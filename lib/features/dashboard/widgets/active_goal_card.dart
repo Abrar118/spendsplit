@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../../core/constants/goal_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/goal_utils.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../data/database/app_database.dart';
 
@@ -13,15 +15,15 @@ class ActiveGoalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Find the first active (not completed) goal
-    final activeGoals = goals.where((g) => !g.isCompleted).toList();
+    final activeGoals = sortGoalsByPriority(
+      goals.where((goal) => !goal.isCompleted),
+    );
 
     if (activeGoals.isEmpty) {
       return _EmptyGoalCard();
     }
 
-    final goal = activeGoals.first;
-    return _ActiveGoalDisplay(goal: goal);
+    return _ActiveGoalDisplay(goal: activeGoals.first);
   }
 }
 
@@ -52,9 +54,7 @@ class _EmptyGoalCard extends StatelessWidget {
               children: [
                 Text(
                   'Savings Goal',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -80,11 +80,11 @@ class _ActiveGoalDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final target = goal.targetAmount;
-    // Goal progress is based on the current saved amount vs target.
-    // Since savings are tracked via transactions (not directly on the goal),
-    // we show the target and deadline here. Full progress tracking
-    // is wired in Phase 7 when the goals screen links savings to goals.
+    final resolvedIcon = GoalIcons.resolve(goal.icon);
+    final progress = goal.targetAmount <= 0
+        ? 0.0
+        : (goal.currentAmount / goal.targetAmount).clamp(0.0, 1.0);
+    final percentage = (progress * 100).round();
     final daysRemaining = _daysRemaining(goal.deadline);
 
     return GlassCard(
@@ -92,10 +92,9 @@ class _ActiveGoalDisplay extends StatelessWidget {
       radius: 24,
       child: Row(
         children: [
-          // Left accent bar
           Container(
             width: 4,
-            height: 96,
+            height: 110,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
               gradient: const LinearGradient(
@@ -110,19 +109,41 @@ class _ActiveGoalDisplay extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  goal.name,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        goal.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: resolvedIcon.color.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        resolvedIcon.icon,
+                        color: resolvedIcon.color,
+                        size: 18,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Icon(
-                      LucideIcons.clock,
+                      goal.deadline == null
+                          ? LucideIcons.calendarDays
+                          : LucideIcons.clock3,
                       size: 14,
                       color: AppColors.textSecondary,
                     ),
@@ -135,18 +156,87 @@ class _ActiveGoalDisplay extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: formatBdtAmount(
+                                goal.currentAmount,
+                                fractionDigits: 0,
+                              ),
+                            ),
+                            TextSpan(
+                              text:
+                                  ' / ${formatBdtAmount(goal.targetAmount, fractionDigits: 0)}',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '$percentage%',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: AppColors.teal,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 10),
-                Text(
-                  'Target: ${formatBdtAmount(target, fractionDigits: 0)}',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: progress),
+                  duration: const Duration(milliseconds: 700),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, animatedValue, _) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: SizedBox(
+                        height: 8,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: ColoredBox(
+                                color: Colors.white.withValues(alpha: 0.06),
+                              ),
+                            ),
+                            FractionallySizedBox(
+                              widthFactor: animatedValue,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [AppColors.teal, AppColors.blue],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.teal.withValues(
+                                        alpha: 0.32,
+                                      ),
+                                      blurRadius: 12,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          const Icon(LucideIcons.flag, color: AppColors.purple),
         ],
       ),
     );

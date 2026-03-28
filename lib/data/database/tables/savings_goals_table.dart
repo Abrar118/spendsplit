@@ -5,7 +5,11 @@ class SavingsGoalsTable extends Table {
 
   TextColumn get name => text()();
 
+  RealColumn get currentAmount => real().withDefault(const Constant(0))();
+
   RealColumn get targetAmount => real()();
+
+  TextColumn get icon => text().withDefault(const Constant('flag'))();
 
   DateTimeColumn get deadline => dateTime().nullable()();
 

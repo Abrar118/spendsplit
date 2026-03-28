@@ -926,6 +926,18 @@ class $SavingsGoalsTableTable extends SavingsGoalsTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _currentAmountMeta = const VerificationMeta(
+    'currentAmount',
+  );
+  @override
+  late final GeneratedColumn<double> currentAmount = GeneratedColumn<double>(
+    'current_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _targetAmountMeta = const VerificationMeta(
     'targetAmount',
   );
@@ -936,6 +948,16 @@ class $SavingsGoalsTableTable extends SavingsGoalsTable
     false,
     type: DriftSqlType.double,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
+    'icon',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('flag'),
   );
   static const VerificationMeta _deadlineMeta = const VerificationMeta(
     'deadline',
@@ -990,7 +1012,9 @@ class $SavingsGoalsTableTable extends SavingsGoalsTable
   List<GeneratedColumn> get $columns => [
     id,
     name,
+    currentAmount,
     targetAmount,
+    icon,
     deadline,
     isCompleted,
     completedAt,
@@ -1019,6 +1043,15 @@ class $SavingsGoalsTableTable extends SavingsGoalsTable
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
+    if (data.containsKey('current_amount')) {
+      context.handle(
+        _currentAmountMeta,
+        currentAmount.isAcceptableOrUnknown(
+          data['current_amount']!,
+          _currentAmountMeta,
+        ),
+      );
+    }
     if (data.containsKey('target_amount')) {
       context.handle(
         _targetAmountMeta,
@@ -1029,6 +1062,12 @@ class $SavingsGoalsTableTable extends SavingsGoalsTable
       );
     } else if (isInserting) {
       context.missing(_targetAmountMeta);
+    }
+    if (data.containsKey('icon')) {
+      context.handle(
+        _iconMeta,
+        icon.isAcceptableOrUnknown(data['icon']!, _iconMeta),
+      );
     }
     if (data.containsKey('deadline')) {
       context.handle(
@@ -1077,9 +1116,17 @@ class $SavingsGoalsTableTable extends SavingsGoalsTable
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      currentAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}current_amount'],
+      )!,
       targetAmount: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}target_amount'],
+      )!,
+      icon: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon'],
       )!,
       deadline: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -1110,7 +1157,9 @@ class SavingsGoalsTableData extends DataClass
     implements Insertable<SavingsGoalsTableData> {
   final int id;
   final String name;
+  final double currentAmount;
   final double targetAmount;
+  final String icon;
   final DateTime? deadline;
   final bool isCompleted;
   final DateTime? completedAt;
@@ -1118,7 +1167,9 @@ class SavingsGoalsTableData extends DataClass
   const SavingsGoalsTableData({
     required this.id,
     required this.name,
+    required this.currentAmount,
     required this.targetAmount,
+    required this.icon,
     this.deadline,
     required this.isCompleted,
     this.completedAt,
@@ -1129,7 +1180,9 @@ class SavingsGoalsTableData extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
+    map['current_amount'] = Variable<double>(currentAmount);
     map['target_amount'] = Variable<double>(targetAmount);
+    map['icon'] = Variable<String>(icon);
     if (!nullToAbsent || deadline != null) {
       map['deadline'] = Variable<DateTime>(deadline);
     }
@@ -1145,7 +1198,9 @@ class SavingsGoalsTableData extends DataClass
     return SavingsGoalsTableCompanion(
       id: Value(id),
       name: Value(name),
+      currentAmount: Value(currentAmount),
       targetAmount: Value(targetAmount),
+      icon: Value(icon),
       deadline: deadline == null && nullToAbsent
           ? const Value.absent()
           : Value(deadline),
@@ -1165,7 +1220,9 @@ class SavingsGoalsTableData extends DataClass
     return SavingsGoalsTableData(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      currentAmount: serializer.fromJson<double>(json['currentAmount']),
       targetAmount: serializer.fromJson<double>(json['targetAmount']),
+      icon: serializer.fromJson<String>(json['icon']),
       deadline: serializer.fromJson<DateTime?>(json['deadline']),
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
@@ -1178,7 +1235,9 @@ class SavingsGoalsTableData extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
+      'currentAmount': serializer.toJson<double>(currentAmount),
       'targetAmount': serializer.toJson<double>(targetAmount),
+      'icon': serializer.toJson<String>(icon),
       'deadline': serializer.toJson<DateTime?>(deadline),
       'isCompleted': serializer.toJson<bool>(isCompleted),
       'completedAt': serializer.toJson<DateTime?>(completedAt),
@@ -1189,7 +1248,9 @@ class SavingsGoalsTableData extends DataClass
   SavingsGoalsTableData copyWith({
     int? id,
     String? name,
+    double? currentAmount,
     double? targetAmount,
+    String? icon,
     Value<DateTime?> deadline = const Value.absent(),
     bool? isCompleted,
     Value<DateTime?> completedAt = const Value.absent(),
@@ -1197,7 +1258,9 @@ class SavingsGoalsTableData extends DataClass
   }) => SavingsGoalsTableData(
     id: id ?? this.id,
     name: name ?? this.name,
+    currentAmount: currentAmount ?? this.currentAmount,
     targetAmount: targetAmount ?? this.targetAmount,
+    icon: icon ?? this.icon,
     deadline: deadline.present ? deadline.value : this.deadline,
     isCompleted: isCompleted ?? this.isCompleted,
     completedAt: completedAt.present ? completedAt.value : this.completedAt,
@@ -1207,9 +1270,13 @@ class SavingsGoalsTableData extends DataClass
     return SavingsGoalsTableData(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      currentAmount: data.currentAmount.present
+          ? data.currentAmount.value
+          : this.currentAmount,
       targetAmount: data.targetAmount.present
           ? data.targetAmount.value
           : this.targetAmount,
+      icon: data.icon.present ? data.icon.value : this.icon,
       deadline: data.deadline.present ? data.deadline.value : this.deadline,
       isCompleted: data.isCompleted.present
           ? data.isCompleted.value
@@ -1226,7 +1293,9 @@ class SavingsGoalsTableData extends DataClass
     return (StringBuffer('SavingsGoalsTableData(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('currentAmount: $currentAmount, ')
           ..write('targetAmount: $targetAmount, ')
+          ..write('icon: $icon, ')
           ..write('deadline: $deadline, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('completedAt: $completedAt, ')
@@ -1239,7 +1308,9 @@ class SavingsGoalsTableData extends DataClass
   int get hashCode => Object.hash(
     id,
     name,
+    currentAmount,
     targetAmount,
+    icon,
     deadline,
     isCompleted,
     completedAt,
@@ -1251,7 +1322,9 @@ class SavingsGoalsTableData extends DataClass
       (other is SavingsGoalsTableData &&
           other.id == this.id &&
           other.name == this.name &&
+          other.currentAmount == this.currentAmount &&
           other.targetAmount == this.targetAmount &&
+          other.icon == this.icon &&
           other.deadline == this.deadline &&
           other.isCompleted == this.isCompleted &&
           other.completedAt == this.completedAt &&
@@ -1262,7 +1335,9 @@ class SavingsGoalsTableCompanion
     extends UpdateCompanion<SavingsGoalsTableData> {
   final Value<int> id;
   final Value<String> name;
+  final Value<double> currentAmount;
   final Value<double> targetAmount;
+  final Value<String> icon;
   final Value<DateTime?> deadline;
   final Value<bool> isCompleted;
   final Value<DateTime?> completedAt;
@@ -1270,7 +1345,9 @@ class SavingsGoalsTableCompanion
   const SavingsGoalsTableCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.currentAmount = const Value.absent(),
     this.targetAmount = const Value.absent(),
+    this.icon = const Value.absent(),
     this.deadline = const Value.absent(),
     this.isCompleted = const Value.absent(),
     this.completedAt = const Value.absent(),
@@ -1279,7 +1356,9 @@ class SavingsGoalsTableCompanion
   SavingsGoalsTableCompanion.insert({
     this.id = const Value.absent(),
     required String name,
+    this.currentAmount = const Value.absent(),
     required double targetAmount,
+    this.icon = const Value.absent(),
     this.deadline = const Value.absent(),
     this.isCompleted = const Value.absent(),
     this.completedAt = const Value.absent(),
@@ -1289,7 +1368,9 @@ class SavingsGoalsTableCompanion
   static Insertable<SavingsGoalsTableData> custom({
     Expression<int>? id,
     Expression<String>? name,
+    Expression<double>? currentAmount,
     Expression<double>? targetAmount,
+    Expression<String>? icon,
     Expression<DateTime>? deadline,
     Expression<bool>? isCompleted,
     Expression<DateTime>? completedAt,
@@ -1298,7 +1379,9 @@ class SavingsGoalsTableCompanion
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (currentAmount != null) 'current_amount': currentAmount,
       if (targetAmount != null) 'target_amount': targetAmount,
+      if (icon != null) 'icon': icon,
       if (deadline != null) 'deadline': deadline,
       if (isCompleted != null) 'is_completed': isCompleted,
       if (completedAt != null) 'completed_at': completedAt,
@@ -1309,7 +1392,9 @@ class SavingsGoalsTableCompanion
   SavingsGoalsTableCompanion copyWith({
     Value<int>? id,
     Value<String>? name,
+    Value<double>? currentAmount,
     Value<double>? targetAmount,
+    Value<String>? icon,
     Value<DateTime?>? deadline,
     Value<bool>? isCompleted,
     Value<DateTime?>? completedAt,
@@ -1318,7 +1403,9 @@ class SavingsGoalsTableCompanion
     return SavingsGoalsTableCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      currentAmount: currentAmount ?? this.currentAmount,
       targetAmount: targetAmount ?? this.targetAmount,
+      icon: icon ?? this.icon,
       deadline: deadline ?? this.deadline,
       isCompleted: isCompleted ?? this.isCompleted,
       completedAt: completedAt ?? this.completedAt,
@@ -1335,8 +1422,14 @@ class SavingsGoalsTableCompanion
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
+    if (currentAmount.present) {
+      map['current_amount'] = Variable<double>(currentAmount.value);
+    }
     if (targetAmount.present) {
       map['target_amount'] = Variable<double>(targetAmount.value);
+    }
+    if (icon.present) {
+      map['icon'] = Variable<String>(icon.value);
     }
     if (deadline.present) {
       map['deadline'] = Variable<DateTime>(deadline.value);
@@ -1358,7 +1451,9 @@ class SavingsGoalsTableCompanion
     return (StringBuffer('SavingsGoalsTableCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('currentAmount: $currentAmount, ')
           ..write('targetAmount: $targetAmount, ')
+          ..write('icon: $icon, ')
           ..write('deadline: $deadline, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('completedAt: $completedAt, ')
@@ -2300,7 +2395,9 @@ typedef $$SavingsGoalsTableTableCreateCompanionBuilder =
     SavingsGoalsTableCompanion Function({
       Value<int> id,
       required String name,
+      Value<double> currentAmount,
       required double targetAmount,
+      Value<String> icon,
       Value<DateTime?> deadline,
       Value<bool> isCompleted,
       Value<DateTime?> completedAt,
@@ -2310,7 +2407,9 @@ typedef $$SavingsGoalsTableTableUpdateCompanionBuilder =
     SavingsGoalsTableCompanion Function({
       Value<int> id,
       Value<String> name,
+      Value<double> currentAmount,
       Value<double> targetAmount,
+      Value<String> icon,
       Value<DateTime?> deadline,
       Value<bool> isCompleted,
       Value<DateTime?> completedAt,
@@ -2336,8 +2435,18 @@ class $$SavingsGoalsTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<double> get currentAmount => $composableBuilder(
+    column: $table.currentAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<double> get targetAmount => $composableBuilder(
     column: $table.targetAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get icon => $composableBuilder(
+    column: $table.icon,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2381,8 +2490,18 @@ class $$SavingsGoalsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get currentAmount => $composableBuilder(
+    column: $table.currentAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get targetAmount => $composableBuilder(
     column: $table.targetAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get icon => $composableBuilder(
+    column: $table.icon,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2422,10 +2541,18 @@ class $$SavingsGoalsTableTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
+  GeneratedColumn<double> get currentAmount => $composableBuilder(
+    column: $table.currentAmount,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<double> get targetAmount => $composableBuilder(
     column: $table.targetAmount,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get icon =>
+      $composableBuilder(column: $table.icon, builder: (column) => column);
 
   GeneratedColumn<DateTime> get deadline =>
       $composableBuilder(column: $table.deadline, builder: (column) => column);
@@ -2486,7 +2613,9 @@ class $$SavingsGoalsTableTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<double> currentAmount = const Value.absent(),
                 Value<double> targetAmount = const Value.absent(),
+                Value<String> icon = const Value.absent(),
                 Value<DateTime?> deadline = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
                 Value<DateTime?> completedAt = const Value.absent(),
@@ -2494,7 +2623,9 @@ class $$SavingsGoalsTableTableTableManager
               }) => SavingsGoalsTableCompanion(
                 id: id,
                 name: name,
+                currentAmount: currentAmount,
                 targetAmount: targetAmount,
+                icon: icon,
                 deadline: deadline,
                 isCompleted: isCompleted,
                 completedAt: completedAt,
@@ -2504,7 +2635,9 @@ class $$SavingsGoalsTableTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String name,
+                Value<double> currentAmount = const Value.absent(),
                 required double targetAmount,
+                Value<String> icon = const Value.absent(),
                 Value<DateTime?> deadline = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
                 Value<DateTime?> completedAt = const Value.absent(),
@@ -2512,7 +2645,9 @@ class $$SavingsGoalsTableTableTableManager
               }) => SavingsGoalsTableCompanion.insert(
                 id: id,
                 name: name,
+                currentAmount: currentAmount,
                 targetAmount: targetAmount,
+                icon: icon,
                 deadline: deadline,
                 isCompleted: isCompleted,
                 completedAt: completedAt,

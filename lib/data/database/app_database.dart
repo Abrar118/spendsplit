@@ -30,7 +30,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -52,6 +52,14 @@ class AppDatabase extends _$AppDatabase {
               .toList(),
         );
       });
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(savingsGoalsTable, savingsGoalsTable.currentAmount);
+        await m.addColumn(savingsGoalsTable, savingsGoalsTable.icon);
+        await m.addColumn(savingsGoalsTable, savingsGoalsTable.isCompleted);
+        await m.addColumn(savingsGoalsTable, savingsGoalsTable.completedAt);
+      }
     },
   );
 }
