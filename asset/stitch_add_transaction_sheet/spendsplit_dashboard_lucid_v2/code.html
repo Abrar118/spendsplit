@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "background-obsidian": "#0D0F1A",
+              "surface-obsidian": "rgba(26, 29, 46, 0.8)",
+              "primary-teal": "#00E5BF",
+              "secondary-purple": "#A78BFA",
+              "accent-coral": "#FF7E70",
+              "navy-deep": "#0F172A",
+              "navy-slate": "#1E293B",
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      
+      .noise-bg {
+        background-color: #0D0F1A;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        background-blend-mode: overlay;
+        opacity: 0.98;
+      }
+
+      .teal-glow-text {
+        text-shadow: 0 0 10px rgba(0, 229, 191, 0.6);
+      }
+      .purple-glow-text {
+        text-shadow: 0 0 10px rgba(167, 139, 250, 0.6);
+      }
+      .teal-bar-glow {
+        box-shadow: 0 0 15px rgba(0, 229, 191, 0.4);
+      }
+      .glass-card {
+        background: rgba(26, 29, 46, 0.8);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .trust-bank-card {
+        background: linear-gradient(135deg, #1A1D2E 0%, #4C1D95 100%);
+        box-shadow: 0 20px 40px rgba(76, 29, 149, 0.3);
+      }
+      .card-chip {
+        background: linear-gradient(135deg, #D4AF37 0%, #F5E050 50%, #B8860B 100%);
+        border-radius: 4px;
+        position: relative;
+      }
+      .card-chip::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(0,0,0,0.1) 4px, rgba(0,0,0,0.1) 5px);
+      }
+    </style>
+</head>
+<body class="noise-bg text-slate-100 font-body pb-32 min-h-screen">
+<!-- TopAppBar -->
+<header class="bg-[#11131E]/80 backdrop-blur-xl w-full sticky top-0 z-50 border-b border-[#3B4A45]/20">
+<div class="flex justify-between items-center w-full px-6 h-16 max-w-7xl mx-auto">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#94A3B8] hover:opacity-80 transition-opacity cursor-pointer active:scale-95 duration-200" data-icon="menu">menu</span>
+<h1 class="font-['Manrope'] font-bold text-[20px] tracking-tighter text-white shadow-[#ffffff33]_0px_0px_12px">SpendSplit</h1>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#94A3B8] hover:opacity-80 transition-opacity cursor-pointer active:scale-95 duration-200" data-icon="settings">settings</span>
+</div>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-6 space-y-6 mt-6">
+<!-- Hero Card: Trust Bank PLC Bangladesh Debit Card Style -->
+<section class="space-y-6">
+<div class="trust-bank-card rounded-[24px] p-6 text-white relative overflow-hidden aspect-[1.58/1] flex flex-col justify-between"><!-- Decorative Elements -->
+<div class="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+<div class="relative z-10 flex justify-between items-start">
+<div class="space-y-0.5">
+<p class="font-headline font-extrabold text-sm tracking-tight">Trust Bank PLC</p>
+<p class="font-label text-[8px] uppercase tracking-widest opacity-80">Bangladesh</p>
+</div>
+<div class="card-chip w-10 h-7 shadow-inner"></div>
+</div>
+<div class="relative z-10">
+<p class="font-label text-[10px] uppercase tracking-[0.2em] text-white/70 mb-1">Total Balance</p>
+<h2 class="font-headline text-[2.5rem] font-extrabold leading-none tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">৳ 84,250</h2>
+</div>
+<div class="relative z-10 flex justify-between items-end">
+<div class="font-label text-[10px] tracking-[0.15em] opacity-80">
+    4532 •••• •••• 8291
+  </div>
+<div class="flex flex-col items-end gap-1">
+<span class="material-symbols-outlined text-lg opacity-60 mb-1" data-icon="contactless">contactless</span>
+<p class="italic font-black text-xl tracking-tighter text-white/90 leading-none">VISA</p>
+</div>
+</div></div>
+<!-- Available/Savings Split -->
+<div class="flex items-center gap-8 px-2">
+<div class="flex-1">
+<p class="font-label text-[10px] uppercase tracking-widest text-slate-400 mb-1">Available</p>
+<p class="text-xl font-bold text-white teal-glow-text">৳ 52,100</p>
+</div>
+<div class="w-px h-10 bg-white/10"></div>
+<div class="flex-1 text-right">
+<p class="font-label text-[10px] uppercase tracking-widest text-slate-400 mb-1">Savings</p>
+<p class="text-xl font-bold text-white purple-glow-text">৳ 32,150</p>
+</div>
+</div>
+</section>
+<!-- Snapshot Row -->
+<section class="flex gap-4 overflow-x-auto no-scrollbar py-2 -mx-6 px-6">
+<div class="min-w-[140px] flex-1 glass-card rounded-[16px] p-4 flex flex-col items-center justify-center text-center shadow-[0_0_20px_rgba(0,229,191,0.05)]">
+<div class="w-10 h-10 rounded-full bg-primary-teal/10 flex items-center justify-center mb-2 shadow-[0_0_15px_rgba(0,229,191,0.2)]">
+<span class="material-symbols-outlined text-primary-teal" data-icon="arrow_upward">arrow_upward</span>
+</div>
+<p class="font-label text-[10px] uppercase tracking-wider text-slate-400 mb-1">Income</p>
+<p class="font-bold text-white">৳ 42k</p>
+</div>
+<div class="min-w-[140px] flex-1 glass-card rounded-[16px] p-4 flex flex-col items-center justify-center text-center shadow-[0_0_20px_rgba(255,126,112,0.05)]">
+<div class="w-10 h-10 rounded-full bg-accent-coral/10 flex items-center justify-center mb-2 shadow-[0_0_15px_rgba(255,126,112,0.2)]">
+<span class="material-symbols-outlined text-accent-coral" data-icon="arrow_downward">arrow_downward</span>
+</div>
+<p class="font-label text-[10px] uppercase tracking-wider text-slate-400 mb-1">Spent</p>
+<p class="font-bold text-white">৳ 18k</p>
+</div>
+<div class="min-w-[140px] flex-1 glass-card rounded-[16px] p-4 flex flex-col items-center justify-center text-center shadow-[0_0_20px_rgba(167,139,250,0.05)]">
+<div class="w-10 h-10 rounded-full bg-secondary-purple/10 flex items-center justify-center mb-2 shadow-[0_0_15px_rgba(167,139,250,0.2)]">
+<span class="material-symbols-outlined text-secondary-purple" data-icon="savings">savings</span>
+</div>
+<p class="font-label text-[10px] uppercase tracking-wider text-slate-400 mb-1">Saved</p>
+<p class="font-bold text-white">৳ 24k</p>
+</div>
+</section>
+<!-- Spending Overview (Bar Chart) - Frosted Style -->
+<section class="glass-card rounded-[24px] p-6 shadow-xl">
+<div class="flex justify-between items-center mb-8">
+<h3 class="font-headline text-lg font-bold text-white">Spending Overview</h3>
+<span class="font-label text-xs text-primary-teal font-bold uppercase tracking-widest cursor-pointer hover:opacity-80">Details</span>
+</div>
+<div class="flex items-end justify-between h-40 gap-2 px-2">
+<!-- Chart Bars -->
+<div class="flex flex-col items-center flex-1 h-full justify-end">
+<div class="w-full bg-white/5 rounded-t-full" style="height: 40%"></div>
+<span class="text-[9px] mt-2 text-slate-500 font-medium">J</span>
+</div>
+<div class="flex flex-col items-center flex-1 h-full justify-end">
+<div class="w-full bg-white/5 rounded-t-full" style="height: 60%"></div>
+<span class="text-[9px] mt-2 text-slate-500 font-medium">F</span>
+</div>
+<div class="flex flex-col items-center flex-1 h-full justify-end">
+<div class="w-full bg-gradient-to-t from-primary-teal to-[#60A5FA] rounded-t-full teal-bar-glow" style="height: 90%"></div>
+<span class="text-[9px] mt-2 text-primary-teal font-bold">M</span>
+</div>
+<div class="flex flex-col items-center flex-1 h-full justify-end">
+<div class="w-full bg-white/5 rounded-t-full" style="height: 30%"></div>
+<span class="text-[9px] mt-2 text-slate-500 font-medium">A</span>
+</div>
+<div class="flex flex-col items-center flex-1 h-full justify-end">
+<div class="w-full bg-white/5 rounded-t-full" style="height: 55%"></div>
+<span class="text-[9px] mt-2 text-slate-500 font-medium">M</span>
+</div>
+<div class="flex flex-col items-center flex-1 h-full justify-end">
+<div class="w-full bg-white/5 rounded-t-full" style="height: 45%"></div>
+<span class="text-[9px] mt-2 text-slate-500 font-medium">J</span>
+</div>
+<div class="flex flex-col items-center flex-1 h-full justify-end">
+<div class="w-full bg-white/5 rounded-t-full" style="height: 70%"></div>
+<span class="text-[9px] mt-2 text-slate-500 font-medium">J</span>
+</div>
+<div class="flex flex-col items-center flex-1 h-full justify-end">
+<div class="w-full bg-white/5 rounded-t-full" style="height: 65%"></div>
+<span class="text-[9px] mt-2 text-slate-500 font-medium">A</span>
+</div>
+<div class="flex flex-col items-center flex-1 h-full justify-end">
+<div class="w-full bg-white/5 rounded-t-full" style="height: 80%"></div>
+<span class="text-[9px] mt-2 text-slate-500 font-medium">S</span>
+</div>
+<div class="flex flex-col items-center flex-1 h-full justify-end">
+<div class="w-full bg-white/5 rounded-t-full" style="height: 40%"></div>
+<span class="text-[9px] mt-2 text-slate-500 font-medium">O</span>
+</div>
+<div class="flex flex-col items-center flex-1 h-full justify-end">
+<div class="w-full bg-white/5 rounded-t-full" style="height: 50%"></div>
+<span class="text-[9px] mt-2 text-slate-500 font-medium">N</span>
+</div>
+<div class="flex flex-col items-center flex-1 h-full justify-end">
+<div class="w-full bg-white/5 rounded-t-full" style="height: 35%"></div>
+<span class="text-[9px] mt-2 text-slate-500 font-medium">D</span>
+</div>
+</div>
+</section>
+<!-- Savings Goal Card - Frosted Style -->
+<section class="glass-card rounded-[24px] p-6 shadow-xl relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-secondary-purple shadow-[0_0_10px_rgba(167,139,250,0.5)]"></div>
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="font-headline text-lg font-bold text-white">New Home Fund</h3>
+<p class="font-label text-[10px] text-slate-500 uppercase tracking-widest mt-1">45 days left</p>
+</div>
+<span class="material-symbols-outlined text-secondary-purple" data-icon="flag">flag</span>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<p class="text-sm font-bold text-white">৳ 34,000 <span class="text-slate-500 font-normal">/ ৳ 50,000</span></p>
+<p class="text-xs font-bold text-secondary-purple">68%</p>
+</div>
+<div class="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-secondary-purple rounded-full shadow-[0_0_10px_rgba(167,139,250,0.4)]" style="width: 68%"></div>
+</div>
+</div>
+</section>
+<!-- Foreign Currency Tracker Card - Frosted Style -->
+<section class="glass-card rounded-[24px] p-6 shadow-xl">
+<div class="flex items-center gap-4 mb-6">
+<div class="w-12 h-12 rounded-2xl bg-secondary-purple/10 flex items-center justify-center border border-secondary-purple/20">
+<span class="material-symbols-outlined text-secondary-purple text-3xl" data-icon="monetization_on">monetization_on</span>
+</div>
+<div>
+<h3 class="font-headline text-lg font-bold leading-tight text-white">Travel Allowance</h3>
+<p class="text-xs text-slate-400">Limit: $12,000</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 mb-4">
+<div class="p-3 rounded-xl bg-black/20 border border-white/5">
+<p class="font-label text-[9px] uppercase tracking-widest text-slate-500 mb-1">Spent</p>
+<p class="font-bold text-accent-coral text-lg">$2,500</p>
+</div>
+<div class="p-3 rounded-xl bg-black/20 border border-white/5">
+<p class="font-label text-[9px] uppercase tracking-widest text-slate-500 mb-1">Remaining</p>
+<p class="font-bold text-primary-teal text-lg">$9,500</p>
+</div>
+</div>
+<div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-primary-teal shadow-[0_0_8px_rgba(0,229,191,0.5)]" style="width: 21%"></div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center h-16 px-4 bg-[#1D1F2B]/80 backdrop-blur-md rounded-[24px] mb-6 mx-4 w-[calc(100%-32px)] border border-[#3B4A45]/20 shadow-[0px_10px_40px_rgba(0,229,191,0.05)]">
+<div class="flex flex-col items-center justify-center text-[#00E5BF] relative after:content-[''] after:absolute after:-bottom-1 after:w-1 after:h-1 after:bg-[#00E5BF] after:rounded-full after:shadow-[0_0_8px_#00E5BF] cursor-pointer active:scale-110 duration-300 ease-out">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-['Manrope'] text-[8px] uppercase tracking-widest mt-0.5">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#94A3B8] hover:text-white transition-colors cursor-pointer active:scale-110 duration-300 ease-out">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-['Manrope'] text-[8px] uppercase tracking-widest mt-0.5">History</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#94A3B8] hover:text-white transition-colors cursor-pointer active:scale-110 duration-300 ease-out">
+<span class="material-symbols-outlined text-[#00E5BF] scale-125 shadow-[0_0_15px_rgba(0,229,191,0.3)] rounded-full" data-icon="add_circle" style="font-variation-settings: 'FILL' 1;">add_circle</span>
+<span class="font-['Manrope'] text-[8px] uppercase tracking-widest mt-1">Add</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#94A3B8] hover:text-white transition-colors cursor-pointer active:scale-110 duration-300 ease-out">
+<span class="material-symbols-outlined" data-icon="calendar_month">calendar_month</span>
+<span class="font-['Manrope'] text-[8px] uppercase tracking-widest mt-0.5">Monthly</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#94A3B8] hover:text-white transition-colors cursor-pointer active:scale-110 duration-300 ease-out">
+<span class="material-symbols-outlined" data-icon="flag">flag</span>
+<span class="font-['Manrope'] text-[8px] uppercase tracking-widest mt-0.5">Goals</span>
+</div>
+</nav>
+</body></html>

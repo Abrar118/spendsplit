@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SpendSplit - Transactions</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "background": "#0D0F1A",
+                "primary-teal": "#00E5BF",
+                "accent-coral": "#FF6B6B",
+                "accent-green": "#34D399",
+                "accent-purple": "#A78BFA",
+                "muted-blue": "#94A3B8",
+                "glass-white": "rgba(255, 255, 255, 0.05)",
+                "glass-border": "rgba(255, 255, 255, 0.1)"
+              },
+              fontFamily: {
+                "headline": ["Manrope"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glassmorphism-card {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glow-coral { text-shadow: 0 0 12px rgba(255, 107, 107, 0.4); }
+        .glow-green { text-shadow: 0 0 12px rgba(52, 211, 153, 0.4); }
+        .glow-purple { text-shadow: 0 0 12px rgba(167, 139, 250, 0.4); }
+    </style>
+</head>
+<body class="bg-background font-body text-white min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 bg-[#11131E]/80 backdrop-blur-xl w-full px-6 h-16 flex justify-between items-center border-b border-[#3B4A45]/20">
+<button class="text-[#94A3B8] hover:opacity-80 transition-opacity active:scale-95 duration-200">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-['Manrope'] font-bold text-[20px] tracking-tight text-white">Transactions</h1>
+<button class="text-[#94A3B8] hover:opacity-80 transition-opacity active:scale-95 duration-200">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</header>
+<main class="max-w-xl mx-auto px-6">
+<!-- Filter Chips -->
+<div class="flex overflow-x-auto gap-3 py-6 no-scrollbar">
+<button class="px-6 py-2 rounded-full bg-primary-teal text-[#0D0F1A] font-bold text-sm whitespace-nowrap shadow-[0_0_15px_rgba(0,229,191,0.3)]">All</button>
+<button class="px-6 py-2 rounded-full border border-muted-blue/30 text-muted-blue font-medium text-sm whitespace-nowrap hover:bg-white/5 transition-colors">Income</button>
+<button class="px-6 py-2 rounded-full border border-muted-blue/30 text-muted-blue font-medium text-sm whitespace-nowrap hover:bg-white/5 transition-colors">Expense</button>
+<button class="px-6 py-2 rounded-full border border-muted-blue/30 text-muted-blue font-medium text-sm whitespace-nowrap hover:bg-white/5 transition-colors">Savings</button>
+</div>
+<!-- Transaction List Groups -->
+<!-- Section: Today -->
+<section class="mb-8">
+<h2 class="sticky top-16 z-30 bg-background/95 py-3 font-headline font-bold text-xs uppercase tracking-widest text-muted-blue px-2">Today</h2>
+<div class="space-y-4">
+<!-- Expense Item -->
+<div class="relative">
+<div class="glassmorphism-card p-4 rounded-2xl flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-accent-coral flex items-center justify-center text-white shrink-0 shadow-[0_0_10px_rgba(255,107,107,0.3)]">
+<span class="material-symbols-outlined text-lg">restaurant</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-headline font-semibold text-white/90">Dinner with friends</h3>
+<span class="font-headline font-bold text-accent-coral glow-coral">− $42.50</span>
+</div>
+<p class="text-[11px] text-muted-blue mt-0.5">Sushi Place • 08:45 PM</p>
+</div>
+</div>
+</div>
+<!-- Income Item -->
+<div class="relative">
+<div class="glassmorphism-card p-4 rounded-2xl flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-accent-green flex items-center justify-center text-white shrink-0 shadow-[0_0_10px_rgba(52,211,153,0.3)]">
+<span class="material-symbols-outlined text-lg">payments</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-headline font-semibold text-white/90">Freelance Payment</h3>
+<span class="font-headline font-bold text-accent-green glow-green">+ $850.00</span>
+</div>
+<p class="text-[11px] text-muted-blue mt-0.5">UI Design Project • 02:15 PM</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Yesterday -->
+<section class="mb-8">
+<h2 class="sticky top-16 z-30 bg-background/95 py-3 font-headline font-bold text-xs uppercase tracking-widest text-muted-blue px-2">Yesterday</h2>
+<div class="space-y-4">
+<!-- Swiped Item -->
+<div class="relative overflow-hidden rounded-2xl">
+<div class="absolute inset-0 bg-accent-coral/20 flex items-center justify-end px-6">
+<div class="flex gap-6 text-white">
+<span class="material-symbols-outlined">edit</span>
+<span class="material-symbols-outlined">delete</span>
+</div>
+</div>
+<div class="glassmorphism-card p-4 flex items-center gap-4 relative z-10 -translate-x-12">
+<div class="w-10 h-10 rounded-full bg-accent-coral flex items-center justify-center text-white shrink-0 shadow-[0_0_10px_rgba(255,107,107,0.3)]">
+<span class="material-symbols-outlined text-lg">shopping_bag</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-headline font-semibold text-white/90">Grocery Store</h3>
+<span class="font-headline font-bold text-accent-coral glow-coral">− $124.00</span>
+</div>
+<p class="text-[11px] text-muted-blue mt-0.5">Weekly supply • 05:30 PM</p>
+</div>
+</div>
+</div>
+<!-- Savings Deposit -->
+<div class="relative">
+<div class="glassmorphism-card p-4 rounded-2xl flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-accent-purple flex items-center justify-center text-white shrink-0 shadow-[0_0_10px_rgba(167,139,250,0.3)]">
+<span class="material-symbols-outlined text-lg">savings</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-headline font-semibold text-white/90">Emergency Fund</h3>
+<span class="font-headline font-bold text-accent-purple glow-purple">↓ $200.00</span>
+</div>
+<p class="text-[11px] text-muted-blue mt-0.5">Auto-transfer • 09:00 AM</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: March 25, 2026 -->
+<section class="mb-8">
+<h2 class="sticky top-16 z-30 bg-background/95 py-3 font-headline font-bold text-xs uppercase tracking-widest text-muted-blue px-2">March 25, 2026</h2>
+<div class="space-y-4">
+<div class="relative">
+<div class="glassmorphism-card p-4 rounded-2xl flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-lg">flight</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-headline font-semibold text-white/90">Vacation Fund</h3>
+<span class="font-headline font-bold text-accent-green glow-green">↑ $500.00</span>
+</div>
+<p class="text-[11px] text-muted-blue mt-0.5">Flight booking • 11:20 AM</p>
+</div>
+</div>
+</div>
+<div class="relative">
+<div class="glassmorphism-card p-4 rounded-2xl flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-accent-coral flex items-center justify-center text-white shrink-0 shadow-[0_0_10px_rgba(255,107,107,0.3)]">
+<span class="material-symbols-outlined text-lg">directions_car</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-headline font-semibold text-white/90">Gas Station</h3>
+<span class="font-headline font-bold text-accent-coral glow-coral">− $65.20</span>
+</div>
+<p class="text-[11px] text-muted-blue mt-0.5">Shell • 08:10 AM</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center h-16 px-4 bg-[#1D1F2B]/80 backdrop-blur-md rounded-[24px] mb-6 mx-4 w-[calc(100%-32px)] border border-[#3B4A45]/20 shadow-[0px_10px_40px_rgba(0,229,191,0.05)]">
+<a class="flex flex-col items-center justify-center text-[#94A3B8] hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-widest mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#00E5BF] relative after:content-[''] after:absolute after:-bottom-1 after:w-1 after:h-1 after:bg-[#00E5BF] after:rounded-full after:shadow-[0_0_8px_#00E5BF]" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-widest mt-1">History</span>
+</a>
+<button class="flex flex-col items-center justify-center text-[#00E5BF] active:scale-110 duration-300 ease-out">
+<span class="material-symbols-outlined text-4xl shadow-[0_0_15px_rgba(0,229,191,0.4)] rounded-full">add_circle</span>
+</button>
+<a class="flex flex-col items-center justify-center text-[#94A3B8] hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-widest mt-1">Monthly</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#94A3B8] hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">flag</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-widest mt-1">Goals</span>
+</a>
+</nav>
+</body></html>
