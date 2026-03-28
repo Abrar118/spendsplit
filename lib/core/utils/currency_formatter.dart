@@ -1,1 +1,1 @@
-String formatBdtPlaceholder(num amount) => '৳ ${amount.toStringAsFixed(0)}';
+String formatBdtAmount(num amount) => '৳ ${amount.toStringAsFixed(0)}';

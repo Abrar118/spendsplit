@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/widgets/empty_state.dart';
-
 class GoalsScreen extends StatelessWidget {
   const GoalsScreen({super.key});
 
@@ -24,17 +22,7 @@ class GoalsScreen extends StatelessWidget {
                 TextButton(onPressed: null, child: const Text('+ New Goal')),
               ],
             ),
-            const SizedBox(height: 24),
-            const Expanded(
-              child: Center(
-                child: EmptyState(
-                  icon: Icons.flag_outlined,
-                  title: 'Goals Route Ready',
-                  message:
-                      'The structure is in place for goals, progress rings, and the create-goal flow in Phase 7.',
-                ),
-              ),
-            ),
+            const Expanded(child: SizedBox.shrink()),
           ],
         ),
       ),

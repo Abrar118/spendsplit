@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_decorations.dart';
@@ -34,7 +35,7 @@ class BottomNavBar extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _NavItem(
-                        icon: Icons.home_rounded,
+                        icon: LucideIcons.home,
                         label: 'HOME',
                         active: currentIndex == 0,
                         onTap: () => onDestinationSelected(0),
@@ -42,7 +43,7 @@ class BottomNavBar extends StatelessWidget {
                     ),
                     Expanded(
                       child: _NavItem(
-                        icon: Icons.receipt_long_rounded,
+                        icon: LucideIcons.receipt,
                         label: 'HISTORY',
                         active: currentIndex == 1,
                         onTap: () => onDestinationSelected(1),
@@ -51,7 +52,7 @@ class BottomNavBar extends StatelessWidget {
                     const SizedBox(width: 72),
                     Expanded(
                       child: _NavItem(
-                        icon: Icons.calendar_month_rounded,
+                        icon: LucideIcons.calendarDays,
                         label: 'MONTHLY',
                         active: currentIndex == 3,
                         onTap: () => onDestinationSelected(3),
@@ -59,7 +60,7 @@ class BottomNavBar extends StatelessWidget {
                     ),
                     Expanded(
                       child: _NavItem(
-                        icon: Icons.flag_rounded,
+                        icon: LucideIcons.flag,
                         label: 'GOALS',
                         active: currentIndex == 4,
                         onTap: () => onDestinationSelected(4),
@@ -77,14 +78,14 @@ class BottomNavBar extends StatelessWidget {
                   onTap: onAddPressed,
                   customBorder: const CircleBorder(),
                   child: Ink(
-                    width: 56,
-                    height: 56,
+                    width: 48,
+                    height: 48,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: AppColors.primaryActionGradient,
                     ),
                     child: const Icon(
-                      Icons.add_rounded,
+                      LucideIcons.plus,
                       color: AppColors.onPrimary,
                     ),
                   ),

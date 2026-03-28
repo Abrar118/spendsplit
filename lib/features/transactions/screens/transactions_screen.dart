@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/widgets/accent_chip.dart';
-import '../../../core/widgets/empty_state.dart';
 
 class TransactionsScreen extends StatelessWidget {
   const TransactionsScreen({super.key});
@@ -40,17 +39,7 @@ class TransactionsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            const Expanded(
-              child: Center(
-                child: EmptyState(
-                  icon: Icons.account_balance_wallet_outlined,
-                  title: 'No Transactions Yet',
-                  message:
-                      'Tap the center add button to open the transaction sheet.',
-                ),
-              ),
-            ),
+            const Expanded(child: SizedBox.shrink()),
           ],
         ),
       ),

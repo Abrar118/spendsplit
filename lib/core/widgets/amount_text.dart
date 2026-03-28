@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
 import '../theme/app_decorations.dart';
 
 class AmountText extends StatelessWidget {
@@ -8,6 +9,7 @@ class AmountText extends StatelessWidget {
     super.key,
     this.prefix = '৳',
     this.color,
+    this.glowColor,
     this.textStyle,
     this.glow = false,
     this.alignment = TextAlign.left,
@@ -16,6 +18,7 @@ class AmountText extends StatelessWidget {
   final String amount;
   final String prefix;
   final Color? color;
+  final Color? glowColor;
   final TextStyle? textStyle;
   final bool glow;
   final TextAlign alignment;
@@ -29,7 +32,11 @@ class AmountText extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        boxShadow: glow ? AppDecorations.contextualGlow() : const [],
+        boxShadow: glow
+            ? AppDecorations.contextualGlow(
+                color: glowColor ?? color ?? AppColors.green,
+              )
+            : const [],
       ),
       child: Text(
         '$prefix $amount',

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/widgets/empty_state.dart';
+import '../../../core/utils/date_utils.dart';
 
 class MonthlyScreen extends StatelessWidget {
   const MonthlyScreen({super.key});
@@ -30,18 +30,11 @@ class MonthlyScreen extends StatelessWidget {
             const SizedBox(height: 24),
             Text('FISCAL PERIOD', style: theme.textTheme.labelMedium),
             const SizedBox(height: 8),
-            Text('March 2026', style: theme.textTheme.headlineMedium),
-            const SizedBox(height: 24),
-            const Expanded(
-              child: Center(
-                child: EmptyState(
-                  icon: Icons.calendar_month_outlined,
-                  title: 'Monthly Analytics Placeholder',
-                  message:
-                      'Phase 1 only establishes the route and shell. Charts and comparisons land in Phase 6.',
-                ),
-              ),
+            Text(
+              formatMonthYear(DateTime.now()),
+              style: theme.textTheme.headlineMedium,
             ),
+            const Expanded(child: SizedBox.shrink()),
           ],
         ),
       ),

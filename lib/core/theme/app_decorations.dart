@@ -21,10 +21,10 @@ abstract final class AppDecorations {
     ];
   }
 
-  static List<BoxShadow> contextualGlow() {
+  static List<BoxShadow> contextualGlow({Color color = AppColors.green}) {
     return [
       BoxShadow(
-        color: AppColors.green.withValues(alpha: 0.24),
+        color: color.withValues(alpha: 0.24),
         blurRadius: 18,
         spreadRadius: 0,
       ),

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/widgets/empty_state.dart';
-
 class DollarTrackerScreen extends StatelessWidget {
   const DollarTrackerScreen({super.key});
 
@@ -28,17 +26,7 @@ class DollarTrackerScreen extends StatelessWidget {
                   Text('2026', style: theme.textTheme.labelLarge),
                 ],
               ),
-              const SizedBox(height: 24),
-              const Expanded(
-                child: Center(
-                  child: EmptyState(
-                    icon: Icons.attach_money_rounded,
-                    title: 'Dollar Tracker Placeholder',
-                    message:
-                        'This push route exists now so the dashboard contract is real. The isolated USD workflow lands in Phase 8.',
-                  ),
-                ),
-              ),
+              const Expanded(child: SizedBox.shrink()),
             ],
           ),
         ),

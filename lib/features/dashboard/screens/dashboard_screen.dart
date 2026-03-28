@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/amount_text.dart';
-import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_card.dart';
+import '../../../providers/providers.dart';
+import '../../transactions/widgets/add_transaction_sheet.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final transactions = ref.watch(transactionsProvider);
     return SafeArea(
       bottom: false,
       child: ListView(
@@ -172,27 +175,29 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.section),
-          GlassCard(
-            glowColor: AppColors.teal,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Align(
+            alignment: Alignment.centerRight,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Row(
-                  children: [
-                    Text('Phase 1 Shell', style: theme.textTheme.titleLarge),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () => context.push('/dollar-tracker'),
-                      child: const Text('Dollar Tracker'),
-                    ),
-                  ],
+                transactions.maybeWhen(
+                  data: (items) {
+                    if (items.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return TextButton(
+                      onPressed: () => showAddTransactionSheet(
+                        context,
+                        existingTransaction: items.first,
+                      ),
+                      child: const Text('Edit Latest'),
+                    );
+                  },
+                  orElse: () => const SizedBox.shrink(),
                 ),
-                const SizedBox(height: 16),
-                const EmptyState(
-                  icon: Icons.layers_outlined,
-                  title: 'Foundation In Place',
-                  message:
-                      'Dashboard primitives, routing, and the floating add action are wired. Live data lands in the next phases.',
+                TextButton(
+                  onPressed: () => context.push('/dollar-tracker'),
+                  child: const Text('Dollar Tracker'),
                 ),
               ],
             ),
