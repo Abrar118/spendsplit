@@ -45,6 +45,8 @@ enum IncomeSource {
   final String dbValue;
 }
 
+enum TransactionQuickFilter { all, income, expense, savings }
+
 enum AppSettingsKey {
   biometricEnabled('biometric_enabled'),
   dollarAnnualLimit('dollar_annual_limit'),

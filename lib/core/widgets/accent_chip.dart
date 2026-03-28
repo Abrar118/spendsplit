@@ -39,7 +39,7 @@ class AccentChip extends StatelessWidget {
           child: Text(
             label,
             style: theme.textTheme.labelLarge?.copyWith(
-              color: selected ? AppColors.onPrimary : AppColors.textSecondary,
+              color: selected ? Colors.white : AppColors.textSecondary,
             ),
           ),
         ),

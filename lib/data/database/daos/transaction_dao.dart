@@ -54,6 +54,15 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
     return into(transactionsTable).insert(entry);
   }
 
+  /// Re-inserts a complete row preserving its original ID.
+  /// Used for undo-delete to maintain identity.
+  Future<void> insertTransactionWithId(TransactionsTableData entry) {
+    return into(transactionsTable).insert(
+      entry.toCompanion(true),
+      mode: InsertMode.insertOrReplace,
+    );
+  }
+
   Future<bool> updateTransaction(TransactionsTableData entry) {
     return update(transactionsTable).replace(entry);
   }

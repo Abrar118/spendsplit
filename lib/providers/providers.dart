@@ -75,23 +75,23 @@ final appSettingsProvider = NotifierProvider<SettingsController, AppSettings>(
   SettingsController.new,
 );
 
-final categoriesProvider = StreamProvider.autoDispose((ref) {
+final categoriesProvider = StreamProvider((ref) {
   return ref.watch(categoryRepositoryProvider).watchMainCategories();
 });
 
-final dollarCategoriesProvider = StreamProvider.autoDispose((ref) {
+final dollarCategoriesProvider = StreamProvider((ref) {
   return ref.watch(categoryRepositoryProvider).watchDollarCategories();
 });
 
-final transactionsProvider = StreamProvider.autoDispose((ref) {
+final transactionsProvider = StreamProvider((ref) {
   return ref.watch(transactionRepositoryProvider).watchTransactions();
 });
 
-final savingsGoalsProvider = StreamProvider.autoDispose((ref) {
+final savingsGoalsProvider = StreamProvider((ref) {
   return ref.watch(savingsRepositoryProvider).watchGoals();
 });
 
-final dollarExpensesProvider = StreamProvider.autoDispose((ref) {
+final dollarExpensesProvider = StreamProvider((ref) {
   return ref.watch(dollarTrackerRepositoryProvider).watchExpenses();
 });
 

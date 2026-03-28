@@ -28,6 +28,11 @@ class TransactionRepository {
     return _transactionDao.insertTransaction(entry);
   }
 
+  /// Re-inserts a complete row preserving its original ID. Used for undo-delete.
+  Future<void> createTransactionWithId(TransactionsTableData entry) {
+    return _transactionDao.insertTransactionWithId(entry);
+  }
+
   Future<bool> updateTransaction(TransactionsTableData entry) {
     return _transactionDao.updateTransaction(entry);
   }

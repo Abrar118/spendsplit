@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+
 class DefaultCategorySeed {
   const DefaultCategorySeed({
     required this.name,
@@ -44,4 +47,23 @@ abstract final class DefaultCategories {
       colorValue: 0xFF8892A7,
     ),
   ];
+}
+
+IconData iconForCategoryKey(String iconName) {
+  switch (iconName) {
+    case 'restaurant':
+      return LucideIcons.utensils;
+    case 'directions_car':
+      return LucideIcons.car;
+    case 'bolt':
+      return LucideIcons.zap;
+    case 'local_hospital':
+      return LucideIcons.heartPulse;
+    case 'shopping_bag':
+      return LucideIcons.shoppingBag;
+    case 'more_horiz':
+      return LucideIcons.moreHorizontal;
+    default:
+      return LucideIcons.tag;
+  }
 }
