@@ -51,22 +51,22 @@ class SettingsController extends Notifier<AppSettings> {
   }
 
   Future<void> setBiometricEnabled(bool value) async {
-    await ref.watch(settingsRepositoryProvider).setBiometricEnabled(value);
+    await ref.read(settingsRepositoryProvider).setBiometricEnabled(value);
     state = state.copyWith(biometricEnabled: value);
   }
 
   Future<void> setDollarAnnualLimit(double value) async {
-    await ref.watch(settingsRepositoryProvider).setDollarAnnualLimit(value);
+    await ref.read(settingsRepositoryProvider).setDollarAnnualLimit(value);
     state = state.copyWith(dollarAnnualLimit: value);
   }
 
   Future<void> setDollarLimitYear(int value) async {
-    await ref.watch(settingsRepositoryProvider).setDollarLimitYear(value);
+    await ref.read(settingsRepositoryProvider).setDollarLimitYear(value);
     state = state.copyWith(dollarLimitYear: value);
   }
 
   Future<void> setInitialBalance(double value) async {
-    await ref.watch(settingsRepositoryProvider).setInitialBalance(value);
+    await ref.read(settingsRepositoryProvider).setInitialBalance(value);
     state = state.copyWith(initialBalance: value);
   }
 }

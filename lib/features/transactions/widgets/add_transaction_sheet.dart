@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 
 import '../../../core/constants/enums.dart';
@@ -21,6 +22,7 @@ Future<void> showAddTransactionSheet(
     backgroundColor: Colors.transparent,
     expand: false,
     bounce: true,
+    isDismissible: true,
     builder: (context) =>
         AddTransactionSheet(existingTransaction: existingTransaction),
   );
@@ -29,6 +31,16 @@ Future<void> showAddTransactionSheet(
 enum _TransactionEntryType { expense, income, savings }
 
 enum _SavingsFlowType { deposit, withdrawal }
+
+/// Palette of colors auto-assigned to custom categories in round-robin order.
+const _customCategoryColors = [
+  AppColors.teal,
+  AppColors.blue,
+  AppColors.amber,
+  AppColors.coral,
+  AppColors.purple,
+  AppColors.green,
+];
 
 class AddTransactionSheet extends ConsumerStatefulWidget {
   const AddTransactionSheet({super.key, this.existingTransaction});
@@ -50,7 +62,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   String _selectedIncomeSource = IncomeSource.salary.dbValue;
   DateTime _selectedDate = DateTime.now();
   bool _saving = false;
-  bool _didInitializeFromExisting = false;
+  bool _didAutoSelectCategory = false;
 
   static const _incomeSources = [
     IncomeSource.salary,
@@ -68,6 +80,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       _noteController.text = transaction.note ?? '';
       _selectedCategoryId = transaction.categoryId;
       _selectedIncomeSource = transaction.source ?? IncomeSource.salary.dbValue;
+      _didAutoSelectCategory = true; // don't override edited category
 
       final type = TransactionType.fromDbValue(transaction.type);
       switch (type) {
@@ -116,7 +129,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
       ),
       child: FractionallySizedBox(
-        heightFactor: 0.86,
+        heightFactor: 0.75,
         alignment: Alignment.bottomCenter,
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
@@ -155,7 +168,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                         Row(
                           children: [
                             Text(
-                              _isEditing ? 'Edit Entry' : 'New Entry',
+                              'New Entry',
                               style: theme.textTheme.headlineMedium,
                             ),
                             const Spacer(),
@@ -195,6 +208,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // --- Amount input with ambient glow ---
                           Center(
                             child: Column(
                               children: [
@@ -203,58 +217,92 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                                   style: theme.textTheme.labelMedium,
                                 ),
                                 const SizedBox(height: 14),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      '৳',
-                                      style: theme.textTheme.headlineLarge
-                                          ?.copyWith(
-                                            color: _accentColor,
-                                            shadows: [
-                                              Shadow(
-                                                color: _accentColor.withValues(
-                                                  alpha: 0.35,
-                                                ),
-                                                blurRadius: 18,
-                                              ),
-                                            ],
-                                          ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    ConstrainedBox(
-                                      constraints: const BoxConstraints(
-                                        maxWidth: 220,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: _accentColor.withValues(
+                                          alpha: 0.12,
+                                        ),
+                                        blurRadius: 32,
+                                        spreadRadius: 4,
                                       ),
-                                      child: TextField(
-                                        controller: _amountController,
-                                        enabled: !_saving,
-                                        textAlign: TextAlign.center,
-                                        keyboardType:
-                                            const TextInputType.numberWithOptions(
-                                              decimal: true,
-                                            ),
-                                        style: theme.textTheme.displayLarge
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        '৳',
+                                        style: theme.textTheme.headlineLarge
                                             ?.copyWith(
-                                              fontSize: 48,
-                                              color: AppColors.textPrimary,
+                                              fontSize: 28,
+                                              color: _accentColor,
                                               shadows: [
                                                 Shadow(
                                                   color: _accentColor
-                                                      .withValues(alpha: 0.28),
-                                                  blurRadius: 20,
+                                                      .withValues(alpha: 0.35),
+                                                  blurRadius: 18,
                                                 ),
                                               ],
                                             ),
-                                        decoration: const InputDecoration(
-                                          hintText: '0.00',
-                                          border: InputBorder.none,
-                                          isDense: true,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 220,
+                                        ),
+                                        child: TextField(
+                                          controller: _amountController,
+                                          enabled: !_saving,
+                                          textAlign: TextAlign.center,
+                                          keyboardType:
+                                              const TextInputType
+                                                  .numberWithOptions(
+                                                    decimal: true,
+                                                  ),
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.allow(
+                                              RegExp(r'^\d*\.?\d*'),
+                                            ),
+                                          ],
+                                          style: theme.textTheme.displayLarge
+                                              ?.copyWith(
+                                                fontSize: 48,
+                                                color: AppColors.textPrimary,
+                                                shadows: [
+                                                  Shadow(
+                                                    color: _accentColor
+                                                        .withValues(
+                                                          alpha: 0.28,
+                                                        ),
+                                                    blurRadius: 20,
+                                                  ),
+                                                ],
+                                              ),
+                                          decoration: InputDecoration(
+                                            hintText: '0.00',
+                                            hintStyle: theme
+                                                .textTheme.displayLarge
+                                                ?.copyWith(
+                                                  fontSize: 48,
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.1),
+                                                ),
+                                            border: InputBorder.none,
+                                            isDense: true,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -263,6 +311,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                           categoriesAsync.when(
                             data: (items) => _AdaptiveSection(
                               entryType: _entryType,
+                              accentColor: _accentColor,
                               categories: items,
                               selectedCategoryId: _selectedCategoryId,
                               selectedIncomeSource: _selectedIncomeSource,
@@ -303,7 +352,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                           ),
                           const SizedBox(height: 24),
                           _InfoRow(
-                            icon: Icons.calendar_today_rounded,
+                            icon: LucideIcons.calendar,
                             label: 'DATE',
                             value: formatSheetDate(_selectedDate),
                             onTap: _saving ? null : _pickDate,
@@ -317,20 +366,42 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                       ),
                     ),
                   ),
+                  // --- Save button: 12px radius, dark text, glow shadow ---
                   Padding(
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    child: SizedBox(
+                    child: Container(
                       width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _accentColor.withValues(alpha: 0.5),
+                            blurRadius: 32,
+                            offset: const Offset(0, 12),
+                            spreadRadius: -8,
+                          ),
+                        ],
+                      ),
                       child: FilledButton(
                         style: FilledButton.styleFrom(
                           backgroundColor: _accentColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF0E1016),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          textStyle: theme.textTheme.labelLarge?.copyWith(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                         onPressed: _saving ? null : _saveTransaction,
                         child: Text(
                           _saving
-                              ? 'Saving...'
-                              : (_isEditing ? 'Update' : 'Save Transaction'),
+                              ? 'SAVING...'
+                              : (_isEditing
+                                  ? 'UPDATE'
+                                  : 'SAVE TRANSACTION'),
                         ),
                       ),
                     ),
@@ -344,27 +415,21 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     );
   }
 
+  /// Auto-select the first category for new expense entries once categories
+  /// have loaded. Runs once and sets a synchronous guard to avoid repeat
+  /// scheduling from subsequent builds.
   void _syncInitialCategory(List<CategoriesTableData> categories) {
+    if (_didAutoSelectCategory) return;
     if (categories.isEmpty) return;
+    if (_entryType != _TransactionEntryType.expense) return;
 
-    if (_isEditing && _didInitializeFromExisting) {
-      return;
-    }
-
-    if (_isEditing) {
-      _didInitializeFromExisting = true;
-      return;
-    }
-
-    if (_selectedCategoryId == null &&
-        _entryType == _TransactionEntryType.expense) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        setState(() {
-          _selectedCategoryId = categories.first.id;
-        });
+    _didAutoSelectCategory = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _selectedCategoryId = categories.first.id;
       });
-    }
+    });
   }
 
   Future<void> _pickDate() async {
@@ -393,6 +458,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   }
 
   Future<void> _createCustomCategory(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
     final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
@@ -425,22 +491,39 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
     if (!mounted || name == null || name.isEmpty) return;
 
-    final categoryId = await ref
-        .read(categoryRepositoryProvider)
-        .createCategory(
-          CategoriesTableCompanion.insert(
-            name: name,
-            icon: 'category',
-            color: AppColors.catOther.toARGB32(),
-            isPredefined: const Value(false),
-            isDollarCategory: const Value(false),
-          ),
-        );
+    // Pick a color from the palette based on existing custom category count
+    final existingCategories =
+        ref.read(categoriesProvider).valueOrNull ?? const [];
+    final customCount =
+        existingCategories.where((c) => !c.isPredefined).length;
+    final color =
+        _customCategoryColors[customCount % _customCategoryColors.length];
 
-    if (!mounted) return;
-    setState(() {
-      _selectedCategoryId = categoryId;
-    });
+    try {
+      final categoryId = await ref
+          .read(categoryRepositoryProvider)
+          .createCategory(
+            CategoriesTableCompanion.insert(
+              name: name,
+              icon: 'category',
+              color: color.toARGB32(),
+              isPredefined: const Value(false),
+              isDollarCategory: const Value(false),
+            ),
+          );
+
+      if (!mounted) return;
+      setState(() {
+        _selectedCategoryId = categoryId;
+      });
+    } on Exception {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Category already exists or could not be created'),
+        ),
+      );
+    }
   }
 
   Future<void> _saveTransaction() async {
@@ -530,6 +613,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       await HapticFeedback.mediumImpact();
 
       if (!mounted) return;
+
+      // Reset saving state before pop to avoid setState-after-dispose
+      setState(() {
+        _saving = false;
+      });
+
       Navigator.of(context).pop();
       messenger.showSnackBar(
         SnackBar(
@@ -538,12 +627,14 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
           ),
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _saving = false;
-        });
-      }
+    } on Exception catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to save: ${e.toString()}')),
+      );
+      setState(() {
+        _saving = false;
+      });
     }
   }
 }
@@ -559,7 +650,7 @@ class _TypeSelector extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.18),
+        color: AppColors.background.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
@@ -655,6 +746,7 @@ class _TypePill extends StatelessWidget {
 class _AdaptiveSection extends StatelessWidget {
   const _AdaptiveSection({
     required this.entryType,
+    required this.accentColor,
     required this.categories,
     required this.selectedCategoryId,
     required this.selectedIncomeSource,
@@ -666,6 +758,7 @@ class _AdaptiveSection extends StatelessWidget {
   });
 
   final _TransactionEntryType entryType;
+  final Color accentColor;
   final List<CategoriesTableData> categories;
   final int? selectedCategoryId;
   final String selectedIncomeSource;
@@ -685,13 +778,6 @@ class _AdaptiveSection extends StatelessWidget {
           Row(
             children: [
               Text('SELECT CATEGORY', style: theme.textTheme.labelMedium),
-              const Spacer(),
-              Text(
-                'VIEW ALL',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: AppColors.teal,
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 18),
@@ -720,6 +806,7 @@ class _AdaptiveSection extends StatelessWidget {
     if (entryType == _TransactionEntryType.income) {
       return _SegmentSection<IncomeSource>(
         label: 'SOURCE',
+        accentColor: accentColor,
         values: _AddTransactionSheetState._incomeSources,
         selectedValue: _incomeSourcesByDbValue(selectedIncomeSource),
         onSelected: (value) => onIncomeSourceSelected(value.dbValue),
@@ -733,6 +820,7 @@ class _AdaptiveSection extends StatelessWidget {
 
     return _SegmentSection<_SavingsFlowType>(
       label: 'SAVINGS TYPE',
+      accentColor: accentColor,
       values: const [_SavingsFlowType.deposit, _SavingsFlowType.withdrawal],
       selectedValue: savingsFlowType,
       onSelected: onSavingsFlowSelected,
@@ -773,13 +861,13 @@ class _CategoryChip extends StatelessWidget {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            width: 62,
-            height: 62,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
               color: selected
                   ? color.withValues(alpha: 0.16)
                   : Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: selected
                     ? color.withValues(alpha: 0.32)
@@ -825,14 +913,14 @@ class _CustomCategoryChip extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            width: 62,
-            height: 62,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
-            child: const Icon(Icons.add_rounded, color: AppColors.teal),
+            child: const Icon(LucideIcons.plus, color: AppColors.teal),
           ),
           const SizedBox(height: 10),
           Text(
@@ -850,6 +938,7 @@ class _CustomCategoryChip extends StatelessWidget {
 class _SegmentSection<T> extends StatelessWidget {
   const _SegmentSection({
     required this.label,
+    required this.accentColor,
     required this.values,
     required this.selectedValue,
     required this.onSelected,
@@ -857,6 +946,7 @@ class _SegmentSection<T> extends StatelessWidget {
   });
 
   final String label;
+  final Color accentColor;
   final List<T> values;
   final T selectedValue;
   final ValueChanged<T> onSelected;
@@ -886,7 +976,7 @@ class _SegmentSection<T> extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: selectedValue == value
-                            ? AppColors.teal.withValues(alpha: 0.22)
+                            ? accentColor.withValues(alpha: 0.22)
                             : Colors.white.withValues(alpha: 0.08),
                       ),
                     ),
@@ -971,7 +1061,7 @@ class _InfoRow extends StatelessWidget {
               ),
             ),
             Icon(
-              Icons.chevron_right_rounded,
+              LucideIcons.chevronRight,
               color: Colors.white.withValues(alpha: 0.24),
             ),
           ],
@@ -1008,7 +1098,7 @@ class _NoteField extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
-              Icons.edit_note_rounded,
+              LucideIcons.pencil,
               size: 20,
               color: Colors.white.withValues(alpha: 0.56),
             ),
@@ -1018,14 +1108,17 @@ class _NoteField extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('NOTE', style: theme.textTheme.labelMedium),
+                Text('Optional Note', style: theme.textTheme.labelMedium),
                 const SizedBox(height: 6),
                 TextField(
                   controller: controller,
                   enabled: enabled,
                   maxLines: 1,
-                  decoration: const InputDecoration(
-                    hintText: 'Add a note...',
+                  decoration: InputDecoration(
+                    hintText: 'What was this for?',
+                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
                     border: InputBorder.none,
                     isDense: true,
                     contentPadding: EdgeInsets.zero,
@@ -1043,18 +1136,18 @@ class _NoteField extends StatelessWidget {
 IconData _iconForCategory(String iconName) {
   switch (iconName) {
     case 'restaurant':
-      return Icons.restaurant_rounded;
+      return LucideIcons.utensils;
     case 'directions_car':
-      return Icons.directions_car_rounded;
+      return LucideIcons.car;
     case 'bolt':
-      return Icons.bolt_rounded;
+      return LucideIcons.zap;
     case 'local_hospital':
-      return Icons.local_hospital_rounded;
+      return LucideIcons.heartPulse;
     case 'shopping_bag':
-      return Icons.shopping_bag_rounded;
+      return LucideIcons.shoppingBag;
     case 'more_horiz':
-      return Icons.more_horiz_rounded;
+      return LucideIcons.moreHorizontal;
     default:
-      return Icons.category_rounded;
+      return LucideIcons.tag;
   }
 }
