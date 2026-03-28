@@ -71,10 +71,10 @@ abstract final class AppDecorations {
     );
   }
 
-  static BoxDecoration heroCard() {
+  static BoxDecoration heroCard({double radius = 20}) {
     return BoxDecoration(
       gradient: AppColors.balanceCardGradient,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: AppColors.purple.withValues(alpha: 0.28)),
       boxShadow: [
         ...heroInnerGlow(),

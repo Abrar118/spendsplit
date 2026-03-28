@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 class GoalsScreen extends StatelessWidget {
   const GoalsScreen({super.key});
@@ -15,7 +16,7 @@ class GoalsScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.menu_rounded),
+                const Icon(LucideIcons.menu),
                 const SizedBox(width: 12),
                 Text('Savings Goals', style: theme.textTheme.titleLarge),
                 const Spacer(),

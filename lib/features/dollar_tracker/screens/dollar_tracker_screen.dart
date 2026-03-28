@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 class DollarTrackerScreen extends StatelessWidget {
   const DollarTrackerScreen({super.key});
@@ -18,7 +19,7 @@ class DollarTrackerScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                    icon: const Icon(LucideIcons.chevronLeft),
                   ),
                   const SizedBox(width: 4),
                   Text('Dollar Tracker', style: theme.textTheme.titleLarge),

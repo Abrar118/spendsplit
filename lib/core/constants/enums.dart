@@ -15,6 +15,35 @@ enum AppTab {
       orElse: () => AppTab.dashboard,
     );
   }
+
+  AppRoute? get route => switch (this) {
+    AppTab.dashboard => AppRoute.dashboard,
+    AppTab.transactions => AppRoute.transactions,
+    AppTab.add => null,
+    AppTab.monthly => AppRoute.monthly,
+    AppTab.goals => AppRoute.goals,
+  };
+}
+
+enum AppRoute {
+  dashboard('/'),
+  transactions('/transactions'),
+  monthly('/monthly'),
+  goals('/goals'),
+  dollarTracker('/dollar-tracker'),
+  settings('/settings'),
+  lock('/lock');
+
+  const AppRoute(this.path);
+
+  final String path;
+
+  static AppRoute fromLocation(String location) {
+    return AppRoute.values.firstWhere(
+      (route) => route.path == location,
+      orElse: () => AppRoute.dashboard,
+    );
+  }
 }
 
 enum TransactionType {

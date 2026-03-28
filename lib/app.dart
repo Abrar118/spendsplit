@@ -9,6 +9,7 @@ import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/dollar_tracker/screens/dollar_tracker_screen.dart';
 import 'features/goals/screens/goals_screen.dart';
 import 'features/monthly/screens/monthly_screen.dart';
+import 'features/settings/screens/settings_screen.dart';
 import 'features/transactions/screens/transactions_screen.dart';
 import 'features/transactions/widgets/add_transaction_sheet.dart';
 
@@ -26,34 +27,31 @@ class SpendSplitApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final router = GoRouter(
       navigatorKey: _rootNavigatorKey,
-      initialLocation: '/',
+      initialLocation: AppRoute.dashboard.path,
       routes: [
         ShellRoute(
           navigatorKey: _shellNavigatorKey,
           builder: (context, state, child) {
-            return AppShell(
-              currentLocation: state.uri.toString(),
-              child: child,
-            );
+            return AppShell(currentLocation: state.uri.path, child: child);
           },
           routes: [
             GoRoute(
-              path: '/',
+              path: AppRoute.dashboard.path,
               pageBuilder: (context, state) =>
                   const NoTransitionPage(child: DashboardScreen()),
             ),
             GoRoute(
-              path: '/transactions',
+              path: AppRoute.transactions.path,
               pageBuilder: (context, state) =>
                   const NoTransitionPage(child: TransactionsScreen()),
             ),
             GoRoute(
-              path: '/monthly',
+              path: AppRoute.monthly.path,
               pageBuilder: (context, state) =>
                   const NoTransitionPage(child: MonthlyScreen()),
             ),
             GoRoute(
-              path: '/goals',
+              path: AppRoute.goals.path,
               pageBuilder: (context, state) =>
                   const NoTransitionPage(child: GoalsScreen()),
             ),
@@ -61,12 +59,17 @@ class SpendSplitApp extends StatelessWidget {
         ),
         GoRoute(
           parentNavigatorKey: _rootNavigatorKey,
-          path: '/dollar-tracker',
+          path: AppRoute.dollarTracker.path,
           builder: (context, state) => const DollarTrackerScreen(),
         ),
         GoRoute(
           parentNavigatorKey: _rootNavigatorKey,
-          path: '/lock',
+          path: AppRoute.settings.path,
+          builder: (context, state) => const SettingsScreen(),
+        ),
+        GoRoute(
+          parentNavigatorKey: _rootNavigatorKey,
+          path: AppRoute.lock.path,
           builder: (context, state) => const LockScreen(),
         ),
       ],
@@ -91,10 +94,10 @@ class AppShell extends StatelessWidget {
   final String currentLocation;
   final Widget child;
 
-  int get currentIndex => switch (currentLocation) {
-    '/transactions' => AppTab.transactions.pageIndex,
-    '/monthly' => AppTab.monthly.pageIndex,
-    '/goals' => AppTab.goals.pageIndex,
+  int get currentIndex => switch (AppRoute.fromLocation(currentLocation)) {
+    AppRoute.transactions => AppTab.transactions.pageIndex,
+    AppRoute.monthly => AppTab.monthly.pageIndex,
+    AppRoute.goals => AppTab.goals.pageIndex,
     _ => AppTab.dashboard.pageIndex,
   };
 
@@ -111,18 +114,13 @@ class AppShell extends StatelessWidget {
       bottomNavigationBar: BottomNavBar(
         currentIndex: currentIndex,
         onDestinationSelected: (index) {
-          switch (AppTab.fromIndex(index)) {
-            case AppTab.dashboard:
-              context.go('/');
-            case AppTab.transactions:
-              context.go('/transactions');
-            case AppTab.add:
-              return;
-            case AppTab.monthly:
-              context.go('/monthly');
-            case AppTab.goals:
-              context.go('/goals');
+          final tab = AppTab.fromIndex(index);
+          final route = tab.route;
+          if (route == null) {
+            return;
           }
+
+          context.go(route.path);
         },
         onAddPressed: () => showAddTransactionSheet(context),
       ),

@@ -184,7 +184,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                                   color: Colors.white.withValues(alpha: 0.08),
                                 ),
                               ),
-                              icon: const Icon(Icons.close_rounded),
+                              icon: const Icon(LucideIcons.x),
                             ),
                           ],
                         ),
@@ -264,10 +264,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                                           enabled: !_saving,
                                           textAlign: TextAlign.center,
                                           keyboardType:
-                                              const TextInputType
-                                                  .numberWithOptions(
-                                                    decimal: true,
-                                                  ),
+                                              const TextInputType.numberWithOptions(
+                                                decimal: true,
+                                              ),
                                           inputFormatters: [
                                             FilteringTextInputFormatter.allow(
                                               RegExp(r'^\d*\.?\d*'),
@@ -290,7 +289,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                                           decoration: InputDecoration(
                                             hintText: '0.00',
                                             hintStyle: theme
-                                                .textTheme.displayLarge
+                                                .textTheme
+                                                .displayLarge
                                                 ?.copyWith(
                                                   fontSize: 48,
                                                   color: Colors.white
@@ -399,9 +399,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                         child: Text(
                           _saving
                               ? 'SAVING...'
-                              : (_isEditing
-                                  ? 'UPDATE'
-                                  : 'SAVE TRANSACTION'),
+                              : (_isEditing ? 'UPDATE' : 'SAVE TRANSACTION'),
                         ),
                       ),
                     ),
@@ -494,8 +492,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     // Pick a color from the palette based on existing custom category count
     final existingCategories =
         ref.read(categoriesProvider).valueOrNull ?? const [];
-    final customCount =
-        existingCategories.where((c) => !c.isPredefined).length;
+    final customCount = existingCategories.where((c) => !c.isPredefined).length;
     final color =
         _customCategoryColors[customCount % _customCategoryColors.length];
 

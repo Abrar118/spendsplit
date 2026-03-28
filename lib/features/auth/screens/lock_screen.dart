@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 
@@ -102,7 +103,7 @@ class LockScreen extends StatelessWidget {
                         TextButton.icon(
                           onPressed: () {},
                           icon: const Icon(
-                            Icons.grid_4x4_rounded,
+                            LucideIcons.grid,
                             size: 16,
                             color: AppColors.teal,
                           ),
@@ -154,7 +155,7 @@ class _LockTopBar extends StatelessWidget {
               ),
             ),
           ),
-          const Icon(Icons.lock_rounded, color: AppColors.teal, size: 20),
+          const Icon(LucideIcons.lock, color: AppColors.teal, size: 20),
         ],
       ),
     );
@@ -189,7 +190,7 @@ class _FingerprintHero extends StatelessWidget {
             color: AppColors.surfaceLight.withValues(alpha: 0.26),
           ),
           child: Icon(
-            Icons.fingerprint_rounded,
+            LucideIcons.fingerprint,
             color: AppColors.teal,
             size: 46,
             shadows: [

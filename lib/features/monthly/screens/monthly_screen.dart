@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../../core/constants/enums.dart';
 import '../../../core/utils/date_utils.dart';
 
 class MonthlyScreen extends StatelessWidget {
@@ -17,13 +20,13 @@ class MonthlyScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.menu_rounded),
+                const Icon(LucideIcons.menu),
                 const SizedBox(width: 12),
                 Text('SpendSplit', style: theme.textTheme.titleLarge),
                 const Spacer(),
                 IconButton(
-                  onPressed: null,
-                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: () => context.push(AppRoute.settings.path),
+                  icon: const Icon(LucideIcons.settings),
                 ),
               ],
             ),

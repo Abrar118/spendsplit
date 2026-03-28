@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
@@ -358,7 +359,7 @@ class _DateFilterRow extends StatelessWidget {
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: onClear,
-                child: const Icon(Icons.close_rounded, size: 16),
+                child: const Icon(LucideIcons.x, size: 16),
               ),
             ],
           ],
