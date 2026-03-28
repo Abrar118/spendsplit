@@ -18,7 +18,9 @@ import '../widgets/filter_chips_row.dart';
 import '../widgets/transaction_tile.dart';
 
 class TransactionsScreen extends ConsumerStatefulWidget {
-  const TransactionsScreen({super.key});
+  const TransactionsScreen({super.key, this.initialMonth});
+
+  final DateTime? initialMonth;
 
   @override
   ConsumerState<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -28,6 +30,25 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   TransactionQuickFilter _quickFilter = TransactionQuickFilter.all;
   TransactionAdvancedFilters _advancedFilters =
       const TransactionAdvancedFilters();
+
+  @override
+  void initState() {
+    super.initState();
+    _advancedFilters = _filtersForMonth(widget.initialMonth);
+  }
+
+  @override
+  void didUpdateWidget(covariant TransactionsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldMonth = oldWidget.initialMonth;
+    final newMonth = widget.initialMonth;
+    final hasChanged =
+        oldMonth?.year != newMonth?.year || oldMonth?.month != newMonth?.month;
+
+    if (hasChanged) {
+      _advancedFilters = _filtersForMonth(newMonth);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -113,26 +134,31 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             return Padding(
                               key: ValueKey(transaction.id),
                               padding: const EdgeInsets.only(bottom: 12),
-                              child: TransactionTile(
-                                transaction: transaction,
-                                category:
-                                    categoriesById[transaction.categoryId],
-                                onTap: () => showAddTransactionSheet(
-                                  context,
-                                  existingTransaction: transaction,
-                                ),
-                                onDelete: () =>
-                                    _deleteTransaction(transaction),
-                              ).animate().fadeIn(
-                                duration: 200.ms,
-                                delay: (50 * index).ms,
-                              ).slideX(
-                                begin: 0.03,
-                                end: 0,
-                                duration: 200.ms,
-                                delay: (50 * index).ms,
-                                curve: Curves.easeOutCubic,
-                              ),
+                              child:
+                                  TransactionTile(
+                                        transaction: transaction,
+                                        category:
+                                            categoriesById[transaction
+                                                .categoryId],
+                                        onTap: () => showAddTransactionSheet(
+                                          context,
+                                          existingTransaction: transaction,
+                                        ),
+                                        onDelete: () =>
+                                            _deleteTransaction(transaction),
+                                      )
+                                      .animate()
+                                      .fadeIn(
+                                        duration: 200.ms,
+                                        delay: (50 * index).ms,
+                                      )
+                                      .slideX(
+                                        begin: 0.03,
+                                        end: 0,
+                                        duration: 200.ms,
+                                        delay: (50 * index).ms,
+                                        curve: Curves.easeOutCubic,
+                                      ),
                             );
                           }, childCount: section.transactions.length),
                         ),
@@ -209,6 +235,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     }).toList();
   }
 
+  TransactionAdvancedFilters _filtersForMonth(DateTime? month) {
+    if (month == null) {
+      return const TransactionAdvancedFilters();
+    }
+
+    final startDate = DateTime(month.year, month.month);
+    final endDate = DateTime(month.year, month.month + 1, 0);
+    return TransactionAdvancedFilters(startDate: startDate, endDate: endDate);
+  }
+
   /// Groups transactions by date (normalized to midnight), sorted descending.
   /// Uses a single `DateTime.now()` call to avoid midnight-crossing splits.
   List<_TransactionSection> _groupTransactions(
@@ -227,8 +263,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     }
 
     // Sort sections by date descending
-    final sortedKeys = grouped.keys.toList()
-      ..sort((a, b) => b.compareTo(a));
+    final sortedKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
     return sortedKeys
         .map(
@@ -322,9 +357,9 @@ class _DateHeaderDelegate extends SliverPersistentHeaderDelegate {
           padding: const EdgeInsets.only(bottom: 8, top: 6),
           child: Text(
             label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: AppColors.textSecondary),
           ),
         ),
       ),

@@ -1,43 +1,676 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../../core/constants/categories.dart';
 import '../../../core/constants/enums.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/widgets/amount_text.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/glass_card.dart';
+import '../../../data/models/financial_summaries.dart';
+import '../../../providers/providers.dart';
 
-class MonthlyScreen extends StatelessWidget {
+class MonthlyScreen extends ConsumerStatefulWidget {
   const MonthlyScreen({super.key});
+
+  @override
+  ConsumerState<MonthlyScreen> createState() => _MonthlyScreenState();
+}
+
+class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
+  late DateTime _visibleMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _visibleMonth = DateTime(now.year, now.month);
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return SafeArea(
-      bottom: false,
+    final analyticsAsync = ref.watch(monthlyAnalyticsProvider(_visibleMonth));
+
+    return GestureDetector(
+      onHorizontalDragEnd: (details) {
+        final velocity = details.primaryVelocity ?? 0;
+        if (velocity.abs() < 220) return;
+        // Block swipe-forward on current month
+        if (velocity < 0 && _isCurrentMonth) return;
+        _changeMonth(velocity < 0 ? 1 : -1);
+      },
+      child: SafeArea(
+        bottom: false,
+        child: analyticsAsync.when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.teal),
+          ),
+          error: (error, stackTrace) => Center(
+            child: Text(
+              'Could not load monthly analytics',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.coral,
+              ),
+            ),
+          ),
+          data: (analytics) {
+            return CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    132,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      _TopBar(
+                        onSettingsTap: () =>
+                            context.push(AppRoute.settings.path),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      _MonthNavigator(
+                        month: _visibleMonth,
+                        onPrevious: () => _changeMonth(-1),
+                        onNext: _isCurrentMonth ? null : () => _changeMonth(1),
+                      ),
+                      const SizedBox(height: AppSpacing.section),
+                      if (analytics.transactionCount == 0)
+                        const SizedBox.shrink()
+                      else ...[
+                        _MonthlyMetricCard(
+                              title: 'TOTAL INCOME',
+                              amount: analytics.summary.income,
+                              gradient: AppColors.incomeCardGradient,
+                              chipLabel: _formatDeltaLabel(
+                                analytics.incomeDelta,
+                              ),
+                              chipIcon: analytics.incomeDelta >= 0
+                                  ? LucideIcons.trendingUp
+                                  : LucideIcons.trendingDown,
+                            )
+                            .animate()
+                            .fadeIn(duration: 240.ms)
+                            .slideY(
+                              begin: 0.08,
+                              end: 0,
+                              duration: 240.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
+                        const SizedBox(height: 14),
+                        _MonthlyMetricCard(
+                              title: 'TOTAL EXPENSES',
+                              amount: analytics.summary.expenses,
+                              gradient: AppColors.expenseCardGradient,
+                              chipLabel: _formatDeltaLabel(
+                                analytics.expenseDelta,
+                              ),
+                              chipIcon: analytics.expenseDelta >= 0
+                                  ? LucideIcons.trendingUp
+                                  : LucideIcons.trendingDown,
+                            )
+                            .animate()
+                            .fadeIn(duration: 240.ms, delay: 60.ms)
+                            .slideY(
+                              begin: 0.08,
+                              end: 0,
+                              duration: 240.ms,
+                              delay: 60.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
+                        const SizedBox(height: 14),
+                        _MonthlyMetricCard(
+                              title: 'AMOUNT SAVED',
+                              amount: analytics.summary.saved,
+                              gradient: AppColors.savingsCardGradient,
+                              chipLabel: _formatSavingsRateLabel(
+                                analytics.savingsRate,
+                              ),
+                              chipIcon: analytics.savingsRate < 0
+                                  ? LucideIcons.trendingDown
+                                  : LucideIcons.shield,
+                              chipColor: analytics.savingsRate < 0
+                                  ? AppColors.coral
+                                  : Colors.white,
+                            )
+                            .animate()
+                            .fadeIn(duration: 240.ms, delay: 120.ms)
+                            .slideY(
+                              begin: 0.08,
+                              end: 0,
+                              duration: 240.ms,
+                              delay: 120.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
+                        const SizedBox(height: AppSpacing.section),
+                        _SectionTitle(
+                          title: 'Where your money went',
+                          trailing: null,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        _CategoryDonutCard(
+                              analytics: analytics,
+                              onViewAll: () => context.go(
+                                '${AppRoute.transactions.path}?month=${_formatMonthQuery(_visibleMonth)}',
+                              ),
+                            )
+                            .animate()
+                            .fadeIn(duration: 260.ms, delay: 180.ms)
+                            .slideY(
+                              begin: 0.08,
+                              end: 0,
+                              duration: 260.ms,
+                              delay: 180.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
+                        const SizedBox(height: AppSpacing.section),
+                        _SectionTitle(
+                          title: 'Category Details',
+                          trailing: 'SORTED BY VOLUME',
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        if (analytics.categories.isEmpty)
+                          const GlassCard(
+                            radius: 20,
+                            child: Text('No expense categories in this month.'),
+                          )
+                        else
+                          for (
+                            var i = 0;
+                            i < analytics.categories.length;
+                            i++
+                          ) ...[
+                            _CategoryDetailTile(
+                                  item: analytics.categories[i],
+                                  highlightAsTop: i == 0,
+                                )
+                                .animate()
+                                .fadeIn(
+                                  duration: 220.ms,
+                                  delay: (220 + (i * 40)).ms,
+                                )
+                                .slideX(
+                                  begin: 0.04,
+                                  end: 0,
+                                  duration: 220.ms,
+                                  delay: (220 + (i * 40)).ms,
+                                  curve: Curves.easeOutCubic,
+                                ),
+                            if (i != analytics.categories.length - 1)
+                              const SizedBox(height: 12),
+                          ],
+                      ],
+                    ]),
+                  ),
+                ),
+                if (analytics.transactionCount == 0)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        0,
+                        AppSpacing.md,
+                        132,
+                      ),
+                      child: Center(
+                        child: EmptyState(
+                          icon: LucideIcons.calendarDays,
+                          title: 'No data for this month.',
+                          message:
+                              'Swipe or tap the arrows to explore another month.',
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  bool get _isCurrentMonth {
+    final now = DateTime.now();
+    return _visibleMonth.year == now.year && _visibleMonth.month == now.month;
+  }
+
+  void _changeMonth(int monthOffset) {
+    setState(() {
+      _visibleMonth = DateTime(
+        _visibleMonth.year,
+        _visibleMonth.month + monthOffset,
+      );
+    });
+  }
+
+  String _formatDeltaLabel(double value) {
+    final sign = value > 0
+        ? '+'
+        : value < 0
+        ? '-'
+        : '';
+    final capped = value.abs().clamp(0.0, 9.99);
+    final percent = (capped * 100).toStringAsFixed(0);
+    final overflow = value.abs() > 9.99 ? '>' : '';
+    return '$sign$overflow$percent% FROM LAST MONTH';
+  }
+
+  String _formatSavingsRateLabel(double value) {
+    final percent = (value.abs() * 100).toStringAsFixed(0);
+    if (value < 0) {
+      return '$percent% NET WITHDRAWAL';
+    }
+
+    return '$percent% SAVINGS RATE';
+  }
+
+  String _formatMonthQuery(DateTime month) {
+    return '${month.year}-${month.month.toString().padLeft(2, '0')}';
+  }
+}
+
+class _TopBar extends StatelessWidget {
+  const _TopBar({required this.onSettingsTap});
+
+  final VoidCallback onSettingsTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        IconButton(onPressed: () {}, icon: const Icon(LucideIcons.menu)),
+        Expanded(
+          child: Center(
+            child: Text('SpendSplit', style: theme.textTheme.titleLarge),
+          ),
+        ),
+        IconButton(
+          onPressed: onSettingsTap,
+          icon: const Icon(LucideIcons.settings),
+        ),
+      ],
+    );
+  }
+}
+
+class _MonthNavigator extends StatelessWidget {
+  const _MonthNavigator({
+    required this.month,
+    required this.onPrevious,
+    this.onNext,
+  });
+
+  final DateTime month;
+  final VoidCallback onPrevious;
+  final VoidCallback? onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Text(
+          'FISCAL PERIOD',
+          style: theme.textTheme.labelMedium?.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              onPressed: onPrevious,
+              icon: const Icon(LucideIcons.chevronLeft, color: AppColors.teal),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              formatMonthYear(month).toUpperCase(),
+              style: theme.textTheme.headlineMedium,
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: onNext,
+              icon: const Icon(LucideIcons.chevronRight, color: AppColors.teal),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MonthlyMetricCard extends StatelessWidget {
+  const _MonthlyMetricCard({
+    required this.title,
+    required this.amount,
+    required this.gradient,
+    required this.chipLabel,
+    required this.chipIcon,
+    this.chipColor = Colors.white,
+  });
+
+  final String title;
+  final double amount;
+  final Gradient gradient;
+  final String chipLabel;
+  final IconData chipIcon;
+  final Color chipColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.22),
+            blurRadius: 24,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 132),
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Text(
+              title,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: Colors.white.withValues(alpha: 0.76),
+              ),
+            ),
+            const SizedBox(height: 10),
+            AnimatedAmountText(
+              value: amount,
+              formatter: (value) => formatBdtAmount(value, fractionDigits: 0),
+              textStyle: theme.textTheme.displaySmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(chipIcon, size: 12, color: chipColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    chipLabel,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: chipColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title, required this.trailing});
+
+  final String title;
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 20,
+          decoration: BoxDecoration(
+            color: AppColors.teal,
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(title, style: theme.textTheme.titleMedium),
+        const Spacer(),
+        if (trailing != null)
+          Text(
+            trailing!,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _CategoryDonutCard extends StatelessWidget {
+  const _CategoryDonutCard({required this.analytics, required this.onViewAll});
+
+  final MonthlyAnalytics analytics;
+  final VoidCallback onViewAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (analytics.categories.isEmpty) {
+      return GlassCard(
+        radius: 24,
+        glowColor: AppColors.blue,
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            Text('No expense data yet', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              'Add expense transactions to see the category breakdown.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 18),
+            InkWell(
+              onTap: onViewAll,
+              borderRadius: BorderRadius.circular(999),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Text(
+                  'View all →',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: AppColors.teal,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GlassCard(
+      radius: 24,
+      glowColor: AppColors.blue,
+      child: Column(
+        children: [
+          SizedBox(
+            height: 220,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                const Icon(LucideIcons.menu),
-                const SizedBox(width: 12),
-                Text('SpendSplit', style: theme.textTheme.titleLarge),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => context.push(AppRoute.settings.path),
-                  icon: const Icon(LucideIcons.settings),
+                PieChart(
+                  PieChartData(
+                    sectionsSpace: 6,
+                    centerSpaceRadius: 54,
+                    startDegreeOffset: -90,
+                    sections: [
+                      for (var i = 0; i < analytics.categories.length; i++)
+                        PieChartSectionData(
+                          value: analytics.categories[i].amount,
+                          color: i == 0
+                              ? AppColors.teal
+                              : Color(analytics.categories[i].colorValue),
+                          radius: i == 0 ? 28 : 24,
+                          showTitle: false,
+                        ),
+                    ],
+                  ),
+                  swapAnimationDuration: const Duration(milliseconds: 700),
+                  swapAnimationCurve: Curves.easeOutCubic,
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'TOP CATEGORY',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      analytics.topCategoryName ?? 'None',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            Text('FISCAL PERIOD', style: theme.textTheme.labelMedium),
-            const SizedBox(height: 8),
-            Text(
-              formatMonthYear(DateTime.now()),
-              style: theme.textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                '${analytics.transactionCount} transactions this month',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const Spacer(),
+              InkWell(
+                onTap: onViewAll,
+                borderRadius: BorderRadius.circular(999),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    'View all →',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: AppColors.teal,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryDetailTile extends StatelessWidget {
+  const _CategoryDetailTile({required this.item, required this.highlightAsTop});
+
+  final MonthlyCategoryBreakdown item;
+  final bool highlightAsTop;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = highlightAsTop ? AppColors.teal : Color(item.colorValue);
+    return GlassCard(
+      radius: 20,
+      padding: const EdgeInsets.fromLTRB(0, 0, 16, 0),
+      glowColor: color,
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(999),
+              ),
             ),
-            const Expanded(child: SizedBox.shrink()),
+            const SizedBox(width: 14),
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                iconForCategoryKey(item.iconKey),
+                color: color,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  formatBdtAmount(item.amount, fractionDigits: 0),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${(item.share * 100).toStringAsFixed(1)}% OF TOTAL',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),

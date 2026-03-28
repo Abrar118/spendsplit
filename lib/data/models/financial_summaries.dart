@@ -26,6 +26,43 @@ class MonthlyFinanceSummary {
   final double saved;
 }
 
+class MonthlyCategoryBreakdown {
+  const MonthlyCategoryBreakdown({
+    required this.name,
+    required this.iconKey,
+    required this.colorValue,
+    required this.amount,
+    required this.share,
+  });
+
+  final String name;
+  final String iconKey;
+  final int colorValue;
+  final double amount;
+  final double share;
+}
+
+class MonthlyAnalytics {
+  const MonthlyAnalytics({
+    required this.summary,
+    required this.incomeDelta,
+    required this.expenseDelta,
+    required this.savingsRate,
+    required this.transactionCount,
+    required this.categories,
+  });
+
+  final MonthlyFinanceSummary summary;
+  final double incomeDelta;
+  final double expenseDelta;
+  final double savingsRate;
+  final int transactionCount;
+  final List<MonthlyCategoryBreakdown> categories;
+
+  String? get topCategoryName =>
+      categories.isEmpty ? null : categories.first.name;
+}
+
 class DollarTrackerSummary {
   const DollarTrackerSummary({
     required this.year,
@@ -163,6 +200,71 @@ abstract final class FinanceCalculators {
     );
   }
 
+  static MonthlyAnalytics monthlyAnalytics({
+    required Iterable<TransactionsTableData> transactions,
+    required Iterable<CategoriesTableData> categories,
+    required DateTime month,
+  }) {
+    final normalizedMonth = DateTime(month.year, month.month);
+    final currentSummary = monthlySummary(
+      transactions: transactions,
+      month: normalizedMonth,
+    );
+    final previousSummary = monthlySummary(
+      transactions: transactions,
+      month: DateTime(normalizedMonth.year, normalizedMonth.month - 1),
+    );
+    final scopedTransactions = transactions
+        .where((entry) => _isSameMonth(entry.date, normalizedMonth))
+        .toList();
+    final expenseTransactions = scopedTransactions
+        .where((entry) => entry.type == 'expense')
+        .toList();
+    final categoriesById = {
+      for (final category in categories) category.id: category,
+    };
+    final amountByCategory = <int?, double>{};
+
+    for (final entry in expenseTransactions) {
+      amountByCategory.update(
+        entry.categoryId,
+        (value) => value + entry.amount,
+        ifAbsent: () => entry.amount,
+      );
+    }
+
+    final breakdown = amountByCategory.entries.map((entry) {
+      final category = categoriesById[entry.key];
+      final amount = entry.value;
+      return MonthlyCategoryBreakdown(
+        name: category?.name ?? 'Uncategorized',
+        iconKey: category?.icon ?? 'more_horiz',
+        colorValue: category?.color ?? 0xFF8892A7,
+        amount: amount,
+        share: currentSummary.expenses <= 0
+            ? 0
+            : amount / currentSummary.expenses,
+      );
+    }).toList()..sort((a, b) => b.amount.compareTo(a.amount));
+
+    return MonthlyAnalytics(
+      summary: currentSummary,
+      incomeDelta: _monthDelta(
+        current: currentSummary.income,
+        previous: previousSummary.income,
+      ),
+      expenseDelta: _monthDelta(
+        current: currentSummary.expenses,
+        previous: previousSummary.expenses,
+      ),
+      savingsRate: currentSummary.income <= 0
+          ? 0
+          : currentSummary.saved / currentSummary.income,
+      transactionCount: expenseTransactions.length,
+      categories: breakdown,
+    );
+  }
+
   static double _sumByType(
     Iterable<TransactionsTableData> transactions,
     Set<String> types,
@@ -174,5 +276,16 @@ abstract final class FinanceCalculators {
 
   static bool _isSameMonth(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month;
+  }
+
+  static double _monthDelta({
+    required double current,
+    required double previous,
+  }) {
+    if (previous == 0) {
+      return current == 0 ? 0 : 1;
+    }
+
+    return (current - previous) / previous;
   }
 }

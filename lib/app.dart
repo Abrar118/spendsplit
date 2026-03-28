@@ -42,8 +42,13 @@ class SpendSplitApp extends StatelessWidget {
             ),
             GoRoute(
               path: AppRoute.transactions.path,
-              pageBuilder: (context, state) =>
-                  const NoTransitionPage(child: TransactionsScreen()),
+              pageBuilder: (context, state) => NoTransitionPage(
+                child: TransactionsScreen(
+                  initialMonth: _parseMonthQuery(
+                    state.uri.queryParameters['month'],
+                  ),
+                ),
+              ),
             ),
             GoRoute(
               path: AppRoute.monthly.path,
@@ -82,6 +87,26 @@ class SpendSplitApp extends StatelessWidget {
       routerConfig: router,
     );
   }
+}
+
+DateTime? _parseMonthQuery(String? value) {
+  if (value == null || value.isEmpty) {
+    return null;
+  }
+
+  final parts = value.split('-');
+  if (parts.length != 2) {
+    return null;
+  }
+
+  final year = int.tryParse(parts[0]);
+  final month = int.tryParse(parts[1]);
+
+  if (year == null || month == null || month < 1 || month > 12) {
+    return null;
+  }
+
+  return DateTime(year, month);
 }
 
 class AppShell extends StatelessWidget {

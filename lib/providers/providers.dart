@@ -133,6 +133,38 @@ final monthlySummaryProvider =
       );
     });
 
+final monthlyAnalyticsProvider =
+    Provider.family<AsyncValue<MonthlyAnalytics>, DateTime>((ref, month) {
+      final transactions = ref.watch(transactionsProvider);
+      final categories = ref.watch(categoriesProvider);
+
+      if (transactions.hasError) {
+        return AsyncError(
+          transactions.error!,
+          transactions.asError?.stackTrace ?? StackTrace.current,
+        );
+      }
+
+      if (categories.hasError) {
+        return AsyncError(
+          categories.error!,
+          categories.asError?.stackTrace ?? StackTrace.current,
+        );
+      }
+
+      if (!transactions.hasValue || !categories.hasValue) {
+        return const AsyncLoading();
+      }
+
+      return AsyncData(
+        FinanceCalculators.monthlyAnalytics(
+          transactions: transactions.value!,
+          categories: categories.value!,
+          month: month,
+        ),
+      );
+    });
+
 final dollarTrackerSummaryProvider = Provider<AsyncValue<DollarTrackerSummary>>(
   (ref) {
     final settings = ref.watch(appSettingsProvider);
