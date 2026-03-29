@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/shimmer_skeleton.dart';
 import '../../../data/database/app_database.dart';
 import '../../../data/models/app_settings.dart';
 import '../../../providers/providers.dart';
@@ -443,10 +444,8 @@ class _SummarySkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      glowColor: AppColors.amber,
-      radius: 30,
-      child: const SizedBox(height: 172),
+    return const ShimmerSkeleton(
+      child: SkeletonCard(height: 172, radius: 30),
     );
   }
 }
@@ -456,14 +455,16 @@ class _ExpenseListSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: const [
-        GlassCard(radius: 22, child: SizedBox(height: 82)),
-        SizedBox(height: AppSpacing.sm),
-        GlassCard(radius: 22, child: SizedBox(height: 82)),
-        SizedBox(height: AppSpacing.sm),
-        GlassCard(radius: 22, child: SizedBox(height: 82)),
-      ],
+    return const ShimmerSkeleton(
+      child: Column(
+        children: [
+          SkeletonCard(height: 82, radius: 22),
+          SizedBox(height: AppSpacing.sm),
+          SkeletonCard(height: 82, radius: 22),
+          SizedBox(height: AppSpacing.sm),
+          SkeletonCard(height: 82, radius: 22),
+        ],
+      ),
     );
   }
 }

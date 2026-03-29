@@ -441,7 +441,7 @@ class _MonthlyMetricCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.22),
+            color: AppColors.background.withValues(alpha: 0.55),
             blurRadius: 24,
             offset: const Offset(0, 16),
           ),
@@ -471,7 +471,7 @@ class _MonthlyMetricCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.18),
+                color: AppColors.background.withValues(alpha: 0.45),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
               ),

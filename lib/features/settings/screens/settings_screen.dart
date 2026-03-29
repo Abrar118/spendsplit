@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -197,10 +198,10 @@ class SettingsScreen extends ConsumerWidget {
 
     double? value;
     try {
-      value = await showModalBottomSheet<double>(
+      value = await showMaterialModalBottomSheet<double>(
         context: context,
         backgroundColor: Colors.transparent,
-        isScrollControlled: true,
+        bounce: true,
         builder: (context) {
           final theme = Theme.of(context);
           String? errorText;
@@ -221,6 +222,17 @@ class SettingsScreen extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Align(
+                        child: Container(
+                          width: 44,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 18),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
                       Text(title, style: theme.textTheme.headlineSmall),
                       const SizedBox(height: AppSpacing.xs),
                       Text(helperText, style: theme.textTheme.bodyMedium),

@@ -17,7 +17,9 @@ class BalanceCard extends StatelessWidget {
     final theme = Theme.of(context);
     return Column(
       children: [
-        DecoratedBox(
+        Hero(
+          tag: 'balance-card',
+          child: DecoratedBox(
           decoration: AppDecorations.heroCard(radius: 20),
           child: Padding(
             padding: const EdgeInsets.all(22),
@@ -115,6 +117,7 @@ class BalanceCard extends StatelessWidget {
               ],
             ),
           ),
+        ),
         ),
         const SizedBox(height: 20),
         Row(

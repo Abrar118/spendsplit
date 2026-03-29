@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -172,7 +173,13 @@ class AppShell extends StatelessWidget {
           if (route == null) return;
           context.go(route.path);
         },
-        onAddPressed: () => showAddTransactionSheet(context),
+        onAddPressed: () async {
+          await HapticFeedback.lightImpact();
+          if (!context.mounted) {
+            return;
+          }
+          await showAddTransactionSheet(context);
+        },
       ),
     );
   }
