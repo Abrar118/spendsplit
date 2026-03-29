@@ -63,6 +63,18 @@ IconData iconForCategoryKey(String iconName) {
       return LucideIcons.shoppingBag;
     case 'more_horiz':
       return LucideIcons.moreHorizontal;
+    case 'school':
+      return LucideIcons.graduationCap;
+    case 'monitor':
+      return LucideIcons.monitor;
+    case 'book':
+      return LucideIcons.bookOpen;
+    case 'cpu':
+      return LucideIcons.cpu;
+    case 'globe':
+      return LucideIcons.globe2;
+    case 'briefcase':
+      return LucideIcons.briefcase;
     default:
       return LucideIcons.tag;
   }

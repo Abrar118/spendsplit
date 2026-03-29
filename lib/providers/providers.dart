@@ -95,6 +95,13 @@ final dollarExpensesProvider = StreamProvider((ref) {
   return ref.watch(dollarTrackerRepositoryProvider).watchExpenses();
 });
 
+final dollarExpensesForYearProvider =
+    StreamProvider.family<List<DollarExpensesTableData>, int>((ref, year) {
+      return ref
+          .watch(dollarTrackerRepositoryProvider)
+          .watchExpensesForYear(year);
+    });
+
 final balanceSummaryProvider = Provider<AsyncValue<BalanceSummary>>((ref) {
   final settings = ref.watch(appSettingsProvider);
   final transactions = ref.watch(transactionsProvider);
@@ -179,6 +186,20 @@ final dollarTrackerSummaryProvider = Provider<AsyncValue<DollarTrackerSummary>>(
     );
   },
 );
+
+final dollarTrackerSummaryForYearProvider =
+    Provider.family<AsyncValue<DollarTrackerSummary>, int>((ref, year) {
+      final settings = ref.watch(appSettingsProvider);
+      final expenses = ref.watch(dollarExpensesForYearProvider(year));
+
+      return expenses.whenData(
+        (entries) => FinanceCalculators.dollarSummary(
+          expenses: entries,
+          annualLimit: settings.dollarAnnualLimit,
+          year: year,
+        ),
+      );
+    });
 
 final savingsInsightsProvider = Provider<AsyncValue<SavingsInsights>>((ref) {
   final transactions = ref.watch(transactionsProvider);
