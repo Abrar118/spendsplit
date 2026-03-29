@@ -10,6 +10,7 @@ import '../../../core/constants/categories.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/utils/input_formatters.dart';
 import '../../../data/database/app_database.dart';
 import '../../../providers/providers.dart';
 
@@ -132,9 +133,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
                           decimal: true,
                         ),
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d*'),
-                          ),
+                          DecimalTextInputFormatter(maxDecimalPlaces: 2),
                         ],
                         decoration: const InputDecoration(
                           prefixText: r'$ ',

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/constants/enums.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/bottom_nav_bar.dart';
+import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/screens/lock_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/dollar_tracker/screens/dollar_tracker_screen.dart';
@@ -12,6 +14,7 @@ import 'features/monthly/screens/monthly_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 import 'features/transactions/screens/transactions_screen.dart';
 import 'features/transactions/widgets/add_transaction_sheet.dart';
+import 'providers/providers.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
@@ -20,66 +23,101 @@ final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'shell',
 );
 
-class SpendSplitApp extends StatelessWidget {
-  const SpendSplitApp({super.key});
+/// A [ChangeNotifier] that listens to auth-related Riverpod providers and
+/// calls [notifyListeners] to trigger GoRouter's [redirect] re-evaluation
+/// without recreating the entire router.
+class _RouterNotifier extends ChangeNotifier {
+  _RouterNotifier(this._ref) {
+    _ref.listen(appSettingsProvider, (prev, next) => notifyListeners());
+    _ref.listen(appSessionUnlockedProvider, (prev, next) => notifyListeners());
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    final router = GoRouter(
-      navigatorKey: _rootNavigatorKey,
-      initialLocation: AppRoute.dashboard.path,
-      routes: [
-        ShellRoute(
-          navigatorKey: _shellNavigatorKey,
-          builder: (context, state, child) {
-            return AppShell(currentLocation: state.uri.path, child: child);
-          },
-          routes: [
-            GoRoute(
-              path: AppRoute.dashboard.path,
-              pageBuilder: (context, state) =>
-                  const NoTransitionPage(child: DashboardScreen()),
-            ),
-            GoRoute(
-              path: AppRoute.transactions.path,
-              pageBuilder: (context, state) => NoTransitionPage(
-                child: TransactionsScreen(
-                  initialMonth: _parseMonthQuery(
-                    state.uri.queryParameters['month'],
-                  ),
+  final Ref _ref;
+
+  String? redirect(BuildContext context, GoRouterState state) {
+    final settings = _ref.read(appSettingsProvider);
+    final sessionUnlocked = _ref.read(appSessionUnlockedProvider);
+    final isLockRoute = state.uri.path == AppRoute.lock.path;
+    final shouldRequireLock = settings.biometricEnabled && !sessionUnlocked;
+
+    if (shouldRequireLock && !isLockRoute) return AppRoute.lock.path;
+    if (!shouldRequireLock && isLockRoute) return AppRoute.dashboard.path;
+    return null;
+  }
+}
+
+final _routerNotifierProvider = Provider<_RouterNotifier>((ref) {
+  final notifier = _RouterNotifier(ref);
+  ref.onDispose(notifier.dispose);
+  return notifier;
+});
+
+final routerProvider = Provider<GoRouter>((ref) {
+  final notifier = ref.watch(_routerNotifierProvider);
+  return GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: AppRoute.dashboard.path,
+    refreshListenable: notifier,
+    redirect: notifier.redirect,
+    routes: [
+      ShellRoute(
+        navigatorKey: _shellNavigatorKey,
+        builder: (context, state, child) {
+          return AppShell(currentLocation: state.uri.path, child: child);
+        },
+        routes: [
+          GoRoute(
+            path: AppRoute.dashboard.path,
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: DashboardScreen()),
+          ),
+          GoRoute(
+            path: AppRoute.transactions.path,
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: TransactionsScreen(
+                initialMonth: _parseMonthQuery(
+                  state.uri.queryParameters['month'],
                 ),
               ),
             ),
-            GoRoute(
-              path: AppRoute.monthly.path,
-              pageBuilder: (context, state) =>
-                  const NoTransitionPage(child: MonthlyScreen()),
-            ),
-            GoRoute(
-              path: AppRoute.goals.path,
-              pageBuilder: (context, state) =>
-                  const NoTransitionPage(child: GoalsScreen()),
-            ),
-          ],
-        ),
-        GoRoute(
-          parentNavigatorKey: _rootNavigatorKey,
-          path: AppRoute.dollarTracker.path,
-          builder: (context, state) => const DollarTrackerScreen(),
-        ),
-        GoRoute(
-          parentNavigatorKey: _rootNavigatorKey,
-          path: AppRoute.settings.path,
-          builder: (context, state) => const SettingsScreen(),
-        ),
-        GoRoute(
-          parentNavigatorKey: _rootNavigatorKey,
-          path: AppRoute.lock.path,
-          builder: (context, state) => const LockScreen(),
-        ),
-      ],
-    );
+          ),
+          GoRoute(
+            path: AppRoute.monthly.path,
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: MonthlyScreen()),
+          ),
+          GoRoute(
+            path: AppRoute.goals.path,
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: GoalsScreen()),
+          ),
+        ],
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoute.dollarTracker.path,
+        builder: (context, state) => const DollarTrackerScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoute.settings.path,
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoute.lock.path,
+        builder: (context, state) => const LockScreen(),
+      ),
+    ],
+  );
+});
 
+class SpendSplitApp extends ConsumerWidget {
+  const SpendSplitApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'SpendSplit',
       debugShowCheckedModeBanner: false,
@@ -90,22 +128,12 @@ class SpendSplitApp extends StatelessWidget {
 }
 
 DateTime? _parseMonthQuery(String? value) {
-  if (value == null || value.isEmpty) {
-    return null;
-  }
-
+  if (value == null || value.isEmpty) return null;
   final parts = value.split('-');
-  if (parts.length != 2) {
-    return null;
-  }
-
+  if (parts.length != 2) return null;
   final year = int.tryParse(parts[0]);
   final month = int.tryParse(parts[1]);
-
-  if (year == null || month == null || month < 1 || month > 12) {
-    return null;
-  }
-
+  if (year == null || month == null || month < 1 || month > 12) return null;
   return DateTime(year, month);
 }
 
@@ -141,10 +169,7 @@ class AppShell extends StatelessWidget {
         onDestinationSelected: (index) {
           final tab = AppTab.fromIndex(index);
           final route = tab.route;
-          if (route == null) {
-            return;
-          }
-
+          if (route == null) return;
           context.go(route.path);
         },
         onAddPressed: () => showAddTransactionSheet(context),

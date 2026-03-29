@@ -10,6 +10,7 @@ import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/utils/input_formatters.dart';
 import '../../../data/database/app_database.dart';
 import '../../../providers/providers.dart';
 
@@ -268,8 +269,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                                                 decimal: true,
                                               ),
                                           inputFormatters: [
-                                            FilteringTextInputFormatter.allow(
-                                              RegExp(r'^\d*\.?\d*'),
+                                            DecimalTextInputFormatter(
+                                              maxDecimalPlaces: 2,
                                             ),
                                           ],
                                           style: theme.textTheme.displayLarge

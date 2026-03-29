@@ -10,6 +10,7 @@ import '../../../core/constants/goal_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/utils/input_formatters.dart';
 import '../../../data/database/app_database.dart';
 import '../../../providers/providers.dart';
 
@@ -359,9 +360,7 @@ class _CurrencyField extends StatelessWidget {
         TextField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-          ],
+          inputFormatters: [DecimalTextInputFormatter(maxDecimalPlaces: 2)],
           decoration: InputDecoration(prefixText: '৳ ', hintText: '0'),
         ),
       ],

@@ -10,6 +10,7 @@ import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/shimmer_skeleton.dart';
 import '../../../data/database/app_database.dart';
 import '../../../providers/providers.dart';
 import '../widgets/add_transaction_sheet.dart';
@@ -94,87 +95,100 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: transactionsAsync.when(
-                data: (transactions) {
-                  final categoriesById = {
-                    for (final category
-                        in categoriesAsync.valueOrNull ??
-                            const <CategoriesTableData>[])
-                      category.id: category,
-                  };
-                  final filtered = _applyFilters(transactions);
+              child: RefreshIndicator(
+                color: AppColors.teal,
+                onRefresh: _refreshTransactions,
+                child: transactionsAsync.when(
+                  data: (transactions) {
+                    final categoriesById = {
+                      for (final category
+                          in categoriesAsync.valueOrNull ??
+                              const <CategoriesTableData>[])
+                        category.id: category,
+                    };
+                    final filtered = _applyFilters(transactions);
 
-                  if (filtered.isEmpty) {
-                    return const Center(
-                      child: EmptyState(
-                        icon: LucideIcons.wallet,
-                        title: 'No transactions yet.',
-                        message: 'Tap + to add your first one.',
-                      ),
-                    );
-                  }
+                    if (filtered.isEmpty) {
+                      return ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: const [
+                          SizedBox(height: 120),
+                          EmptyState(
+                            icon: LucideIcons.wallet,
+                            title: 'No transactions yet.',
+                            message: 'Tap + to add your first one.',
+                          ),
+                        ],
+                      );
+                    }
 
-                  final sections = _groupTransactions(filtered);
+                    final sections = _groupTransactions(filtered);
 
-                  return CustomScrollView(
-                    slivers: [
-                      for (final section in sections) ...[
-                        SliverPersistentHeader(
-                          key: ValueKey('header_${section.dateKey}'),
-                          pinned: true,
-                          delegate: _DateHeaderDelegate(section.header),
-                        ),
-                        SliverList(
-                          key: ValueKey('list_${section.dateKey}'),
-                          delegate: SliverChildBuilderDelegate((
-                            context,
-                            index,
-                          ) {
-                            final transaction = section.transactions[index];
-                            return Padding(
-                              key: ValueKey(transaction.id),
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child:
-                                  TransactionTile(
-                                        transaction: transaction,
-                                        category:
-                                            categoriesById[transaction
-                                                .categoryId],
-                                        onTap: () => showAddTransactionSheet(
-                                          context,
-                                          existingTransaction: transaction,
+                    return CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        for (final section in sections) ...[
+                          SliverPersistentHeader(
+                            key: ValueKey('header_${section.dateKey}'),
+                            pinned: true,
+                            delegate: _DateHeaderDelegate(section.header),
+                          ),
+                          SliverList(
+                            key: ValueKey('list_${section.dateKey}'),
+                            delegate: SliverChildBuilderDelegate((
+                              context,
+                              index,
+                            ) {
+                              final transaction = section.transactions[index];
+                              return Padding(
+                                key: ValueKey(transaction.id),
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child:
+                                    TransactionTile(
+                                          transaction: transaction,
+                                          category:
+                                              categoriesById[transaction
+                                                  .categoryId],
+                                          onTap: () => showAddTransactionSheet(
+                                            context,
+                                            existingTransaction: transaction,
+                                          ),
+                                          onDelete: () =>
+                                              _deleteTransaction(transaction),
+                                        )
+                                        .animate()
+                                        .fadeIn(
+                                          duration: 200.ms,
+                                          delay: (50 * index).ms,
+                                        )
+                                        .slideX(
+                                          begin: 0.03,
+                                          end: 0,
+                                          duration: 200.ms,
+                                          delay: (50 * index).ms,
+                                          curve: Curves.easeOutCubic,
                                         ),
-                                        onDelete: () =>
-                                            _deleteTransaction(transaction),
-                                      )
-                                      .animate()
-                                      .fadeIn(
-                                        duration: 200.ms,
-                                        delay: (50 * index).ms,
-                                      )
-                                      .slideX(
-                                        begin: 0.03,
-                                        end: 0,
-                                        duration: 200.ms,
-                                        delay: (50 * index).ms,
-                                        curve: Curves.easeOutCubic,
-                                      ),
-                            );
-                          }, childCount: section.transactions.length),
-                        ),
+                              );
+                            }, childCount: section.transactions.length),
+                          ),
+                        ],
                       ],
+                    );
+                  },
+                  loading: () => const _TransactionsSkeleton(),
+                  error: (error, _) => ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      const SizedBox(height: 180),
+                      Center(
+                        child: Text(
+                          'Could not load transactions',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppColors.coral,
+                          ),
+                        ),
+                      ),
                     ],
-                  );
-                },
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.teal),
-                ),
-                error: (error, _) => Center(
-                  child: Text(
-                    'Could not load transactions',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.coral,
-                    ),
                   ),
                 ),
               ),
@@ -315,6 +329,41 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           },
         ),
       ),
+    );
+  }
+
+  Future<void> _refreshTransactions() async {
+    ref.invalidate(transactionsProvider);
+    ref.invalidate(categoriesProvider);
+    await Future.wait([
+      ref.refresh(transactionsProvider.future),
+      ref.refresh(categoriesProvider.future),
+    ]);
+  }
+}
+
+class _TransactionsSkeleton extends StatelessWidget {
+  const _TransactionsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: const [
+        ShimmerSkeleton(
+          child: Column(
+            children: [
+              SkeletonCard(height: 86, radius: 20),
+              SizedBox(height: 12),
+              SkeletonCard(height: 86, radius: 20),
+              SizedBox(height: 12),
+              SkeletonCard(height: 86, radius: 20),
+              SizedBox(height: 12),
+              SkeletonCard(height: 86, radius: 20),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

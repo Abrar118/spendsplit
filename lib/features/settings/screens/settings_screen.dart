@@ -7,7 +7,9 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/input_formatters.dart';
 import '../../../core/widgets/glass_card.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../../providers/providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -63,7 +65,31 @@ class SettingsScreen extends ConsumerWidget {
                         : 'Keep the app open without biometric gate',
                     value: settings.biometricEnabled,
                     onChanged: (value) async {
+                      if (value) {
+                        final isAvailable = await ref
+                            .read(authRepositoryProvider)
+                            .isAvailable();
+                        if (!isAvailable) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Local authentication is unavailable on this device.',
+                                ),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                      }
+
                       await controller.setBiometricEnabled(value);
+                      await HapticFeedback.mediumImpact();
+                      if (value) {
+                        ref.read(appSessionUnlockedProvider.notifier).unlock();
+                      } else {
+                        ref.read(appSessionUnlockedProvider.notifier).lock();
+                      }
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -169,100 +195,106 @@ class SettingsScreen extends ConsumerWidget {
           : initialValue.toStringAsFixed(initialValue % 1 == 0 ? 0 : 2),
     );
 
-    final value = await showModalBottomSheet<double>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        final theme = Theme.of(context);
-        String? errorText;
+    double? value;
+    try {
+      value = await showModalBottomSheet<double>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (context) {
+          final theme = Theme.of(context);
+          String? errorText;
 
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: AppSpacing.md,
-                right: AppSpacing.md,
-                bottom:
-                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
-              ),
-              child: GlassCard(
-                glowColor: AppColors.teal,
-                radius: 28,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: theme.textTheme.headlineSmall),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(helperText, style: theme.textTheme.bodyMedium),
-                    const SizedBox(height: AppSpacing.xl),
-                    TextField(
-                      controller: textController,
-                      autofocus: true,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-                      ],
-                      style: theme.textTheme.headlineMedium,
-                      decoration: InputDecoration(
-                        prefixText: '$symbol ',
-                        hintText: '0',
-                        errorText: errorText,
-                      ),
-                      onChanged: (_) {
-                        if (errorText != null) {
-                          setModalState(() {
-                            errorText = null;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Cancel'),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: FilledButton(
-                            onPressed: () {
-                              final parsed = double.tryParse(
-                                textController.text.trim(),
-                              );
-                              if (parsed == null || parsed < 0) {
-                                setModalState(() {
-                                  errorText = 'Enter a valid number';
-                                });
-                                return;
-                              }
-                              Navigator.of(context).pop(parsed);
-                            },
-                            child: const Text('Save'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+          return StatefulBuilder(
+            builder: (context, setModalState) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  left: AppSpacing.md,
+                  right: AppSpacing.md,
+                  bottom:
+                      MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
                 ),
-              ),
-            );
-          },
-        );
-      },
-    );
+                child: GlassCard(
+                  glowColor: AppColors.teal,
+                  radius: 28,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: theme.textTheme.headlineSmall),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(helperText, style: theme.textTheme.bodyMedium),
+                      const SizedBox(height: AppSpacing.xl),
+                      TextField(
+                        controller: textController,
+                        autofocus: true,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        inputFormatters: [
+                          DecimalTextInputFormatter(maxDecimalPlaces: 2),
+                        ],
+                        style: theme.textTheme.headlineMedium,
+                        decoration: InputDecoration(
+                          prefixText: '$symbol ',
+                          hintText: '0',
+                          errorText: errorText,
+                        ),
+                        onChanged: (_) {
+                          if (errorText != null) {
+                            setModalState(() {
+                              errorText = null;
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('Cancel'),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: () {
+                                final parsed = double.tryParse(
+                                  textController.text.trim(),
+                                );
+                                if (parsed == null || parsed < 0) {
+                                  setModalState(() {
+                                    errorText = 'Enter a valid number';
+                                  });
+                                  return;
+                                }
+                                Navigator.of(context).pop(parsed);
+                              },
+                              child: const Text('Save'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      textController.dispose();
+    }
 
     if (value == null) {
       return;
     }
 
     await onSave(value);
+    HapticFeedback.mediumImpact();
 
     if (context.mounted) {
       ScaffoldMessenger.of(
