@@ -127,288 +127,312 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         right: 16,
         bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
       ),
-      child: FractionallySizedBox(
-        heightFactor: 0.75,
-        alignment: Alignment.bottomCenter,
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: const Color(0xFF232738).withValues(alpha: 0.92),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(40),
-                ),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x80000000),
-                    blurRadius: 40,
-                    offset: Offset(0, -12),
-                  ),
-                ],
+      child: SafeArea(
+        top: false,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+            ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(40),
               ),
-              child: Column(
-                children: [
-                  const SizedBox(height: 14),
-                  Container(
-                    width: 48,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF232738).withValues(alpha: 0.92),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(40),
                     ),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x80000000),
+                        blurRadius: 40,
+                        offset: Offset(0, -12),
+                      ),
+                    ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
-                    child: Column(
-                      children: [
-                        Row(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 14),
+                      Container(
+                        width: 48,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+                        child: Column(
                           children: [
-                            Text(
-                              'New Entry',
-                              style: theme.textTheme.headlineMedium,
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              onPressed: _saving
-                                  ? null
-                                  : () => Navigator.of(context).pop(),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.white.withValues(
-                                  alpha: 0.05,
-                                ),
-                                side: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.08),
-                                ),
-                              ),
-                              icon: const Icon(LucideIcons.x),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 18),
-                        _TypeSelector(
-                          value: _entryType,
-                          onChanged: _saving
-                              ? null
-                              : (value) {
-                                  setState(() {
-                                    _entryType = value;
-                                  });
-                                },
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // --- Amount input with ambient glow ---
-                          Center(
-                            child: Column(
+                            Row(
                               children: [
                                 Text(
-                                  'ENTER AMOUNT',
-                                  style: theme.textTheme.labelMedium,
+                                  _isEditing ? 'Edit Entry' : 'New Entry',
+                                  style: theme.textTheme.headlineMedium,
                                 ),
-                                const SizedBox(height: 14),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: _accentColor.withValues(
-                                          alpha: 0.12,
-                                        ),
-                                        blurRadius: 32,
-                                        spreadRadius: 4,
+                                const Spacer(),
+                                IconButton(
+                                  onPressed: _saving
+                                      ? null
+                                      : () => Navigator.of(context).pop(),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.white.withValues(
+                                      alpha: 0.05,
+                                    ),
+                                    side: BorderSide(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.08,
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        '৳',
-                                        style: theme.textTheme.headlineLarge
-                                            ?.copyWith(
-                                              fontSize: 28,
-                                              color: _accentColor,
-                                              shadows: [
-                                                Shadow(
-                                                  color: _accentColor
-                                                      .withValues(alpha: 0.35),
-                                                  blurRadius: 18,
-                                                ),
-                                              ],
-                                            ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          maxWidth: 220,
-                                        ),
-                                        child: TextField(
-                                          controller: _amountController,
-                                          enabled: !_saving,
-                                          textAlign: TextAlign.center,
-                                          keyboardType:
-                                              const TextInputType.numberWithOptions(
-                                                decimal: true,
-                                              ),
-                                          inputFormatters: [
-                                            DecimalTextInputFormatter(
-                                              maxDecimalPlaces: 2,
-                                            ),
-                                          ],
-                                          style: theme.textTheme.displayLarge
-                                              ?.copyWith(
-                                                fontSize: 48,
-                                                color: AppColors.textPrimary,
-                                                shadows: [
-                                                  Shadow(
-                                                    color: _accentColor
-                                                        .withValues(
-                                                          alpha: 0.28,
-                                                        ),
-                                                    blurRadius: 20,
-                                                  ),
-                                                ],
-                                              ),
-                                          decoration: InputDecoration(
-                                            hintText: '0.00',
-                                            hintStyle: theme
-                                                .textTheme
-                                                .displayLarge
-                                                ?.copyWith(
-                                                  fontSize: 48,
-                                                  color: Colors.white
-                                                      .withValues(alpha: 0.1),
-                                                ),
-                                            border: InputBorder.none,
-                                            isDense: true,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                  icon: const Icon(LucideIcons.x),
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 32),
-                          categoriesAsync.when(
-                            data: (items) => _AdaptiveSection(
-                              entryType: _entryType,
-                              accentColor: _accentColor,
-                              categories: items,
-                              selectedCategoryId: _selectedCategoryId,
-                              selectedIncomeSource: _selectedIncomeSource,
-                              savingsFlowType: _savingsFlowType,
-                              onCategorySelected: (value) {
-                                setState(() {
-                                  _selectedCategoryId = value;
-                                });
-                              },
-                              onAddCustomCategory: _saving
+                            const SizedBox(height: 18),
+                            _TypeSelector(
+                              value: _entryType,
+                              onChanged: _saving
                                   ? null
-                                  : () => _createCustomCategory(context),
-                              onIncomeSourceSelected: (value) {
-                                setState(() {
-                                  _selectedIncomeSource = value;
-                                });
-                              },
-                              onSavingsFlowSelected: (value) {
-                                setState(() {
-                                  _savingsFlowType = value;
-                                });
-                              },
+                                  : (value) {
+                                      setState(() {
+                                        _entryType = value;
+                                      });
+                                    },
                             ),
-                            loading: () => const Center(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: CircularProgressIndicator(
-                                  color: AppColors.teal,
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // --- Amount input with ambient glow ---
+                              Center(
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'ENTER AMOUNT',
+                                      style: theme.textTheme.labelMedium,
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: _accentColor.withValues(
+                                              alpha: 0.12,
+                                            ),
+                                            blurRadius: 32,
+                                            spreadRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            '৳',
+                                            style: theme.textTheme.headlineLarge
+                                                ?.copyWith(
+                                                  fontSize: 28,
+                                                  color: _accentColor,
+                                                  shadows: [
+                                                    Shadow(
+                                                      color: _accentColor
+                                                          .withValues(
+                                                            alpha: 0.35,
+                                                          ),
+                                                      blurRadius: 18,
+                                                    ),
+                                                  ],
+                                                ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              maxWidth: 220,
+                                            ),
+                                            child: TextField(
+                                              controller: _amountController,
+                                              enabled: !_saving,
+                                              textAlign: TextAlign.center,
+                                              keyboardType:
+                                                  const TextInputType.numberWithOptions(
+                                                    decimal: true,
+                                                  ),
+                                              inputFormatters: [
+                                                DecimalTextInputFormatter(
+                                                  maxDecimalPlaces: 2,
+                                                ),
+                                              ],
+                                              style: theme
+                                                  .textTheme
+                                                  .displayLarge
+                                                  ?.copyWith(
+                                                    fontSize: 48,
+                                                    color:
+                                                        AppColors.textPrimary,
+                                                    shadows: [
+                                                      Shadow(
+                                                        color: _accentColor
+                                                            .withValues(
+                                                              alpha: 0.28,
+                                                            ),
+                                                        blurRadius: 20,
+                                                      ),
+                                                    ],
+                                                  ),
+                                              decoration: InputDecoration(
+                                                hintText: '0.00',
+                                                hintStyle: theme
+                                                    .textTheme
+                                                    .displayLarge
+                                                    ?.copyWith(
+                                                      fontSize: 48,
+                                                      color: Colors.white
+                                                          .withValues(
+                                                            alpha: 0.1,
+                                                          ),
+                                                    ),
+                                                border: InputBorder.none,
+                                                isDense: true,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                            error: (error, _) => Text(
-                              'Could not load categories',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: AppColors.coral,
+                              const SizedBox(height: 32),
+                              categoriesAsync.when(
+                                data: (items) => _AdaptiveSection(
+                                  entryType: _entryType,
+                                  accentColor: _accentColor,
+                                  categories: items,
+                                  selectedCategoryId: _selectedCategoryId,
+                                  selectedIncomeSource: _selectedIncomeSource,
+                                  savingsFlowType: _savingsFlowType,
+                                  onCategorySelected: (value) {
+                                    setState(() {
+                                      _selectedCategoryId = value;
+                                    });
+                                  },
+                                  onAddCustomCategory: _saving
+                                      ? null
+                                      : () => _createCustomCategory(context),
+                                  onIncomeSourceSelected: (value) {
+                                    setState(() {
+                                      _selectedIncomeSource = value;
+                                    });
+                                  },
+                                  onSavingsFlowSelected: (value) {
+                                    setState(() {
+                                      _savingsFlowType = value;
+                                    });
+                                  },
+                                ),
+                                loading: () => const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.teal,
+                                    ),
+                                  ),
+                                ),
+                                error: (error, _) => Text(
+                                  'Could not load categories',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: AppColors.coral,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          _InfoRow(
-                            icon: LucideIcons.calendar,
-                            label: 'DATE',
-                            value: formatSheetDate(_selectedDate),
-                            onTap: _saving ? null : _pickDate,
-                          ),
-                          const SizedBox(height: 16),
-                          _NoteField(
-                            controller: _noteController,
-                            enabled: !_saving,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // --- Save button: 12px radius, dark text, glow shadow ---
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _accentColor.withValues(alpha: 0.5),
-                            blurRadius: 32,
-                            offset: const Offset(0, 12),
-                            spreadRadius: -8,
-                          ),
-                        ],
-                      ),
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: _accentColor,
-                          foregroundColor: const Color(0xFF0E1016),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          textStyle: theme.textTheme.labelLarge?.copyWith(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
+                              const SizedBox(height: 24),
+                              _InfoRow(
+                                icon: LucideIcons.calendar,
+                                label: 'DATE',
+                                value: formatSheetDate(_selectedDate),
+                                onTap: _saving ? null : _pickDate,
+                              ),
+                              const SizedBox(height: 16),
+                              _NoteField(
+                                controller: _noteController,
+                                enabled: !_saving,
+                              ),
+                            ],
                           ),
                         ),
-                        onPressed: _saving ? null : _saveTransaction,
-                        child: _saving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFF0E1016),
-                                ),
-                              )
-                            : Text(_isEditing ? 'UPDATE' : 'SAVE TRANSACTION'),
                       ),
-                    ),
+                      // --- Save button: 12px radius, dark text, glow shadow ---
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                        child: Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _accentColor.withValues(alpha: 0.5),
+                                blurRadius: 32,
+                                offset: const Offset(0, 12),
+                                spreadRadius: -8,
+                              ),
+                            ],
+                          ),
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _accentColor,
+                              foregroundColor: const Color(0xFF0E1016),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              textStyle: theme.textTheme.labelLarge?.copyWith(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            onPressed: _saving ? null : _saveTransaction,
+                            child: _saving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Color(0xFF0E1016),
+                                    ),
+                                  )
+                                : Text(
+                                    _isEditing ? 'UPDATE' : 'SAVE TRANSACTION',
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
