@@ -51,18 +51,18 @@ abstract final class AppColors {
   static const incomeCardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF059669), Color(0xFF047857)],
+    colors: [Color(0xFF00332E), Color(0xFF004D40)],
   );
 
   static const expenseCardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFDC2626), Color(0xFFEF4444)],
+    colors: [Color(0xFF801B00), Color(0xFFFF4D4D)],
   );
 
   static const savingsCardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)],
+    colors: [Color(0xFF2D1A4D), Color(0xFF4527A0)],
   );
 }

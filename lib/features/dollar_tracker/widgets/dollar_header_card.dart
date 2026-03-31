@@ -28,12 +28,10 @@ class DollarHeaderCard extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              AppColors.surface,
-              AppColors.surfaceLight.withValues(alpha: 0.94),
-            ],
+            colors: [const Color(0xFF25175A), const Color(0xFF0E223E)],
           ),
           borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(22),
@@ -61,25 +59,34 @@ class DollarHeaderCard extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
+                    Container(
+                      height: 1,
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                    const SizedBox(height: 18),
                     Row(
                       children: [
-                        _MetricColumn(
-                          label: 'ANNUAL LIMIT',
-                          value: formatUsdAmount(
-                            summary.annualLimit,
-                            fractionDigits: 0,
+                        Expanded(
+                          child: _MetricColumn(
+                            label: 'ANNUAL LIMIT',
+                            value: formatUsdAmount(
+                              summary.annualLimit,
+                              fractionDigits: 0,
+                            ),
+                            color: Colors.white,
                           ),
-                          color: Colors.white,
                         ),
                         const SizedBox(width: 20),
-                        _MetricColumn(
-                          label: 'SPENT YTD',
-                          value: formatUsdAmount(
-                            summary.spentYtd,
-                            fractionDigits: 0,
+                        Expanded(
+                          child: _MetricColumn(
+                            label: 'SPENT YTD',
+                            value: formatUsdAmount(
+                              summary.spentYtd,
+                              fractionDigits: 0,
+                            ),
+                            color: AppColors.teal,
                           ),
-                          color: AppColors.teal,
                         ),
                       ],
                     ),
@@ -156,6 +163,8 @@ class _MetricColumn extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.titleMedium?.copyWith(
             color: color,
             fontWeight: FontWeight.w700,
@@ -173,7 +182,7 @@ class _UtilizationRingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const strokeWidth = 12.0;
+    const strokeWidth = 15.0;
     final radius = (size.width - strokeWidth) / 2;
     final center = size.center(Offset.zero);
 
@@ -181,7 +190,7 @@ class _UtilizationRingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round
-      ..color = Colors.white.withValues(alpha: 0.06);
+      ..color = Colors.white.withValues(alpha: 0.05);
     canvas.drawCircle(center, radius, trackPaint);
 
     if (progress <= 0) {
@@ -189,11 +198,25 @@ class _UtilizationRingPainter extends CustomPainter {
     }
 
     final rect = Rect.fromCircle(center: center, radius: radius);
+    final glowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth + 8
+      ..strokeCap = StrokeCap.round
+      ..color = AppColors.amber.withValues(alpha: 0.18)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
+    canvas.drawArc(
+      rect,
+      -math.pi / 2,
+      (math.pi * 2) * progress,
+      false,
+      glowPaint,
+    );
+
     final progressPaint = Paint()
       ..shader = const SweepGradient(
         startAngle: -math.pi / 2,
         endAngle: (math.pi * 2) - (math.pi / 2),
-        colors: [AppColors.amber, Color(0xFFFFE082)],
+        colors: [Color(0xFFFFC72C), Color(0xFFFFD54F)],
       ).createShader(rect)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth

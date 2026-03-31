@@ -26,8 +26,10 @@ class BottomNavBar extends StatelessWidget {
         child: SizedBox(
           height: 72,
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Expanded(
+              SizedBox(
+                width: 64,
                 child: _NavItem(
                   icon: LucideIcons.home,
                   label: 'HOME',
@@ -35,7 +37,8 @@ class BottomNavBar extends StatelessWidget {
                   onTap: () => onDestinationSelected(0),
                 ),
               ),
-              Expanded(
+              SizedBox(
+                width: 64,
                 child: _NavItem(
                   icon: LucideIcons.receipt,
                   label: 'HISTORY',
@@ -43,8 +46,9 @@ class BottomNavBar extends StatelessWidget {
                   onTap: () => onDestinationSelected(1),
                 ),
               ),
-              Expanded(child: _AddNavItem(onTap: onAddPressed)),
-              Expanded(
+              SizedBox(width: 64, child: _AddNavItem(onTap: onAddPressed)),
+              SizedBox(
+                width: 64,
                 child: _NavItem(
                   icon: LucideIcons.calendarDays,
                   label: 'MONTHLY',
@@ -52,7 +56,8 @@ class BottomNavBar extends StatelessWidget {
                   onTap: () => onDestinationSelected(3),
                 ),
               ),
-              Expanded(
+              SizedBox(
+                width: 64,
                 child: _NavItem(
                   icon: LucideIcons.flag,
                   label: 'GOALS',

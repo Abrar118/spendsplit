@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-import '../../../core/constants/categories.dart';
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -102,6 +101,10 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
                                 title: 'TOTAL INCOME',
                                 amount: analytics.summary.income,
                                 gradient: AppColors.incomeCardGradient,
+                                accentColor: AppColors.teal,
+                                borderColor: AppColors.teal.withValues(
+                                  alpha: 0.2,
+                                ),
                                 chipLabel: _formatDeltaLabel(
                                   analytics.incomeDelta,
                                 ),
@@ -122,6 +125,10 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
                                 title: 'TOTAL EXPENSES',
                                 amount: analytics.summary.expenses,
                                 gradient: AppColors.expenseCardGradient,
+                                accentColor: Colors.white,
+                                borderColor: Colors.white.withValues(
+                                  alpha: 0.2,
+                                ),
                                 chipLabel: _formatDeltaLabel(
                                   analytics.expenseDelta,
                                 ),
@@ -143,6 +150,10 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
                                 title: 'AMOUNT SAVED',
                                 amount: analytics.summary.saved,
                                 gradient: AppColors.savingsCardGradient,
+                                accentColor: AppColors.softPurple,
+                                borderColor: AppColors.softPurple.withValues(
+                                  alpha: 0.2,
+                                ),
                                 chipLabel: _formatSavingsRateLabel(
                                   analytics.savingsRate,
                                 ),
@@ -433,6 +444,8 @@ class _MonthlyMetricCard extends StatelessWidget {
     required this.title,
     required this.amount,
     required this.gradient,
+    required this.accentColor,
+    required this.borderColor,
     required this.chipLabel,
     required this.chipIcon,
     this.chipColor = Colors.white,
@@ -441,6 +454,8 @@ class _MonthlyMetricCard extends StatelessWidget {
   final String title;
   final double amount;
   final Gradient gradient;
+  final Color accentColor;
+  final Color borderColor;
   final String chipLabel;
   final IconData chipIcon;
   final Color chipColor;
@@ -452,10 +467,11 @@ class _MonthlyMetricCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: gradient,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: AppColors.background.withValues(alpha: 0.55),
-            blurRadius: 24,
+            color: accentColor.withValues(alpha: 0.15),
+            blurRadius: 20,
             offset: const Offset(0, 16),
           ),
         ],
@@ -468,7 +484,7 @@ class _MonthlyMetricCard extends StatelessWidget {
             Text(
               title,
               style: theme.textTheme.labelMedium?.copyWith(
-                color: Colors.white.withValues(alpha: 0.76),
+                color: accentColor.withValues(alpha: 0.72),
               ),
             ),
             const SizedBox(height: 10),
@@ -476,31 +492,21 @@ class _MonthlyMetricCard extends StatelessWidget {
               value: amount,
               formatter: (value) => formatBdtAmount(value, fractionDigits: 0),
               textStyle: theme.textTheme.displaySmall?.copyWith(
-                color: Colors.white,
+                color: accentColor,
                 fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.background.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(chipIcon, size: 12, color: chipColor),
-                  const SizedBox(width: 6),
-                  Text(
-                    chipLabel,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: chipColor,
-                    ),
-                  ),
-                ],
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(chipIcon, size: 14, color: chipColor),
+                const SizedBox(width: 8),
+                Text(
+                  chipLabel,
+                  style: theme.textTheme.labelSmall?.copyWith(color: chipColor),
+                ),
+              ],
             ),
           ],
         ),
@@ -587,88 +593,139 @@ class _CategoryDonutCard extends StatelessWidget {
       );
     }
 
-    return GlassCard(
-      radius: 24,
-      glowColor: AppColors.blue,
-      child: Column(
-        children: [
-          SizedBox(
-            height: 220,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                PieChart(
-                  PieChartData(
-                    sectionsSpace: 6,
-                    centerSpaceRadius: 54,
-                    startDegreeOffset: -90,
-                    sections: [
-                      for (var i = 0; i < analytics.categories.length; i++)
-                        PieChartSectionData(
-                          value: analytics.categories[i].amount,
-                          color: i == 0
-                              ? AppColors.teal
-                              : Color(analytics.categories[i].colorValue),
-                          radius: i == 0 ? 28 : 24,
-                          showTitle: false,
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainer,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.background.withValues(alpha: 0.42),
+                blurRadius: 26,
+                offset: const Offset(0, 18),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 22, 18, 20),
+            child: SizedBox(
+              height: 300,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  PieChart(
+                    PieChartData(
+                      sectionsSpace: 0,
+                      centerSpaceRadius: 96,
+                      startDegreeOffset: -90,
+                      sections: [
+                        for (var i = 0; i < analytics.categories.length; i++)
+                          PieChartSectionData(
+                            value: analytics.categories[i].amount,
+                            color: i == 0
+                                ? AppColors.teal
+                                : Color(analytics.categories[i].colorValue),
+                            radius: 30,
+                            showTitle: false,
+                          ),
+                      ],
+                    ),
+                    swapAnimationDuration: const Duration(milliseconds: 700),
+                    swapAnimationCurve: Curves.easeOutCubic,
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'TOP CATEGORY',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.textSecondary,
+                          letterSpacing: 4,
                         ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        analytics.topCategoryName ?? 'None',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.headlineLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ],
                   ),
-                  swapAnimationDuration: const Duration(milliseconds: 700),
-                  swapAnimationCurve: Curves.easeOutCubic,
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surfaceDim,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${analytics.transactionCount} transactions this month',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'LAST SYNCED: LOCAL ONLY',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.textSecondary.withValues(alpha: 0.7),
+                          letterSpacing: 3,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'TOP CATEGORY',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                InkWell(
+                  onTap: onViewAll,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 4,
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      analytics.topCategoryName ?? 'None',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'View all',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: AppColors.blue,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(
+                          LucideIcons.arrowRight,
+                          size: 22,
+                          color: AppColors.blue,
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(
-                '${analytics.transactionCount} transactions this month',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const Spacer(),
-              InkWell(
-                onTap: onViewAll,
-                borderRadius: BorderRadius.circular(999),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 4,
-                  ),
-                  child: Text(
-                    'View all →',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: AppColors.teal,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -683,37 +740,46 @@ class _CategoryDetailTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = highlightAsTop ? AppColors.teal : Color(item.colorValue);
-    return GlassCard(
-      radius: 20,
-      padding: const EdgeInsets.fromLTRB(0, 0, 16, 0),
-      glowColor: color,
-      child: IntrinsicHeight(
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceDim,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.background.withValues(alpha: 0.3),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 14, 22, 14),
         child: Row(
           children: [
             Container(
-              width: 4,
+              width: 18,
+              height: 72,
               decoration: BoxDecoration(
-                color: color,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [color, color.withValues(alpha: 0.42)],
+                ),
                 borderRadius: BorderRadius.circular(999),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.18),
+                    blurRadius: 14,
+                    spreadRadius: 1,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 14),
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.14),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                iconForCategoryKey(item.iconKey),
-                color: color,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 20),
             Expanded(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -721,27 +787,39 @@ class _CategoryDetailTile extends StatelessWidget {
                     item.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _categoryClassification(item.name),
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 16),
             Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
                   formatBdtAmount(item.amount, fractionDigits: 0),
-                  style: theme.textTheme.titleMedium?.copyWith(
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontSize: 18,
                     color: Colors.white,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 10),
                 Text(
                   '${(item.share * 100).toStringAsFixed(1)}% OF TOTAL',
-                  style: theme.textTheme.labelSmall?.copyWith(
+                  style: theme.textTheme.labelMedium?.copyWith(
                     color: AppColors.textSecondary,
                   ),
                 ),
@@ -752,4 +830,23 @@ class _CategoryDetailTile extends StatelessWidget {
       ),
     );
   }
+}
+
+String _categoryClassification(String name) {
+  final normalized = name.toLowerCase();
+  if (normalized.contains('housing') || normalized.contains('utilit')) {
+    return 'RECURRING';
+  }
+  if (normalized.contains('life') ||
+      normalized.contains('food') ||
+      normalized.contains('dining') ||
+      normalized.contains('shopping')) {
+    return 'FLEXIBLE';
+  }
+  if (normalized.contains('transport') ||
+      normalized.contains('fuel') ||
+      normalized.contains('travel')) {
+    return 'VARIABLE';
+  }
+  return 'ONE-TIME';
 }
