@@ -10,7 +10,7 @@ class GlassCard extends StatelessWidget {
     this.margin,
     this.glowColor,
     this.radius = 20,
-    this.opacity = 0.8,
+    this.opacity = 1,
   });
 
   final Widget child;

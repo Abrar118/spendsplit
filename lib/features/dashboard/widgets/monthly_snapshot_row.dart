@@ -15,7 +15,7 @@ class MonthlySnapshotRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 112,
+      height: 126,
       child: ListView(
         scrollDirection: Axis.horizontal,
         physics: const ClampingScrollPhysics(),
@@ -68,19 +68,31 @@ class _SnapshotCard extends StatelessWidget {
         glowColor: color,
         radius: 16,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        opacity: 0.8,
         child: Column(
           children: [
             Container(
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.2),
+                    blurRadius: 15,
+                  ),
+                ],
               ),
               child: Icon(icon, color: color, size: 18),
             ),
             const Spacer(),
-            Text(label, style: theme.textTheme.labelMedium),
+            Text(
+              label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
             const SizedBox(height: 4),
             AnimatedAmountText(
               value: rawAmount,

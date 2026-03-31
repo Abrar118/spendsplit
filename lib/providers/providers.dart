@@ -69,6 +69,11 @@ class SettingsController extends Notifier<AppSettings> {
     await ref.read(settingsRepositoryProvider).setInitialBalance(value);
     state = state.copyWith(initialBalance: value);
   }
+
+  Future<void> setCardNumber(String value) async {
+    await ref.read(settingsRepositoryProvider).setCardNumber(value);
+    state = state.copyWith(cardNumber: value);
+  }
 }
 
 final appSettingsProvider = NotifierProvider<SettingsController, AppSettings>(

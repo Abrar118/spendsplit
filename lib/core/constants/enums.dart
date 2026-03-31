@@ -80,7 +80,8 @@ enum AppSettingsKey {
   biometricEnabled('biometric_enabled'),
   dollarAnnualLimit('dollar_annual_limit'),
   dollarLimitYear('dollar_limit_year'),
-  initialBalance('initial_balance');
+  initialBalance('initial_balance'),
+  cardNumber('card_number');
 
   const AppSettingsKey(this.value);
 

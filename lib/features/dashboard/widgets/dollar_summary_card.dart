@@ -30,8 +30,9 @@ class DollarSummaryCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: GlassCard(
-        glowColor: AppColors.blue,
+        glowColor: AppColors.purple,
         radius: 24,
+        opacity: 0.8,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -41,12 +42,15 @@ class DollarSummaryCard extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppColors.teal.withValues(alpha: 0.14),
+                    color: AppColors.purple.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.purple.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: const Icon(
                     LucideIcons.dollarSign,
-                    color: AppColors.teal,
+                    color: AppColors.purple,
                     size: 28,
                   ),
                 ),
@@ -56,7 +60,7 @@ class DollarSummaryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Travel Allowance',
+                        'Dual Currency Allowance',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 2),

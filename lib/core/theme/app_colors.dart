@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColors {
-  static const background = Color(0xFF0A0E1A);
-  static const surface = Color(0xFF141829);
-  static const surfaceLight = Color(0xFF1C2137);
-  static const navBar = Color(0xFF0F1322);
+  static const background = Color(0xFF0D0F1A);
+  static const surface = Color(0xFF1A1D2E);
+  static const surfaceLight = Color(0xFF1E2336);
+  static const navBar = Color(0xFF1D1F2B);
   static const surfaceDim = Color(0xFF11131E);
   static const surfaceContainer = Color(0xFF1D1F2B);
   static const surfaceContainerLow = Color(0xFF191B26);
@@ -12,10 +12,10 @@ abstract final class AppColors {
 
   static const teal = Color(0xFF00E5BF);
   static const tealBright = Color(0xFF6FFFDC);
-  static const coral = Color(0xFFFF6B6B);
+  static const coral = Color(0xFFFF7E70);
   static const green = Color(0xFF34D399);
-  static const purple = Color(0xFF9C7CFF);
-  static const softPurple = Color(0xFFCEBDFF);
+  static const purple = Color(0xFFA78BFA);
+  static const softPurple = Color(0xFFD4C6FF);
   static const amber = Color(0xFFFBBF24);
   static const blue = Color(0xFF60A5FA);
 
@@ -33,7 +33,7 @@ abstract final class AppColors {
   static const catTransport = Color(0xFF60A5FA);
   static const catUtilities = Color(0xFFFBBF24);
   static const catHealth = Color(0xFFF472B6);
-  static const catShopping = Color(0xFF9C7CFF);
+  static const catShopping = Color(0xFFA78BFA);
   static const catOther = Color(0xFF8892A7);
 
   static const balanceCardGradient = LinearGradient(

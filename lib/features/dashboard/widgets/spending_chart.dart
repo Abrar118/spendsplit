@@ -158,18 +158,16 @@ class _SpendingChartState extends State<SpendingChart> {
                       for (var i = 0; i < _monthSeries.length; i++)
                         BarChartGroupData(
                           x: i,
-                          barRods: [
-                            BarChartRodData(
-                              toY: _monthSeries[i].amount <= 0
-                                  ? 4
-                                  : _monthSeries[i].amount,
-                              width: _monthSeries[i].isCurrent ? 14 : 11,
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(999),
-                              ),
-                              gradient: _monthSeries[i].amount <= 0
-                                  ? null
-                                  : LinearGradient(
+                          barRods: _monthSeries[i].amount <= 0
+                              ? []
+                              : [
+                                  BarChartRodData(
+                                    toY: _monthSeries[i].amount,
+                                    width: _monthSeries[i].isCurrent ? 14 : 11,
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(999),
+                                    ),
+                                    gradient: LinearGradient(
                                       begin: Alignment.bottomCenter,
                                       end: Alignment.topCenter,
                                       colors: _monthSeries[i].isCurrent
@@ -186,16 +184,8 @@ class _SpendingChartState extends State<SpendingChart> {
                                               ),
                                             ],
                                     ),
-                              color: _monthSeries[i].amount <= 0
-                                  ? Colors.white.withValues(alpha: 0.08)
-                                  : null,
-                              backDrawRodData: BackgroundBarChartRodData(
-                                show: true,
-                                toY: normalizedMax * 1.02,
-                                color: Colors.white.withValues(alpha: 0.03),
-                              ),
-                            ),
-                          ],
+                                  ),
+                                ],
                         ),
                     ],
                   ),
@@ -220,13 +210,13 @@ class _SpendingChartState extends State<SpendingChart> {
                                       maxY: chartMax,
                                     ),
                                   ),
-                                  child: _ChartPointGlow(
-                                    color: _monthSeries[i].amount <= 0
-                                        ? Colors.white.withValues(alpha: 0.16)
-                                        : (_monthSeries[i].isCurrent
+                                  child: _monthSeries[i].amount <= 0
+                                      ? const SizedBox.shrink()
+                                      : _ChartPointGlow(
+                                          color: _monthSeries[i].isCurrent
                                               ? AppColors.teal
-                                              : AppColors.blue),
-                                  ),
+                                              : AppColors.blue,
+                                        ),
                                 ),
                               ),
                             ),
@@ -270,8 +260,7 @@ class _SpendingChartState extends State<SpendingChart> {
   }
 
   double _glowOffset({required double amount, required double maxY}) {
-    final renderedAmount = amount <= 0 ? 4.0 : amount;
-    final ratio = maxY <= 0 ? 0.0 : (renderedAmount / maxY).clamp(0.0, 1.0);
+    final ratio = maxY <= 0 ? 0.0 : (amount / maxY).clamp(0.0, 1.0);
     return math.max(0, (_plotAreaHeight * ratio) - 5);
   }
 

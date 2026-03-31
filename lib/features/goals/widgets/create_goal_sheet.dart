@@ -4,8 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
-import 'package:vibration/vibration.dart';
-
 import '../../../core/constants/goal_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -226,7 +224,16 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: Text(_editing ? 'Update Goal' : 'Save Goal'),
+                      child: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(_editing ? 'Update Goal' : 'Save Goal'),
                     ),
                   ),
                 ],
@@ -308,12 +315,7 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
         );
       }
 
-      final hasVibrator = await Vibration.hasVibrator();
-      if (hasVibrator == true) {
-        Vibration.vibrate(duration: 30);
-      } else {
-        HapticFeedback.mediumImpact();
-      }
+      HapticFeedback.mediumImpact();
 
       if (!mounted) return;
       setState(() => _saving = false);

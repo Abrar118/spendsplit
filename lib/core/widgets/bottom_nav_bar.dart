@@ -21,78 +21,47 @@ class BottomNavBar extends StatelessWidget {
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 0, 16, 12 + bottomInset),
-      child: SizedBox(
-        height: 78,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.topCenter,
-          children: [
-            Positioned.fill(
-              top: 12,
-              child: DecoratedBox(
-                decoration: AppDecorations.navBar(),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _NavItem(
-                        icon: LucideIcons.home,
-                        label: 'HOME',
-                        active: currentIndex == 0,
-                        onTap: () => onDestinationSelected(0),
-                      ),
-                    ),
-                    Expanded(
-                      child: _NavItem(
-                        icon: LucideIcons.receipt,
-                        label: 'HISTORY',
-                        active: currentIndex == 1,
-                        onTap: () => onDestinationSelected(1),
-                      ),
-                    ),
-                    const SizedBox(width: 72),
-                    Expanded(
-                      child: _NavItem(
-                        icon: LucideIcons.calendarDays,
-                        label: 'MONTHLY',
-                        active: currentIndex == 3,
-                        onTap: () => onDestinationSelected(3),
-                      ),
-                    ),
-                    Expanded(
-                      child: _NavItem(
-                        icon: LucideIcons.flag,
-                        label: 'GOALS',
-                        active: currentIndex == 4,
-                        onTap: () => onDestinationSelected(4),
-                      ),
-                    ),
-                  ],
+      child: DecoratedBox(
+        decoration: AppDecorations.navBar(),
+        child: SizedBox(
+          height: 72,
+          child: Row(
+            children: [
+              Expanded(
+                child: _NavItem(
+                  icon: LucideIcons.home,
+                  label: 'HOME',
+                  active: currentIndex == 0,
+                  onTap: () => onDestinationSelected(0),
                 ),
               ),
-            ),
-            Positioned(
-              top: 0,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: onAddPressed,
-                  customBorder: const CircleBorder(),
-                  child: Ink(
-                    width: 48,
-                    height: 48,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: AppColors.primaryActionGradient,
-                    ),
-                    child: const Icon(
-                      LucideIcons.plus,
-                      color: AppColors.onPrimary,
-                    ),
-                  ),
+              Expanded(
+                child: _NavItem(
+                  icon: LucideIcons.receipt,
+                  label: 'HISTORY',
+                  active: currentIndex == 1,
+                  onTap: () => onDestinationSelected(1),
                 ),
               ),
-            ),
-          ],
+              Expanded(child: _AddNavItem(onTap: onAddPressed)),
+              Expanded(
+                child: _NavItem(
+                  icon: LucideIcons.calendarDays,
+                  label: 'MONTHLY',
+                  active: currentIndex == 3,
+                  onTap: () => onDestinationSelected(3),
+                ),
+              ),
+              Expanded(
+                child: _NavItem(
+                  icon: LucideIcons.flag,
+                  label: 'GOALS',
+                  active: currentIndex == 4,
+                  onTap: () => onDestinationSelected(4),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -145,6 +114,46 @@ class _NavItem extends StatelessWidget {
                   ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AddNavItem extends StatelessWidget {
+  const _AddNavItem({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppColors.primaryActionGradient,
+                ),
+                child: const Icon(
+                  LucideIcons.plus,
+                  color: AppColors.onPrimary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(height: 2),
             ],
           ),
         ),

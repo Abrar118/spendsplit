@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -26,6 +27,7 @@ class DashboardScreen extends ConsumerWidget {
     final transactions = ref.watch(transactionsProvider);
     final goals = ref.watch(savingsGoalsProvider);
     final dollarSummary = ref.watch(dollarTrackerSummaryProvider);
+    final settings = ref.watch(appSettingsProvider);
 
     final loading =
         balanceSummary.isLoading ||
@@ -62,15 +64,22 @@ class DashboardScreen extends ConsumerWidget {
             // --- Top bar ---
             Row(
               children: [
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(LucideIcons.menu),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'SpendSplit',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: AppColors.textPrimary,
+                const SizedBox(width: 8),
+                RichText(
+                  text: TextSpan(
+                    style: theme.textTheme.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                    children: const [
+                      TextSpan(
+                        text: 'Spend',
+                        style: TextStyle(color: AppColors.purple),
+                      ),
+                      TextSpan(
+                        text: 'Split',
+                        style: TextStyle(color: AppColors.green),
+                      ),
+                    ],
                   ),
                 ),
                 const Spacer(),
@@ -85,7 +94,12 @@ class DashboardScreen extends ConsumerWidget {
               const _DashboardSkeleton()
             else ...[
               balanceSummary.when(
-                data: (summary) => BalanceCard(summary: summary),
+                data: (summary) => BalanceCard(
+                  summary: summary,
+                  cardNumber: settings.cardNumber,
+                  onEditCardNumber: () =>
+                      _showCardNumberEditor(context: context, ref: ref),
+                ),
                 error: (error, stackTrace) => const _SectionError(),
                 loading: () => const _DashboardSkeleton(),
               ),
@@ -124,6 +138,148 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _showCardNumberEditor({
+    required BuildContext context,
+    required WidgetRef ref,
+  }) async {
+    final currentCardNumber = ref.read(appSettingsProvider).cardNumber;
+    final controller = TextEditingController(
+      text: currentCardNumber.replaceAll(RegExp(r'\D'), ''),
+    );
+
+    final didSave = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        String? errorText;
+        bool saving = false;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: AppSpacing.md,
+                right: AppSpacing.md,
+                bottom:
+                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
+              ),
+              child: GlassCard(
+                glowColor: AppColors.teal,
+                radius: 28,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Edit Card Number',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Enter 12–19 digits. Only the first and last four will be visible.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    TextField(
+                      controller: controller,
+                      autofocus: true,
+                      maxLength: 19,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: InputDecoration(
+                        hintText: '4532756028418291',
+                        counterText: '',
+                        errorText: errorText,
+                      ),
+                      onChanged: (_) {
+                        if (errorText != null) {
+                          setModalState(() {
+                            errorText = null;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: saving
+                                ? null
+                                : () => Navigator.of(context).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: saving
+                                ? null
+                                : () async {
+                                    final digits = controller.text.trim();
+                                    if (digits.length < 12) {
+                                      setModalState(() {
+                                        errorText = 'Enter at least 12 digits.';
+                                      });
+                                      return;
+                                    }
+                                    setModalState(() => saving = true);
+                                    try {
+                                      await ref
+                                          .read(appSettingsProvider.notifier)
+                                          .setCardNumber(digits);
+                                      HapticFeedback.mediumImpact();
+                                      if (!context.mounted) {
+                                        return;
+                                      }
+                                      Navigator.of(context).pop(true);
+                                    } catch (_) {
+                                      if (!context.mounted) {
+                                        return;
+                                      }
+                                      setModalState(() {
+                                        saving = false;
+                                        errorText = 'Failed to save changes';
+                                      });
+                                    }
+                                  },
+                            child: saving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text('Save'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+
+    if (didSave != true || !context.mounted) {
+      return;
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Card number updated')));
+    }
   }
 }
 

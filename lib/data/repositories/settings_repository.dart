@@ -20,6 +20,9 @@ class SettingsRepository {
           DateTime.now().year,
       initialBalance:
           _preferences.getDouble(AppSettingsKey.initialBalance.value) ?? 0.0,
+      cardNumber:
+          _preferences.getString(AppSettingsKey.cardNumber.value) ??
+          '4532756028418291',
     );
   }
 
@@ -40,5 +43,9 @@ class SettingsRepository {
 
   Future<void> setInitialBalance(double value) {
     return _preferences.setDouble(AppSettingsKey.initialBalance.value, value);
+  }
+
+  Future<void> setCardNumber(String value) {
+    return _preferences.setString(AppSettingsKey.cardNumber.value, value);
   }
 }

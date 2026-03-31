@@ -50,4 +50,5 @@ flutter:
   uses-material-design: true
   assets:
     - asset/app-icon.png
+    - asset/chip.png
     - asset/fonts/

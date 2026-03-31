@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/constants/enums.dart';
+import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/bottom_nav_bar.dart';
 import 'features/auth/providers/auth_provider.dart';
@@ -174,7 +175,7 @@ class AppShell extends StatelessWidget {
           context.go(route.path);
         },
         onAddPressed: () async {
-          await HapticFeedback.lightImpact();
+          HapticFeedback.lightImpact();
           if (!context.mounted) {
             return;
           }
@@ -192,16 +193,10 @@ class _NoiseBackdrop extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [colors.surfaceDim, colors.surface],
-        ),
-      ),
+      decoration: const BoxDecoration(color: AppColors.background),
       child: CustomPaint(
         painter: _NoisePainter(
-          baseColor: colors.surface,
+          baseColor: AppColors.background,
           grainColor: colors.onSurface.withValues(alpha: 0.018),
         ),
       ),

@@ -397,11 +397,16 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                           ),
                         ),
                         onPressed: _saving ? null : _saveTransaction,
-                        child: Text(
-                          _saving
-                              ? 'SAVING...'
-                              : (_isEditing ? 'UPDATE' : 'SAVE TRANSACTION'),
-                        ),
+                        child: _saving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF0E1016),
+                                ),
+                              )
+                            : Text(_isEditing ? 'UPDATE' : 'SAVE TRANSACTION'),
                       ),
                     ),
                   ),
@@ -608,7 +613,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         await repository.createTransaction(companion);
       }
 
-      await HapticFeedback.mediumImpact();
+      HapticFeedback.mediumImpact();
 
       if (!mounted) return;
 

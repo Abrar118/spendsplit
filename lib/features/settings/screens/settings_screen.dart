@@ -85,7 +85,7 @@ class SettingsScreen extends ConsumerWidget {
                       }
 
                       await controller.setBiometricEnabled(value);
-                      await HapticFeedback.mediumImpact();
+                      HapticFeedback.mediumImpact();
                       if (value) {
                         ref.read(appSessionUnlockedProvider.notifier).unlock();
                       } else {
@@ -196,117 +196,141 @@ class SettingsScreen extends ConsumerWidget {
           : initialValue.toStringAsFixed(initialValue % 1 == 0 ? 0 : 2),
     );
 
-    double? value;
-    try {
-      value = await showMaterialModalBottomSheet<double>(
-        context: context,
-        backgroundColor: Colors.transparent,
-        bounce: true,
-        builder: (context) {
-          final theme = Theme.of(context);
-          String? errorText;
+    final didSave = await showMaterialModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      bounce: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        String? errorText;
+        bool saving = false;
 
-          return StatefulBuilder(
-            builder: (context, setModalState) {
-              return Padding(
-                padding: EdgeInsets.only(
-                  left: AppSpacing.md,
-                  right: AppSpacing.md,
-                  bottom:
-                      MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: AppSpacing.md,
+                right: AppSpacing.md,
+                bottom:
+                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
+              ),
+              child: GlassCard(
+                glowColor: AppColors.teal,
+                radius: 28,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Align(
+                      child: Container(
+                        width: 44,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 18),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    Text(title, style: theme.textTheme.headlineSmall),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(helperText, style: theme.textTheme.bodyMedium),
+                    const SizedBox(height: AppSpacing.xl),
+                    TextField(
+                      controller: textController,
+                      autofocus: true,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      inputFormatters: [
+                        DecimalTextInputFormatter(maxDecimalPlaces: 2),
+                      ],
+                      style: theme.textTheme.headlineMedium,
+                      decoration: InputDecoration(
+                        prefixText: '$symbol ',
+                        hintText: '0',
+                        errorText: errorText,
+                      ),
+                      onChanged: (_) {
+                        if (errorText != null) {
+                          setModalState(() {
+                            errorText = null;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: saving
+                                ? null
+                                : () => Navigator.of(context).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: saving
+                                ? null
+                                : () async {
+                                    final parsed = double.tryParse(
+                                      textController.text.trim(),
+                                    );
+                                    if (parsed == null || parsed < 0) {
+                                      setModalState(() {
+                                        errorText = 'Enter a valid number';
+                                      });
+                                      return;
+                                    }
+                                    setModalState(() => saving = true);
+                                    try {
+                                      await onSave(parsed);
+                                      HapticFeedback.mediumImpact();
+                                      if (!context.mounted) {
+                                        return;
+                                      }
+                                      Navigator.of(context).pop(true);
+                                    } catch (_) {
+                                      if (!context.mounted) {
+                                        return;
+                                      }
+                                      setModalState(() {
+                                        saving = false;
+                                        errorText = 'Failed to save changes';
+                                      });
+                                    }
+                                  },
+                            child: saving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text('Save'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                child: GlassCard(
-                  glowColor: AppColors.teal,
-                  radius: 28,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Align(
-                        child: Container(
-                          width: 44,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 18),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                        ),
-                      ),
-                      Text(title, style: theme.textTheme.headlineSmall),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(helperText, style: theme.textTheme.bodyMedium),
-                      const SizedBox(height: AppSpacing.xl),
-                      TextField(
-                        controller: textController,
-                        autofocus: true,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        inputFormatters: [
-                          DecimalTextInputFormatter(maxDecimalPlaces: 2),
-                        ],
-                        style: theme.textTheme.headlineMedium,
-                        decoration: InputDecoration(
-                          prefixText: '$symbol ',
-                          hintText: '0',
-                          errorText: errorText,
-                        ),
-                        onChanged: (_) {
-                          if (errorText != null) {
-                            setModalState(() {
-                              errorText = null;
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('Cancel'),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: () {
-                                final parsed = double.tryParse(
-                                  textController.text.trim(),
-                                );
-                                if (parsed == null || parsed < 0) {
-                                  setModalState(() {
-                                    errorText = 'Enter a valid number';
-                                  });
-                                  return;
-                                }
-                                Navigator.of(context).pop(parsed);
-                              },
-                              child: const Text('Save'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      );
-    } finally {
-      textController.dispose();
-    }
+              ),
+            );
+          },
+        );
+      },
+    );
 
-    if (value == null) {
+    textController.dispose();
+
+    if (didSave != true) {
       return;
     }
-
-    await onSave(value);
-    HapticFeedback.mediumImpact();
 
     if (context.mounted) {
       ScaffoldMessenger.of(

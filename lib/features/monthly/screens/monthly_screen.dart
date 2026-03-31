@@ -353,12 +353,25 @@ class _TopBar extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(
       children: [
-        IconButton(onPressed: () {}, icon: const Icon(LucideIcons.menu)),
-        Expanded(
-          child: Center(
-            child: Text('SpendSplit', style: theme.textTheme.titleLarge),
+        const SizedBox(width: 8),
+        RichText(
+          text: TextSpan(
+            style: theme.textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+            children: const [
+              TextSpan(
+                text: 'Spend',
+                style: TextStyle(color: AppColors.purple),
+              ),
+              TextSpan(
+                text: 'Split',
+                style: TextStyle(color: AppColors.green),
+              ),
+            ],
           ),
         ),
+        const Spacer(),
         IconButton(
           onPressed: onSettingsTap,
           icon: const Icon(LucideIcons.settings),

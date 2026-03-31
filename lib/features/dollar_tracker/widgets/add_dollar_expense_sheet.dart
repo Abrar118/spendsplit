@@ -4,8 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
-import 'package:vibration/vibration.dart';
-
 import '../../../core/constants/categories.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -214,7 +212,16 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
                             foregroundColor: AppColors.onPrimary,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
-                          child: Text(_isEditing ? 'Update' : 'Save'),
+                          child: _saving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.onPrimary,
+                                  ),
+                                )
+                              : Text(_isEditing ? 'Update' : 'Save'),
                         ),
                       ),
                     ],
@@ -344,12 +351,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
         );
       }
 
-      final hasVibrator = await Vibration.hasVibrator();
-      if (hasVibrator == true) {
-        Vibration.vibrate(duration: 30);
-      } else {
-        HapticFeedback.mediumImpact();
-      }
+      HapticFeedback.mediumImpact();
 
       if (!mounted) return;
       setState(() {

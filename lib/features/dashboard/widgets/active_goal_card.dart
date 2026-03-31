@@ -33,6 +33,7 @@ class _EmptyGoalCard extends StatelessWidget {
     return GlassCard(
       glowColor: AppColors.purple,
       radius: 24,
+      opacity: 0.8,
       child: Row(
         children: [
           Container(
@@ -40,11 +41,13 @@ class _EmptyGoalCard extends StatelessWidget {
             height: 96,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [AppColors.teal, AppColors.purple],
-              ),
+              color: AppColors.purple,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.purple.withValues(alpha: 0.45),
+                  blurRadius: 10,
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 16),
@@ -90,6 +93,7 @@ class _ActiveGoalDisplay extends StatelessWidget {
     return GlassCard(
       glowColor: AppColors.purple,
       radius: 24,
+      opacity: 0.8,
       child: Row(
         children: [
           Container(
@@ -97,11 +101,13 @@ class _ActiveGoalDisplay extends StatelessWidget {
             height: 110,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [AppColors.teal, AppColors.purple],
-              ),
+              color: AppColors.purple,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.purple.withValues(alpha: 0.45),
+                  blurRadius: 10,
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 16),
@@ -187,7 +193,7 @@ class _ActiveGoalDisplay extends StatelessWidget {
                     Text(
                       '$percentage%',
                       style: theme.textTheme.titleMedium?.copyWith(
-                        color: AppColors.teal,
+                        color: AppColors.purple,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -215,11 +221,14 @@ class _ActiveGoalDisplay extends StatelessWidget {
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [AppColors.teal, AppColors.blue],
+                                    colors: [
+                                      AppColors.purple,
+                                      AppColors.softPurple,
+                                    ],
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppColors.teal.withValues(
+                                      color: AppColors.purple.withValues(
                                         alpha: 0.32,
                                       ),
                                       blurRadius: 12,
