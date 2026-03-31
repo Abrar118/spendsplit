@@ -21,10 +21,12 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   bool _authenticating = false;
   bool _deviceSupported = true;
   String? _statusMessage;
+  late final AuthRepository _authRepository;
 
   @override
   void initState() {
     super.initState();
+    _authRepository = ref.read(authRepositoryProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -35,7 +37,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
 
   @override
   void dispose() {
-    ref.read(authRepositoryProvider).stopAuthentication();
+    _authRepository.stopAuthentication();
     super.dispose();
   }
 
