@@ -302,9 +302,40 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
   Future<void> _deleteTransaction(TransactionsTableData transaction) async {
     final repository = ref.read(transactionRepositoryProvider);
+    final savingsRepository = ref.read(savingsRepositoryProvider);
     final messenger = ScaffoldMessenger.of(context);
+    final goalDelta = _goalLinkedDelta(transaction);
+    final linkedGoalId = transaction.savingsGoalId;
 
-    await repository.deleteTransactionById(transaction.id);
+    if (linkedGoalId != null && goalDelta.abs() > 1e-9) {
+      final goal = await savingsRepository.getGoalById(linkedGoalId);
+      if (goal != null) {
+        final projected = goal.currentAmount - goalDelta;
+        if (projected < -1e-9) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                'Cannot delete this transaction because it would make "${goal.name}" go below zero.',
+              ),
+            ),
+          );
+          return;
+        }
+      }
+    }
+
+    await ref.read(appDatabaseProvider).transaction(() async {
+      await repository.deleteTransactionById(transaction.id);
+      if (linkedGoalId != null && goalDelta.abs() > 1e-9) {
+        final updated = await savingsRepository.adjustGoalAmountBy(
+          linkedGoalId,
+          -goalDelta,
+        );
+        if (!updated) {
+          throw StateError('Failed to update linked savings goal.');
+        }
+      }
+    });
 
     var undoFired = false;
 
@@ -314,15 +345,39 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         content: const Text('Deleted'),
         action: SnackBarAction(
           label: 'Undo',
-          onPressed: () {
+          onPressed: () async {
             if (undoFired) return;
             undoFired = true;
-            // Re-insert with the original ID to preserve identity
-            repository.createTransactionWithId(transaction);
+            await ref.read(appDatabaseProvider).transaction(() async {
+              await repository.createTransactionWithId(transaction);
+              // Only re-apply goal delta if the goal still exists
+              if (linkedGoalId != null && goalDelta.abs() > 1e-9) {
+                final goal = await savingsRepository.getGoalById(linkedGoalId);
+                if (goal != null && !goal.isCompleted) {
+                  final updated = await savingsRepository.adjustGoalAmountBy(
+                    linkedGoalId,
+                    goalDelta,
+                  );
+                  if (!updated) {
+                    throw StateError('Failed to restore linked savings goal.');
+                  }
+                }
+              }
+            });
           },
         ),
       ),
     );
+  }
+
+  double _goalLinkedDelta(TransactionsTableData transaction) {
+    if (transaction.savingsGoalId == null) return 0;
+
+    return switch (TransactionType.fromDbValue(transaction.type)) {
+      TransactionType.savingsDeposit => transaction.amount,
+      TransactionType.savingsWithdrawal => -transaction.amount,
+      _ => 0,
+    };
   }
 
   Future<void> _refreshTransactions() async {

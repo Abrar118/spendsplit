@@ -161,6 +161,27 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                             const SizedBox(height: 14),
                         ],
                       const SizedBox(height: AppSpacing.section),
+                      OverallProgressCard(
+                            progress: overallProgress,
+                            title: 'On track for your milestones',
+                            body: _buildPredictiveCopy(
+                              activeGoals: activeGoals,
+                              averageMonthlySavings:
+                                  insightsAsync
+                                      .valueOrNull
+                                      ?.averageMonthlySavings ??
+                                  0,
+                            ),
+                          )
+                          .animate()
+                          .fadeIn(duration: 260.ms, delay: 120.ms)
+                          .slideY(
+                            begin: 0.06,
+                            end: 0,
+                            duration: 260.ms,
+                            delay: 120.ms,
+                          ),
+                      const SizedBox(height: AppSpacing.section),
                       InkWell(
                         onTap: completedGoals.isEmpty
                             ? null
@@ -241,27 +262,6 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                             const SizedBox(height: 12),
                         ],
                       ],
-                      const SizedBox(height: AppSpacing.section),
-                      OverallProgressCard(
-                            progress: overallProgress,
-                            title: 'On track for your milestones',
-                            body: _buildPredictiveCopy(
-                              activeGoals: activeGoals,
-                              averageMonthlySavings:
-                                  insightsAsync
-                                      .valueOrNull
-                                      ?.averageMonthlySavings ??
-                                  0,
-                            ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 260.ms, delay: 120.ms)
-                          .slideY(
-                            begin: 0.06,
-                            end: 0,
-                            duration: 260.ms,
-                            delay: 120.ms,
-                          ),
                     ]),
                   ),
                 ),

@@ -51,6 +51,17 @@ class $TransactionsTableTable extends TransactionsTable
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _savingsGoalIdMeta = const VerificationMeta(
+    'savingsGoalId',
+  );
+  @override
+  late final GeneratedColumn<int> savingsGoalId = GeneratedColumn<int>(
+    'savings_goal_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _sourceMeta = const VerificationMeta('source');
   @override
   late final GeneratedColumn<String> source = GeneratedColumn<String>(
@@ -96,6 +107,7 @@ class $TransactionsTableTable extends TransactionsTable
     type,
     amount,
     categoryId,
+    savingsGoalId,
     source,
     note,
     date,
@@ -136,6 +148,15 @@ class $TransactionsTableTable extends TransactionsTable
       context.handle(
         _categoryIdMeta,
         categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    }
+    if (data.containsKey('savings_goal_id')) {
+      context.handle(
+        _savingsGoalIdMeta,
+        savingsGoalId.isAcceptableOrUnknown(
+          data['savings_goal_id']!,
+          _savingsGoalIdMeta,
+        ),
       );
     }
     if (data.containsKey('source')) {
@@ -189,6 +210,10 @@ class $TransactionsTableTable extends TransactionsTable
         DriftSqlType.int,
         data['${effectivePrefix}category_id'],
       ),
+      savingsGoalId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}savings_goal_id'],
+      ),
       source: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}source'],
@@ -220,6 +245,7 @@ class TransactionsTableData extends DataClass
   final String type;
   final double amount;
   final int? categoryId;
+  final int? savingsGoalId;
   final String? source;
   final String? note;
   final DateTime date;
@@ -229,6 +255,7 @@ class TransactionsTableData extends DataClass
     required this.type,
     required this.amount,
     this.categoryId,
+    this.savingsGoalId,
     this.source,
     this.note,
     required this.date,
@@ -242,6 +269,9 @@ class TransactionsTableData extends DataClass
     map['amount'] = Variable<double>(amount);
     if (!nullToAbsent || categoryId != null) {
       map['category_id'] = Variable<int>(categoryId);
+    }
+    if (!nullToAbsent || savingsGoalId != null) {
+      map['savings_goal_id'] = Variable<int>(savingsGoalId);
     }
     if (!nullToAbsent || source != null) {
       map['source'] = Variable<String>(source);
@@ -262,6 +292,9 @@ class TransactionsTableData extends DataClass
       categoryId: categoryId == null && nullToAbsent
           ? const Value.absent()
           : Value(categoryId),
+      savingsGoalId: savingsGoalId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(savingsGoalId),
       source: source == null && nullToAbsent
           ? const Value.absent()
           : Value(source),
@@ -281,6 +314,7 @@ class TransactionsTableData extends DataClass
       type: serializer.fromJson<String>(json['type']),
       amount: serializer.fromJson<double>(json['amount']),
       categoryId: serializer.fromJson<int?>(json['categoryId']),
+      savingsGoalId: serializer.fromJson<int?>(json['savingsGoalId']),
       source: serializer.fromJson<String?>(json['source']),
       note: serializer.fromJson<String?>(json['note']),
       date: serializer.fromJson<DateTime>(json['date']),
@@ -295,6 +329,7 @@ class TransactionsTableData extends DataClass
       'type': serializer.toJson<String>(type),
       'amount': serializer.toJson<double>(amount),
       'categoryId': serializer.toJson<int?>(categoryId),
+      'savingsGoalId': serializer.toJson<int?>(savingsGoalId),
       'source': serializer.toJson<String?>(source),
       'note': serializer.toJson<String?>(note),
       'date': serializer.toJson<DateTime>(date),
@@ -307,6 +342,7 @@ class TransactionsTableData extends DataClass
     String? type,
     double? amount,
     Value<int?> categoryId = const Value.absent(),
+    Value<int?> savingsGoalId = const Value.absent(),
     Value<String?> source = const Value.absent(),
     Value<String?> note = const Value.absent(),
     DateTime? date,
@@ -316,6 +352,9 @@ class TransactionsTableData extends DataClass
     type: type ?? this.type,
     amount: amount ?? this.amount,
     categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    savingsGoalId: savingsGoalId.present
+        ? savingsGoalId.value
+        : this.savingsGoalId,
     source: source.present ? source.value : this.source,
     note: note.present ? note.value : this.note,
     date: date ?? this.date,
@@ -329,6 +368,9 @@ class TransactionsTableData extends DataClass
       categoryId: data.categoryId.present
           ? data.categoryId.value
           : this.categoryId,
+      savingsGoalId: data.savingsGoalId.present
+          ? data.savingsGoalId.value
+          : this.savingsGoalId,
       source: data.source.present ? data.source.value : this.source,
       note: data.note.present ? data.note.value : this.note,
       date: data.date.present ? data.date.value : this.date,
@@ -343,6 +385,7 @@ class TransactionsTableData extends DataClass
           ..write('type: $type, ')
           ..write('amount: $amount, ')
           ..write('categoryId: $categoryId, ')
+          ..write('savingsGoalId: $savingsGoalId, ')
           ..write('source: $source, ')
           ..write('note: $note, ')
           ..write('date: $date, ')
@@ -352,8 +395,17 @@ class TransactionsTableData extends DataClass
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, type, amount, categoryId, source, note, date, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    type,
+    amount,
+    categoryId,
+    savingsGoalId,
+    source,
+    note,
+    date,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -362,6 +414,7 @@ class TransactionsTableData extends DataClass
           other.type == this.type &&
           other.amount == this.amount &&
           other.categoryId == this.categoryId &&
+          other.savingsGoalId == this.savingsGoalId &&
           other.source == this.source &&
           other.note == this.note &&
           other.date == this.date &&
@@ -374,6 +427,7 @@ class TransactionsTableCompanion
   final Value<String> type;
   final Value<double> amount;
   final Value<int?> categoryId;
+  final Value<int?> savingsGoalId;
   final Value<String?> source;
   final Value<String?> note;
   final Value<DateTime> date;
@@ -383,6 +437,7 @@ class TransactionsTableCompanion
     this.type = const Value.absent(),
     this.amount = const Value.absent(),
     this.categoryId = const Value.absent(),
+    this.savingsGoalId = const Value.absent(),
     this.source = const Value.absent(),
     this.note = const Value.absent(),
     this.date = const Value.absent(),
@@ -393,6 +448,7 @@ class TransactionsTableCompanion
     required String type,
     required double amount,
     this.categoryId = const Value.absent(),
+    this.savingsGoalId = const Value.absent(),
     this.source = const Value.absent(),
     this.note = const Value.absent(),
     required DateTime date,
@@ -405,6 +461,7 @@ class TransactionsTableCompanion
     Expression<String>? type,
     Expression<double>? amount,
     Expression<int>? categoryId,
+    Expression<int>? savingsGoalId,
     Expression<String>? source,
     Expression<String>? note,
     Expression<DateTime>? date,
@@ -415,6 +472,7 @@ class TransactionsTableCompanion
       if (type != null) 'type': type,
       if (amount != null) 'amount': amount,
       if (categoryId != null) 'category_id': categoryId,
+      if (savingsGoalId != null) 'savings_goal_id': savingsGoalId,
       if (source != null) 'source': source,
       if (note != null) 'note': note,
       if (date != null) 'date': date,
@@ -427,6 +485,7 @@ class TransactionsTableCompanion
     Value<String>? type,
     Value<double>? amount,
     Value<int?>? categoryId,
+    Value<int?>? savingsGoalId,
     Value<String?>? source,
     Value<String?>? note,
     Value<DateTime>? date,
@@ -437,6 +496,7 @@ class TransactionsTableCompanion
       type: type ?? this.type,
       amount: amount ?? this.amount,
       categoryId: categoryId ?? this.categoryId,
+      savingsGoalId: savingsGoalId ?? this.savingsGoalId,
       source: source ?? this.source,
       note: note ?? this.note,
       date: date ?? this.date,
@@ -458,6 +518,9 @@ class TransactionsTableCompanion
     }
     if (categoryId.present) {
       map['category_id'] = Variable<int>(categoryId.value);
+    }
+    if (savingsGoalId.present) {
+      map['savings_goal_id'] = Variable<int>(savingsGoalId.value);
     }
     if (source.present) {
       map['source'] = Variable<String>(source.value);
@@ -481,6 +544,7 @@ class TransactionsTableCompanion
           ..write('type: $type, ')
           ..write('amount: $amount, ')
           ..write('categoryId: $categoryId, ')
+          ..write('savingsGoalId: $savingsGoalId, ')
           ..write('source: $source, ')
           ..write('note: $note, ')
           ..write('date: $date, ')
@@ -1904,6 +1968,7 @@ typedef $$TransactionsTableTableCreateCompanionBuilder =
       required String type,
       required double amount,
       Value<int?> categoryId,
+      Value<int?> savingsGoalId,
       Value<String?> source,
       Value<String?> note,
       required DateTime date,
@@ -1915,6 +1980,7 @@ typedef $$TransactionsTableTableUpdateCompanionBuilder =
       Value<String> type,
       Value<double> amount,
       Value<int?> categoryId,
+      Value<int?> savingsGoalId,
       Value<String?> source,
       Value<String?> note,
       Value<DateTime> date,
@@ -1947,6 +2013,11 @@ class $$TransactionsTableTableFilterComposer
 
   ColumnFilters<int> get categoryId => $composableBuilder(
     column: $table.categoryId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get savingsGoalId => $composableBuilder(
+    column: $table.savingsGoalId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2000,6 +2071,11 @@ class $$TransactionsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get savingsGoalId => $composableBuilder(
+    column: $table.savingsGoalId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get source => $composableBuilder(
     column: $table.source,
     builder: (column) => ColumnOrderings(column),
@@ -2041,6 +2117,11 @@ class $$TransactionsTableTableAnnotationComposer
 
   GeneratedColumn<int> get categoryId => $composableBuilder(
     column: $table.categoryId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get savingsGoalId => $composableBuilder(
+    column: $table.savingsGoalId,
     builder: (column) => column,
   );
 
@@ -2101,6 +2182,7 @@ class $$TransactionsTableTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<double> amount = const Value.absent(),
                 Value<int?> categoryId = const Value.absent(),
+                Value<int?> savingsGoalId = const Value.absent(),
                 Value<String?> source = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 Value<DateTime> date = const Value.absent(),
@@ -2110,6 +2192,7 @@ class $$TransactionsTableTableTableManager
                 type: type,
                 amount: amount,
                 categoryId: categoryId,
+                savingsGoalId: savingsGoalId,
                 source: source,
                 note: note,
                 date: date,
@@ -2121,6 +2204,7 @@ class $$TransactionsTableTableTableManager
                 required String type,
                 required double amount,
                 Value<int?> categoryId = const Value.absent(),
+                Value<int?> savingsGoalId = const Value.absent(),
                 Value<String?> source = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 required DateTime date,
@@ -2130,6 +2214,7 @@ class $$TransactionsTableTableTableManager
                 type: type,
                 amount: amount,
                 categoryId: categoryId,
+                savingsGoalId: savingsGoalId,
                 source: source,
                 note: note,
                 date: date,

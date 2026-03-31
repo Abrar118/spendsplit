@@ -9,6 +9,8 @@ class TransactionsTable extends Table {
 
   IntColumn get categoryId => integer().nullable()();
 
+  IntColumn get savingsGoalId => integer().nullable()();
+
   TextColumn get source => text().nullable()();
 
   TextColumn get note => text().nullable()();

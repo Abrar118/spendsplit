@@ -58,6 +58,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   _TransactionEntryType _entryType = _TransactionEntryType.expense;
   _SavingsFlowType _savingsFlowType = _SavingsFlowType.deposit;
   int? _selectedCategoryId;
+  int? _selectedSavingsGoalId;
   String _selectedIncomeSource = IncomeSource.salary.dbValue;
   DateTime _selectedDate = DateTime.now();
   bool _saving = false;
@@ -78,6 +79,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       _amountController.text = transaction.amount.toStringAsFixed(2);
       _noteController.text = transaction.note ?? '';
       _selectedCategoryId = transaction.categoryId;
+      _selectedSavingsGoalId = transaction.savingsGoalId;
       _selectedIncomeSource = transaction.source ?? IncomeSource.salary.dbValue;
       _didAutoSelectCategory = true; // don't override edited category
 
@@ -118,6 +120,17 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final categoriesAsync = ref.watch(categoriesProvider);
     final categories =
         categoriesAsync.valueOrNull ?? const <CategoriesTableData>[];
+    final openGoals =
+        (ref.watch(savingsGoalsProvider).valueOrNull ??
+                const <SavingsGoalsTableData>[])
+            .where((goal) => !goal.isCompleted)
+            .toList();
+
+    // Clear stale goal reference if the linked goal was completed or deleted
+    if (_selectedSavingsGoalId != null &&
+        !openGoals.any((g) => g.id == _selectedSavingsGoalId)) {
+      _selectedSavingsGoalId = null;
+    }
 
     _syncInitialCategory(categories);
 
@@ -333,6 +346,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                                   accentColor: _accentColor,
                                   categories: items,
                                   selectedCategoryId: _selectedCategoryId,
+                                  openGoals: openGoals,
+                                  selectedSavingsGoalId: _selectedSavingsGoalId,
                                   selectedIncomeSource: _selectedIncomeSource,
                                   savingsFlowType: _savingsFlowType,
                                   onCategorySelected: (value) {
@@ -351,6 +366,11 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                                   onSavingsFlowSelected: (value) {
                                     setState(() {
                                       _savingsFlowType = value;
+                                    });
+                                  },
+                                  onSavingsGoalSelected: (value) {
+                                    setState(() {
+                                      _selectedSavingsGoalId = value;
                                     });
                                   },
                                 ),
@@ -545,20 +565,52 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       return;
     }
 
+    final transactionType = switch (_entryType) {
+      _TransactionEntryType.expense => TransactionType.expense,
+      _TransactionEntryType.income => TransactionType.income,
+      _TransactionEntryType.savings =>
+        _savingsFlowType == _SavingsFlowType.deposit
+            ? TransactionType.savingsDeposit
+            : TransactionType.savingsWithdrawal,
+    };
+
+    final nextSavingsGoalId = _entryType == _TransactionEntryType.savings
+        ? _selectedSavingsGoalId
+        : null;
+    final goalAdjustments = _goalAdjustmentsForSave(
+      existingTransaction: widget.existingTransaction,
+      nextGoalId: nextSavingsGoalId,
+      nextType: transactionType,
+      nextAmount: amount,
+    );
+
+    if (goalAdjustments.isNotEmpty) {
+      final savingsRepository = ref.read(savingsRepositoryProvider);
+      for (final entry in goalAdjustments.entries) {
+        final goal = await savingsRepository.getGoalById(entry.key);
+        if (goal == null) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Selected goal could not be found')),
+          );
+          return;
+        }
+        final projected = goal.currentAmount + entry.value;
+        if (projected < 0) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text('This would make "${goal.name}" go below zero.'),
+            ),
+          );
+          return;
+        }
+      }
+    }
+
     setState(() {
       _saving = true;
     });
 
     try {
-      final transactionType = switch (_entryType) {
-        _TransactionEntryType.expense => TransactionType.expense,
-        _TransactionEntryType.income => TransactionType.income,
-        _TransactionEntryType.savings =>
-          _savingsFlowType == _SavingsFlowType.deposit
-              ? TransactionType.savingsDeposit
-              : TransactionType.savingsWithdrawal,
-      };
-
       final companion = TransactionsTableCompanion(
         type: Value(transactionType.dbValue),
         amount: Value(amount),
@@ -572,6 +624,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               ? _selectedIncomeSource
               : null,
         ),
+        savingsGoalId: Value(nextSavingsGoalId),
         note: Value(
           _noteController.text.trim().isEmpty
               ? null
@@ -581,34 +634,48 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       );
 
       final repository = ref.read(transactionRepositoryProvider);
+      final savingsRepository = ref.read(savingsRepositoryProvider);
+      await ref.read(appDatabaseProvider).transaction(() async {
+        if (_isEditing) {
+          final existing = widget.existingTransaction!;
+          await repository.updateTransaction(
+            existing.copyWith(
+              type: transactionType.dbValue,
+              amount: amount,
+              categoryId: Value(
+                _entryType == _TransactionEntryType.expense
+                    ? _selectedCategoryId
+                    : null,
+              ),
+              savingsGoalId: Value(nextSavingsGoalId),
+              source: Value(
+                _entryType == _TransactionEntryType.income
+                    ? _selectedIncomeSource
+                    : null,
+              ),
+              note: Value(
+                _noteController.text.trim().isEmpty
+                    ? null
+                    : _noteController.text.trim(),
+              ),
+              date: _selectedDate,
+            ),
+          );
+        } else {
+          await repository.createTransaction(companion);
+        }
 
-      if (_isEditing) {
-        final existing = widget.existingTransaction!;
-        await repository.updateTransaction(
-          existing.copyWith(
-            type: transactionType.dbValue,
-            amount: amount,
-            categoryId: Value(
-              _entryType == _TransactionEntryType.expense
-                  ? _selectedCategoryId
-                  : null,
-            ),
-            source: Value(
-              _entryType == _TransactionEntryType.income
-                  ? _selectedIncomeSource
-                  : null,
-            ),
-            note: Value(
-              _noteController.text.trim().isEmpty
-                  ? null
-                  : _noteController.text.trim(),
-            ),
-            date: _selectedDate,
-          ),
-        );
-      } else {
-        await repository.createTransaction(companion);
-      }
+        for (final entry in goalAdjustments.entries) {
+          if (entry.value.abs() < 1e-9) continue;
+          final updated = await savingsRepository.adjustGoalAmountBy(
+            entry.key,
+            entry.value,
+          );
+          if (!updated) {
+            throw StateError('Failed to update linked savings goal.');
+          }
+        }
+      });
 
       if (!mounted) return;
 
@@ -634,6 +701,57 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         _saving = false;
       });
     }
+  }
+
+  Map<int, double> _goalAdjustmentsForSave({
+    required TransactionsTableData? existingTransaction,
+    required int? nextGoalId,
+    required TransactionType nextType,
+    required double nextAmount,
+  }) {
+    final adjustments = <int, double>{};
+
+    void apply(int? goalId, double delta) {
+      if (goalId == null || delta.abs() < 1e-9) return;
+      adjustments.update(
+        goalId,
+        (value) => value + delta,
+        ifAbsent: () => delta,
+      );
+    }
+
+    if (existingTransaction != null) {
+      apply(
+        existingTransaction.savingsGoalId,
+        -_goalLinkedDelta(
+          goalId: existingTransaction.savingsGoalId,
+          type: TransactionType.fromDbValue(existingTransaction.type),
+          amount: existingTransaction.amount,
+        ),
+      );
+    }
+
+    apply(
+      nextGoalId,
+      _goalLinkedDelta(goalId: nextGoalId, type: nextType, amount: nextAmount),
+    );
+
+    adjustments.removeWhere((key, value) => value.abs() < 1e-9);
+    return adjustments;
+  }
+
+  double _goalLinkedDelta({
+    required int? goalId,
+    required TransactionType type,
+    required double amount,
+  }) {
+    if (goalId == null) return 0;
+
+    return switch (type) {
+      TransactionType.savingsDeposit => amount,
+      TransactionType.savingsWithdrawal => -amount,
+      _ => 0,
+    };
   }
 }
 
@@ -796,24 +914,30 @@ class _AdaptiveSection extends StatelessWidget {
     required this.accentColor,
     required this.categories,
     required this.selectedCategoryId,
+    required this.openGoals,
+    required this.selectedSavingsGoalId,
     required this.selectedIncomeSource,
     required this.savingsFlowType,
     required this.onCategorySelected,
     required this.onAddCustomCategory,
     required this.onIncomeSourceSelected,
     required this.onSavingsFlowSelected,
+    required this.onSavingsGoalSelected,
   });
 
   final _TransactionEntryType entryType;
   final Color accentColor;
   final List<CategoriesTableData> categories;
   final int? selectedCategoryId;
+  final List<SavingsGoalsTableData> openGoals;
+  final int? selectedSavingsGoalId;
   final String selectedIncomeSource;
   final _SavingsFlowType savingsFlowType;
   final ValueChanged<int> onCategorySelected;
   final VoidCallback? onAddCustomCategory;
   final ValueChanged<String> onIncomeSourceSelected;
   final ValueChanged<_SavingsFlowType> onSavingsFlowSelected;
+  final ValueChanged<int?> onSavingsGoalSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -865,14 +989,49 @@ class _AdaptiveSection extends StatelessWidget {
       );
     }
 
-    return _SegmentSection<_SavingsFlowType>(
-      label: 'SAVINGS TYPE',
-      accentColor: accentColor,
-      values: const [_SavingsFlowType.deposit, _SavingsFlowType.withdrawal],
-      selectedValue: savingsFlowType,
-      onSelected: onSavingsFlowSelected,
-      displayText: (value) =>
-          value == _SavingsFlowType.deposit ? 'Deposit' : 'Withdrawal',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SegmentSection<_SavingsFlowType>(
+          label: 'SAVINGS TYPE',
+          accentColor: accentColor,
+          values: const [_SavingsFlowType.deposit, _SavingsFlowType.withdrawal],
+          selectedValue: savingsFlowType,
+          onSelected: onSavingsFlowSelected,
+          displayText: (value) =>
+              value == _SavingsFlowType.deposit ? 'Deposit' : 'Withdrawal',
+        ),
+        const SizedBox(height: 24),
+        Text('ADD TO GOAL', style: theme.textTheme.labelMedium),
+        const SizedBox(height: 16),
+        if (openGoals.isEmpty)
+          Text(
+            'No open savings goals available.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: Colors.white.withValues(alpha: 0.58),
+            ),
+          )
+        else
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _GoalLinkChip(
+                label: 'None',
+                selected: selectedSavingsGoalId == null,
+                accentColor: accentColor,
+                onTap: () => onSavingsGoalSelected(null),
+              ),
+              for (final goal in openGoals)
+                _GoalLinkChip(
+                  label: goal.name,
+                  selected: selectedSavingsGoalId == goal.id,
+                  accentColor: accentColor,
+                  onTap: () => onSavingsGoalSelected(goal.id),
+                ),
+            ],
+          ),
+      ],
     );
   }
 
@@ -880,6 +1039,43 @@ class _AdaptiveSection extends StatelessWidget {
     return IncomeSource.values.firstWhere(
       (source) => source.dbValue == value,
       orElse: () => IncomeSource.salary,
+    );
+  }
+}
+
+class _GoalLinkChip extends StatelessWidget {
+  const _GoalLinkChip({
+    required this.label,
+    required this.selected,
+    required this.accentColor,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final Color accentColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onTap(),
+      showCheckmark: false,
+      selectedColor: accentColor.withValues(alpha: 0.16),
+      backgroundColor: Colors.white.withValues(alpha: 0.04),
+      side: BorderSide(
+        color: selected
+            ? accentColor.withValues(alpha: 0.32)
+            : Colors.white.withValues(alpha: 0.08),
+      ),
+      labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: selected ? Colors.white : Colors.white.withValues(alpha: 0.72),
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     );
   }
 }

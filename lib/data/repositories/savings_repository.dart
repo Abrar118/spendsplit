@@ -16,6 +16,10 @@ class SavingsRepository {
     return _savingsGoalDao.getGoals(includeCompleted: includeCompleted);
   }
 
+  Future<SavingsGoalsTableData?> getGoalById(int id) {
+    return _savingsGoalDao.getGoalById(id);
+  }
+
   Future<int> createGoal(SavingsGoalsTableCompanion entry) {
     return _savingsGoalDao.insertGoal(entry);
   }
@@ -24,7 +28,13 @@ class SavingsRepository {
     return _savingsGoalDao.updateGoal(entry);
   }
 
-  Future<int> deleteGoalById(int id) {
+  /// Clears savingsGoalId on all linked transactions, then deletes the goal.
+  Future<int> deleteGoalById(int id) async {
+    await _savingsGoalDao.clearGoalReferencesOnTransactions(id);
     return _savingsGoalDao.deleteGoalById(id);
+  }
+
+  Future<bool> adjustGoalAmountBy(int id, double delta) {
+    return _savingsGoalDao.adjustCurrentAmountBy(id, delta);
   }
 }

@@ -34,6 +34,12 @@ class SavingsGoalDao extends DatabaseAccessor<AppDatabase>
     return query.get();
   }
 
+  Future<SavingsGoalsTableData?> getGoalById(int id) {
+    return (select(
+      savingsGoalsTable,
+    )..where((table) => table.id.equals(id))).getSingleOrNull();
+  }
+
   Future<int> insertGoal(SavingsGoalsTableCompanion entry) {
     return into(savingsGoalsTable).insert(entry);
   }
@@ -46,5 +52,28 @@ class SavingsGoalDao extends DatabaseAccessor<AppDatabase>
     return (delete(
       savingsGoalsTable,
     )..where((table) => table.id.equals(id))).go();
+  }
+
+  /// Adjusts the goal's currentAmount by [delta].
+  /// Returns false if the goal doesn't exist or the result would go negative.
+  Future<bool> adjustCurrentAmountBy(int id, double delta) async {
+    if (delta.abs() < 1e-9) return true; // skip dust deltas
+    final existing = await getGoalById(id);
+    if (existing == null) return false;
+
+    final raw = existing.currentAmount + delta;
+    if (raw < -1e-9) return false;
+    final nextAmount = raw.abs() < 1e-9 ? 0.0 : raw;
+    return update(
+      savingsGoalsTable,
+    ).replace(existing.copyWith(currentAmount: nextAmount));
+  }
+
+  /// Nulls out savingsGoalId on all transactions that reference [goalId].
+  /// Called before deleting a goal to prevent orphaned references.
+  Future<void> clearGoalReferencesOnTransactions(int goalId) async {
+    await (attachedDatabase.update(attachedDatabase.transactionsTable)
+          ..where((t) => t.savingsGoalId.equals(goalId)))
+        .write(const TransactionsTableCompanion(savingsGoalId: Value(null)));
   }
 }

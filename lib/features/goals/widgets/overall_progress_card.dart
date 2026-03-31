@@ -10,14 +10,12 @@ class OverallProgressCard extends StatelessWidget {
     required this.progress,
     required this.title,
     required this.body,
-    this.onAdjustStrategy,
     super.key,
   });
 
   final double progress;
   final String title;
   final String body;
-  final VoidCallback? onAdjustStrategy;
 
   @override
   Widget build(BuildContext context) {
@@ -78,23 +76,6 @@ class OverallProgressCard extends StatelessWidget {
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondary,
                     height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                InkWell(
-                  onTap: onAdjustStrategy,
-                  borderRadius: BorderRadius.circular(999),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 2,
-                    ),
-                    child: Text(
-                      'Adjust strategy',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: AppColors.teal,
-                      ),
-                    ),
                   ),
                 ),
               ],
