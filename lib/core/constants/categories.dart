@@ -49,6 +49,26 @@ abstract final class DefaultCategories {
   ];
 }
 
+abstract final class DefaultDollarCategories {
+  static const games = 'Games';
+  static const subscription = 'Subscription';
+  static const education = 'Education';
+
+  static const seeds = [
+    DefaultCategorySeed(name: games, icon: 'gamepad_2', colorValue: 0xFF60A5FA),
+    DefaultCategorySeed(
+      name: subscription,
+      icon: 'repeat',
+      colorValue: 0xFF00E5BF,
+    ),
+    DefaultCategorySeed(
+      name: education,
+      icon: 'graduation_cap',
+      colorValue: 0xFFA78BFA,
+    ),
+  ];
+}
+
 IconData iconForCategoryKey(String iconName) {
   switch (iconName) {
     case 'restaurant':
@@ -75,6 +95,12 @@ IconData iconForCategoryKey(String iconName) {
       return LucideIcons.globe2;
     case 'briefcase':
       return LucideIcons.briefcase;
+    case 'gamepad_2':
+      return LucideIcons.gamepad2;
+    case 'repeat':
+      return LucideIcons.repeat;
+    case 'graduation_cap':
+      return LucideIcons.graduationCap;
     default:
       return LucideIcons.tag;
   }

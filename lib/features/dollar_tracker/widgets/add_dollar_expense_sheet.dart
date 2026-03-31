@@ -40,6 +40,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
   DateTime _selectedDate = DateTime.now();
   int? _selectedCategoryId;
   bool _saving = false;
+  bool _didAutoSelectCategory = false;
 
   @override
   void initState() {
@@ -75,6 +76,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
           const Center(child: CircularProgressIndicator(color: AppColors.teal)),
       error: (error, stackTrace) => const SizedBox.shrink(),
       data: (categories) {
+        _syncInitialCategory(categories);
         return SafeArea(
           top: false,
           child: Padding(
@@ -280,6 +282,24 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
     if (!mounted) return;
     setState(() {
       _selectedCategoryId = categoryId;
+      _didAutoSelectCategory = true;
+    });
+  }
+
+  void _syncInitialCategory(List<CategoriesTableData> categories) {
+    if (_didAutoSelectCategory) return;
+    if (_selectedCategoryId != null) {
+      _didAutoSelectCategory = true;
+      return;
+    }
+    if (categories.isEmpty) return;
+
+    _didAutoSelectCategory = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _selectedCategoryId = categories.first.id;
+      });
     });
   }
 
@@ -422,27 +442,27 @@ class _CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = Color(category.color);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected
-              ? color.withValues(alpha: 0.18)
-              : Colors.white.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected ? color : Colors.white.withValues(alpha: 0.08),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(iconForCategoryKey(category.icon), size: 14, color: color),
-            const SizedBox(width: 8),
-            Text(category.name),
-          ],
+    return ChoiceChip(
+      selected: selected,
+      onSelected: onTap == null ? null : (_) => onTap!(),
+      showCheckmark: false,
+      selectedColor: color.withValues(alpha: 0.18),
+      backgroundColor: Colors.white.withValues(alpha: 0.04),
+      side: BorderSide(
+        color: selected ? color : Colors.white.withValues(alpha: 0.08),
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+      avatar: Icon(
+        iconForCategoryKey(category.icon),
+        size: 14,
+        color: selected ? color : Colors.white,
+      ),
+      label: Text(
+        category.name,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: selected ? color : Colors.white,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
         ),
       ),
     );

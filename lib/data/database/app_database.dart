@@ -30,28 +30,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
       await m.createAll();
-      await batch((batch) {
-        batch.insertAll(
-          categoriesTable,
-          DefaultCategories.seeds
-              .map(
-                (seed) => CategoriesTableCompanion.insert(
-                  name: seed.name,
-                  icon: seed.icon,
-                  color: seed.colorValue,
-                  isPredefined: const Value(true),
-                  isDollarCategory: const Value(false),
-                ),
-              )
-              .toList(),
-        );
-      });
+      await _ensureDefaultCategories();
     },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
@@ -60,8 +45,77 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(savingsGoalsTable, savingsGoalsTable.isCompleted);
         await m.addColumn(savingsGoalsTable, savingsGoalsTable.completedAt);
       }
+
+      if (from < 3) {
+        final existingNames = (await select(
+          categoriesTable,
+        ).get()).map((row) => row.name).toSet();
+        final missingDollarSeeds = DefaultDollarCategories.seeds.where(
+          (seed) => !existingNames.contains(seed.name),
+        );
+        if (missingDollarSeeds.isNotEmpty) {
+          await batch((batch) {
+            batch.insertAll(
+              categoriesTable,
+              missingDollarSeeds
+                  .map(
+                    (seed) => CategoriesTableCompanion.insert(
+                      name: seed.name,
+                      icon: seed.icon,
+                      color: seed.colorValue,
+                      isPredefined: const Value(true),
+                      isDollarCategory: const Value(true),
+                    ),
+                  )
+                  .toList(),
+            );
+          });
+        }
+      }
+    },
+    beforeOpen: (_) async {
+      await _ensureDefaultCategories();
     },
   );
+
+  Future<void> _ensureDefaultCategories() async {
+    final existingNames = (await select(
+      categoriesTable,
+    ).get()).map((row) => row.name).toSet();
+
+    final entries = [
+      ...DefaultCategories.seeds
+          .where((seed) => !existingNames.contains(seed.name))
+          .map(
+            (seed) => CategoriesTableCompanion.insert(
+              name: seed.name,
+              icon: seed.icon,
+              color: seed.colorValue,
+              isPredefined: const Value(true),
+              isDollarCategory: const Value(false),
+            ),
+          ),
+      ...DefaultDollarCategories.seeds
+          .where((seed) => !existingNames.contains(seed.name))
+          .map(
+            (seed) => CategoriesTableCompanion.insert(
+              name: seed.name,
+              icon: seed.icon,
+              color: seed.colorValue,
+              isPredefined: const Value(true),
+              isDollarCategory: const Value(true),
+            ),
+          ),
+    ];
+
+    if (entries.isEmpty) {
+      return;
+    }
+
+    await batch((batch) {
+      batch.insertAll(categoriesTable, entries);
+    });
+  }
 }
 
 LazyDatabase _openConnection() {
