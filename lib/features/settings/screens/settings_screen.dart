@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -85,7 +83,6 @@ class SettingsScreen extends ConsumerWidget {
                       }
 
                       await controller.setBiometricEnabled(value);
-                      HapticFeedback.mediumImpact();
                       if (value) {
                         ref.read(appSessionUnlockedProvider.notifier).unlock();
                       } else {
@@ -190,143 +187,19 @@ class SettingsScreen extends ConsumerWidget {
     required String helperText,
     required Future<void> Function(double value) onSave,
   }) async {
-    final textController = TextEditingController(
-      text: initialValue == 0
-          ? ''
-          : initialValue.toStringAsFixed(initialValue % 1 == 0 ? 0 : 2),
-    );
-
-    final didSave = await showMaterialModalBottomSheet<bool>(
+    final didSave = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
-      bounce: true,
-      builder: (context) {
-        final theme = Theme.of(context);
-        String? errorText;
-        bool saving = false;
-
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: AppSpacing.md,
-                right: AppSpacing.md,
-                bottom:
-                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
-              ),
-              child: GlassCard(
-                glowColor: AppColors.teal,
-                radius: 28,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Align(
-                      child: Container(
-                        width: 44,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 18),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                    ),
-                    Text(title, style: theme.textTheme.headlineSmall),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(helperText, style: theme.textTheme.bodyMedium),
-                    const SizedBox(height: AppSpacing.xl),
-                    TextField(
-                      controller: textController,
-                      autofocus: true,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [
-                        DecimalTextInputFormatter(maxDecimalPlaces: 2),
-                      ],
-                      style: theme.textTheme.headlineMedium,
-                      decoration: InputDecoration(
-                        prefixText: '$symbol ',
-                        hintText: '0',
-                        errorText: errorText,
-                      ),
-                      onChanged: (_) {
-                        if (errorText != null) {
-                          setModalState(() {
-                            errorText = null;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: saving
-                                ? null
-                                : () => Navigator.of(context).pop(false),
-                            child: const Text('Cancel'),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: FilledButton(
-                            onPressed: saving
-                                ? null
-                                : () async {
-                                    final parsed = double.tryParse(
-                                      textController.text.trim(),
-                                    );
-                                    if (parsed == null || parsed < 0) {
-                                      setModalState(() {
-                                        errorText = 'Enter a valid number';
-                                      });
-                                      return;
-                                    }
-                                    setModalState(() => saving = true);
-                                    try {
-                                      await onSave(parsed);
-                                      HapticFeedback.mediumImpact();
-                                      if (!context.mounted) {
-                                        return;
-                                      }
-                                      Navigator.of(context).pop(true);
-                                    } catch (_) {
-                                      if (!context.mounted) {
-                                        return;
-                                      }
-                                      setModalState(() {
-                                        saving = false;
-                                        errorText = 'Failed to save changes';
-                                      });
-                                    }
-                                  },
-                            child: saving
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text('Save'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+      isScrollControlled: true,
+      enableDrag: true,
+      builder: (_) => _AmountEditorSheet(
+        title: title,
+        symbol: symbol,
+        initialValue: initialValue,
+        helperText: helperText,
+        onSave: onSave,
+      ),
     );
-
-    textController.dispose();
 
     if (didSave != true) {
       return;
@@ -388,6 +261,163 @@ class _SwitchRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _AmountEditorSheet extends StatefulWidget {
+  const _AmountEditorSheet({
+    required this.title,
+    required this.symbol,
+    required this.initialValue,
+    required this.helperText,
+    required this.onSave,
+  });
+
+  final String title;
+  final String symbol;
+  final double initialValue;
+  final String helperText;
+  final Future<void> Function(double value) onSave;
+
+  @override
+  State<_AmountEditorSheet> createState() => _AmountEditorSheetState();
+}
+
+class _AmountEditorSheetState extends State<_AmountEditorSheet> {
+  late final TextEditingController _controller;
+  String? _errorText;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.initialValue == 0
+          ? ''
+          : widget.initialValue.toStringAsFixed(
+              widget.initialValue % 1 == 0 ? 0 : 2,
+            ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.only(
+        left: AppSpacing.md,
+        right: AppSpacing.md,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
+      ),
+      child: GlassCard(
+        glowColor: AppColors.teal,
+        radius: 28,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Align(
+              child: Container(
+                width: 44,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 18),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            Text(widget.title, style: theme.textTheme.headlineSmall),
+            const SizedBox(height: AppSpacing.xs),
+            Text(widget.helperText, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: AppSpacing.xl),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [DecimalTextInputFormatter(maxDecimalPlaces: 2)],
+              style: theme.textTheme.headlineMedium,
+              decoration: InputDecoration(
+                prefixText: '${widget.symbol} ',
+                hintText: '0',
+                errorText: _errorText,
+              ),
+              onChanged: (_) {
+                if (_errorText != null) {
+                  setState(() {
+                    _errorText = null;
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _saving
+                        ? null
+                        : () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _saving ? null : _save,
+                    child: _saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Save'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    final parsed = double.tryParse(_controller.text.trim());
+    if (parsed == null || parsed < 0) {
+      setState(() {
+        _errorText = 'Enter a valid number';
+      });
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await widget.onSave(parsed);
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pop(true);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _errorText = 'Failed to save changes';
+      });
+    }
   }
 }
 

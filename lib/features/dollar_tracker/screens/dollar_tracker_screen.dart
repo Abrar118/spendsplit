@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -94,7 +93,6 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
               const SizedBox(height: AppSpacing.lg),
               OutlinedButton.icon(
                 onPressed: () async {
-                  HapticFeedback.lightImpact();
                   await showAddDollarExpenseSheet(context);
                 },
                 style: OutlinedButton.styleFrom(
@@ -177,7 +175,6 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
     final repository = ref.read(dollarTrackerRepositoryProvider);
     final messenger = ScaffoldMessenger.of(context);
 
-    HapticFeedback.mediumImpact();
     await repository.deleteExpenseById(expense.id);
 
     var undoFired = false;
@@ -205,88 +202,17 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
   }
 
   Future<void> _showYearRolloverDialog(AppSettings settings) async {
-    final controller = TextEditingController(
-      text: settings.dollarAnnualLimit == 0
-          ? ''
-          : settings.dollarAnnualLimit.toStringAsFixed(
-              settings.dollarAnnualLimit % 1 == 0 ? 0 : 2,
-            ),
-    );
-    String? errorText;
     final currentYear = DateTime.now().year;
 
     final action = await showDialog<_YearRolloverAction>(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        final theme = Theme.of(context);
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: AppColors.surfaceLight,
-              title: const Text('New Dollar Tracking Year'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Your USD allowance is still assigned to ${settings.dollarLimitYear}. Confirm the carry-over limit or update it for $currentYear.',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  TextField(
-                    controller: controller,
-                    autofocus: true,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: InputDecoration(
-                      prefixText: r'$ ',
-                      hintText: '0',
-                      labelText: 'Annual limit for $currentYear',
-                      errorText: errorText,
-                    ),
-                    onChanged: (_) {
-                      if (errorText != null) {
-                        setDialogState(() {
-                          errorText = null;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(
-                    context,
-                  ).pop(_YearRolloverAction.keepExisting),
-                  child: const Text('Keep Existing'),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    final value = double.tryParse(controller.text.trim());
-                    if (value == null || value < 0) {
-                      setDialogState(() {
-                        errorText = 'Enter a valid limit.';
-                      });
-                      return;
-                    }
-
-                    Navigator.of(
-                      context,
-                    ).pop(_YearRolloverAction.updateLimit(value));
-                  },
-                  child: const Text('Save New Limit'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (_) => _YearRolloverDialog(
+        currentYear: currentYear,
+        previousYear: settings.dollarLimitYear,
+        initialLimit: settings.dollarAnnualLimit,
+      ),
     );
-
-    controller.dispose();
 
     if (!mounted || action == null) {
       return;
@@ -308,6 +234,102 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Dollar allowance is now set for $currentYear.')),
     );
+  }
+}
+
+class _YearRolloverDialog extends StatefulWidget {
+  const _YearRolloverDialog({
+    required this.currentYear,
+    required this.previousYear,
+    required this.initialLimit,
+  });
+
+  final int currentYear;
+  final int previousYear;
+  final double initialLimit;
+
+  @override
+  State<_YearRolloverDialog> createState() => _YearRolloverDialogState();
+}
+
+class _YearRolloverDialogState extends State<_YearRolloverDialog> {
+  late final TextEditingController _controller;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.initialLimit == 0
+          ? ''
+          : widget.initialLimit.toStringAsFixed(
+              widget.initialLimit % 1 == 0 ? 0 : 2,
+            ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      backgroundColor: AppColors.surfaceLight,
+      title: const Text('New Dollar Tracking Year'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Your USD allowance is still assigned to ${widget.previousYear}. Confirm the carry-over limit or update it for ${widget.currentYear}.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              prefixText: r'$ ',
+              hintText: '0',
+              labelText: 'Annual limit for ${widget.currentYear}',
+              errorText: _errorText,
+            ),
+            onChanged: (_) {
+              if (_errorText != null) {
+                setState(() {
+                  _errorText = null;
+                });
+              }
+            },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () =>
+              Navigator.of(context).pop(_YearRolloverAction.keepExisting),
+          child: const Text('Keep Existing'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Save New Limit')),
+      ],
+    );
+  }
+
+  void _submit() {
+    final value = double.tryParse(_controller.text.trim());
+    if (value == null || value < 0) {
+      setState(() {
+        _errorText = 'Enter a valid limit.';
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(_YearRolloverAction.updateLimit(value));
   }
 }
 
@@ -444,9 +466,7 @@ class _SummarySkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ShimmerSkeleton(
-      child: SkeletonCard(height: 172, radius: 30),
-    );
+    return const ShimmerSkeleton(child: SkeletonCard(height: 172, radius: 30));
   }
 }
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
@@ -48,10 +47,11 @@ Future<TransactionAdvancedFilters?> showTransactionFilterBottomSheet(
   required TransactionAdvancedFilters initialFilters,
   required List<CategoriesTableData> categories,
 }) {
-  return showMaterialModalBottomSheet<TransactionAdvancedFilters>(
+  return showModalBottomSheet<TransactionAdvancedFilters>(
     context: context,
     backgroundColor: Colors.transparent,
-    bounce: true,
+    isScrollControlled: true,
+    enableDrag: true,
     builder: (context) => _FilterBottomSheet(
       initialFilters: initialFilters,
       categories: categories,

@@ -2,10 +2,8 @@ import 'dart:ui';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
@@ -18,12 +16,12 @@ Future<void> showAddTransactionSheet(
   BuildContext context, {
   TransactionsTableData? existingTransaction,
 }) {
-  return showMaterialModalBottomSheet<void>(
+  return showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
-    expand: false,
-    bounce: true,
+    isScrollControlled: true,
     isDismissible: true,
+    enableDrag: true,
     builder: (context) =>
         AddTransactionSheet(existingTransaction: existingTransaction),
   );
@@ -463,35 +461,10 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
   Future<void> _createCustomCategory(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
-    final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: AppColors.surfaceLight,
-          title: const Text('New Category'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(hintText: 'Category name'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(controller.text.trim());
-              },
-              child: const Text('Create'),
-            ),
-          ],
-        );
-      },
+      builder: (_) => const _CategoryNameDialog(hintText: 'Category name'),
     );
-    controller.dispose();
 
     if (!mounted || name == null || name.isEmpty) return;
 
@@ -613,8 +586,6 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         await repository.createTransaction(companion);
       }
 
-      HapticFeedback.mediumImpact();
-
       if (!mounted) return;
 
       // Reset saving state before pop to avoid setState-after-dispose
@@ -622,7 +593,6 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         _saving = false;
       });
 
-      Navigator.of(context).pop();
       messenger.showSnackBar(
         SnackBar(
           content: Text(
@@ -630,6 +600,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
           ),
         ),
       );
+      Navigator.of(context).pop();
     } on Exception catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
@@ -639,6 +610,55 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         _saving = false;
       });
     }
+  }
+}
+
+class _CategoryNameDialog extends StatefulWidget {
+  const _CategoryNameDialog({required this.hintText});
+
+  final String hintText;
+
+  @override
+  State<_CategoryNameDialog> createState() => _CategoryNameDialogState();
+}
+
+class _CategoryNameDialogState extends State<_CategoryNameDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.surfaceLight,
+      title: const Text('New Category'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        decoration: InputDecoration(hintText: widget.hintText),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: const Text('Create'),
+        ),
+      ],
+    );
   }
 }
 

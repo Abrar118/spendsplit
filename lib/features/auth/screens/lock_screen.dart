@@ -27,12 +27,6 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   void initState() {
     super.initState();
     _authRepository = ref.read(authRepositoryProvider);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-      _attemptBiometricUnlock();
-    });
   }
 
   @override

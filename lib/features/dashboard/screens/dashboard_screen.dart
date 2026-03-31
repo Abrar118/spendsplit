@@ -145,140 +145,131 @@ class DashboardScreen extends ConsumerWidget {
     required WidgetRef ref,
   }) async {
     final currentCardNumber = ref.read(appSettingsProvider).cardNumber;
-    final controller = TextEditingController(
-      text: currentCardNumber.replaceAll(RegExp(r'\D'), ''),
-    );
-
-    final didSave = await showModalBottomSheet<bool>(
+    final didSave = await showDialog<bool>(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        String? errorText;
-        bool saving = false;
-
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: AppSpacing.md,
-                right: AppSpacing.md,
-                bottom:
-                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
-              ),
-              child: GlassCard(
-                glowColor: AppColors.teal,
-                radius: 28,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Edit Card Number',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Enter 12–19 digits. Only the first and last four will be visible.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    TextField(
-                      controller: controller,
-                      autofocus: true,
-                      maxLength: 19,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: InputDecoration(
-                        hintText: '4532756028418291',
-                        counterText: '',
-                        errorText: errorText,
-                      ),
-                      onChanged: (_) {
-                        if (errorText != null) {
-                          setModalState(() {
-                            errorText = null;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: saving
-                                ? null
-                                : () => Navigator.of(context).pop(false),
-                            child: const Text('Cancel'),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: FilledButton(
-                            onPressed: saving
-                                ? null
-                                : () async {
-                                    final digits = controller.text.trim();
-                                    if (digits.length < 12) {
-                                      setModalState(() {
-                                        errorText = 'Enter at least 12 digits.';
-                                      });
-                                      return;
-                                    }
-                                    setModalState(() => saving = true);
-                                    try {
-                                      await ref
-                                          .read(appSettingsProvider.notifier)
-                                          .setCardNumber(digits);
-                                      HapticFeedback.mediumImpact();
-                                      if (!context.mounted) {
-                                        return;
-                                      }
-                                      Navigator.of(context).pop(true);
-                                    } catch (_) {
-                                      if (!context.mounted) {
-                                        return;
-                                      }
-                                      setModalState(() {
-                                        saving = false;
-                                        errorText = 'Failed to save changes';
-                                      });
-                                    }
-                                  },
-                            child: saving
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text('Save'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+      builder: (_) => _CardNumberEditorDialog(
+        initialDigits: currentCardNumber.replaceAll(RegExp(r'\D'), ''),
+        onSave: (value) =>
+            ref.read(appSettingsProvider.notifier).setCardNumber(value),
+      ),
     );
 
-    controller.dispose();
-
-    if (didSave != true || !context.mounted) {
-      return;
-    }
+    if (didSave != true || !context.mounted) return;
 
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Card number updated')));
+    }
+  }
+}
+
+class _CardNumberEditorDialog extends StatefulWidget {
+  const _CardNumberEditorDialog({
+    required this.initialDigits,
+    required this.onSave,
+  });
+
+  final String initialDigits;
+  final Future<void> Function(String value) onSave;
+
+  @override
+  State<_CardNumberEditorDialog> createState() =>
+      _CardNumberEditorDialogState();
+}
+
+class _CardNumberEditorDialogState extends State<_CardNumberEditorDialog> {
+  late final TextEditingController _controller;
+  String? _errorText;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialDigits);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.surfaceLight,
+      title: const Text('Edit Card Number'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Enter 12–19 digits. Only the first and last four will be visible.',
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            maxLength: 19,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              hintText: '4532756028418291',
+              counterText: '',
+              errorText: _errorText,
+            ),
+            onChanged: (_) {
+              if (_errorText != null) {
+                setState(() => _errorText = null);
+              }
+            },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _save() async {
+    final value = _controller.text.trim();
+    if (value.length < 12) {
+      setState(() => _errorText = 'Enter at least 12 digits.');
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await widget.onSave(value);
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pop(true);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _errorText = 'Failed to update card number';
+      });
     }
   }
 }

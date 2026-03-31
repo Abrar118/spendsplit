@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -307,9 +306,6 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   Future<void> _deleteTransaction(TransactionsTableData transaction) async {
     final repository = ref.read(transactionRepositoryProvider);
     final messenger = ScaffoldMessenger.of(context);
-
-    // Fire haptic immediately at action confirmation
-    HapticFeedback.mediumImpact();
 
     await repository.deleteTransactionById(transaction.id);
 

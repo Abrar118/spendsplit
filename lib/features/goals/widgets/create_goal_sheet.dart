@@ -1,9 +1,7 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import '../../../core/constants/goal_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -16,10 +14,11 @@ Future<void> showCreateGoalSheet(
   BuildContext context, {
   SavingsGoalsTableData? existingGoal,
 }) {
-  return showMaterialModalBottomSheet<void>(
+  return showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
-    bounce: true,
+    isScrollControlled: true,
+    enableDrag: true,
     builder: (context) => CreateGoalSheet(existingGoal: existingGoal),
   );
 }
@@ -314,8 +313,6 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
           ),
         );
       }
-
-      HapticFeedback.mediumImpact();
 
       if (!mounted) return;
       setState(() => _saving = false);

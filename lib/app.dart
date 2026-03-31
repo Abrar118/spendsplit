@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -175,10 +174,7 @@ class AppShell extends StatelessWidget {
           context.go(route.path);
         },
         onAddPressed: () async {
-          HapticFeedback.lightImpact();
-          if (!context.mounted) {
-            return;
-          }
+          if (!context.mounted) return;
           await showAddTransactionSheet(context);
         },
       ),

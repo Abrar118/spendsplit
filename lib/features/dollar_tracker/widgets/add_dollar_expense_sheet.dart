@@ -1,9 +1,7 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -16,10 +14,11 @@ Future<void> showAddDollarExpenseSheet(
   BuildContext context, {
   DollarExpensesTableData? existingExpense,
 }) {
-  return showMaterialModalBottomSheet<void>(
+  return showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
-    bounce: true,
+    isScrollControlled: true,
+    enableDrag: true,
     builder: (context) =>
         AddDollarExpenseSheet(existingExpense: existingExpense),
   );
@@ -250,34 +249,10 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
   }
 
   Future<void> _createCategory(List<CategoriesTableData> existing) async {
-    final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('New Category'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(hintText: 'Software'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(controller.text.trim()),
-              child: const Text('Create'),
-            ),
-          ],
-        );
-      },
+      builder: (_) => const _DollarCategoryNameDialog(),
     );
-
-    controller.dispose();
 
     if (!mounted || name == null || name.isEmpty) return;
     if (existing.any(
@@ -351,8 +326,6 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
         );
       }
 
-      HapticFeedback.mediumImpact();
-
       if (!mounted) return;
       setState(() {
         _saving = false;
@@ -374,6 +347,53 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
         SnackBar(content: Text('Failed to save: ${e.toString()}')),
       );
     }
+  }
+}
+
+class _DollarCategoryNameDialog extends StatefulWidget {
+  const _DollarCategoryNameDialog();
+
+  @override
+  State<_DollarCategoryNameDialog> createState() =>
+      _DollarCategoryNameDialogState();
+}
+
+class _DollarCategoryNameDialogState extends State<_DollarCategoryNameDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('New Category'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(hintText: 'Software'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: const Text('Create'),
+        ),
+      ],
+    );
   }
 }
 
