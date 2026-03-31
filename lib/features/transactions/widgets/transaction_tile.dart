@@ -77,12 +77,12 @@ class TransactionTile extends StatelessWidget {
                   1.0,
                 );
                 final backgroundOpacity = lerpDouble(
-                  0.82,
-                  0.03,
+                  0.04,
+                  0.02,
                   swipeProgress,
                 )!;
-                final borderOpacity = lerpDouble(0.06, 0.1, swipeProgress)!;
-                final blurAmount = lerpDouble(14, 24, swipeProgress)!;
+                final borderOpacity = lerpDouble(0.10, 0.12, swipeProgress)!;
+                final blurAmount = lerpDouble(12, 18, swipeProgress)!;
 
                 return ClipRRect(
                   borderRadius: borderRadius,
@@ -93,13 +93,20 @@ class TransactionTile extends StatelessWidget {
                     ),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: AppColors.surface.withValues(
+                        color: Colors.white.withValues(
                           alpha: backgroundOpacity,
                         ),
                         borderRadius: borderRadius,
                         border: Border.all(
                           color: Colors.white.withValues(alpha: borderOpacity),
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
                       ),
                       child: Material(
                         color: Colors.transparent,
@@ -165,7 +172,13 @@ class TransactionTile extends StatelessWidget {
                                                   presentation.title,
                                                   style: theme
                                                       .textTheme
-                                                      .titleMedium,
+                                                      .titleMedium
+                                                      ?.copyWith(
+                                                        color: Colors.white
+                                                            .withValues(
+                                                              alpha: 0.9,
+                                                            ),
+                                                      ),
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,

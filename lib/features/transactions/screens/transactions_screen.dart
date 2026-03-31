@@ -63,11 +63,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- Top bar: hamburger, centered title, filter icon ---
             Row(
               children: [
-                const Icon(LucideIcons.menu),
-                const Spacer(),
                 Text('Transactions', style: theme.textTheme.titleLarge),
                 const Spacer(),
                 IconButton(

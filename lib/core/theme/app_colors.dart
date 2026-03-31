@@ -9,6 +9,8 @@ abstract final class AppColors {
   static const surfaceContainer = Color(0xFF1D1F2B);
   static const surfaceContainerLow = Color(0xFF191B26);
   static const surfaceContainerHighest = Color(0xFF323440);
+  static const glassCardFill = Color(0xCC1A1D2E);
+  static const glassCardBorder = Color(0x14FFFFFF);
 
   static const teal = Color(0xFF00E5BF);
   static const tealBright = Color(0xFF6FFFDC);

@@ -14,34 +14,50 @@ class MonthlySnapshotRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 126,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        physics: const ClampingScrollPhysics(),
-        children: [
-          _SnapshotCard(
-            label: 'INCOME',
-            rawAmount: summary.income,
-            icon: LucideIcons.trendingUp,
-            color: AppColors.green,
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 12),
+          child: Text(
+            'THIS MONTH',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
-          const SizedBox(width: 14),
-          _SnapshotCard(
-            label: 'SPENT',
-            rawAmount: summary.expenses,
-            icon: LucideIcons.trendingDown,
-            color: AppColors.coral,
+        ),
+        SizedBox(
+          height: 126,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            physics: const ClampingScrollPhysics(),
+            children: [
+              _SnapshotCard(
+                label: 'INCOME',
+                rawAmount: summary.income,
+                icon: LucideIcons.trendingUp,
+                color: AppColors.green,
+              ),
+              const SizedBox(width: 14),
+              _SnapshotCard(
+                label: 'SPENT',
+                rawAmount: summary.expenses,
+                icon: LucideIcons.trendingDown,
+                color: AppColors.coral,
+              ),
+              const SizedBox(width: 14),
+              _SnapshotCard(
+                label: 'SAVED',
+                rawAmount: summary.saved,
+                icon: LucideIcons.piggyBank,
+                color: AppColors.purple,
+              ),
+            ],
           ),
-          const SizedBox(width: 14),
-          _SnapshotCard(
-            label: 'SAVED',
-            rawAmount: summary.saved,
-            icon: LucideIcons.piggyBank,
-            color: AppColors.purple,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

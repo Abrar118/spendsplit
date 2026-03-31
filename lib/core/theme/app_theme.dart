@@ -47,6 +47,15 @@ abstract final class AppTheme {
       scaffoldBackgroundColor: Colors.transparent,
       textTheme: AppTypography.textTheme(),
       canvasColor: AppColors.surface,
+      cardTheme: CardThemeData(
+        color: AppColors.glassCardFill,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.glassCardBorder),
+        ),
+      ),
       splashFactory: InkSparkle.splashFactory,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,

@@ -43,20 +43,22 @@ abstract final class AppDecorations {
   }
 
   static BoxDecoration glassCard({
-    Color color = AppColors.surfaceLight,
+    Color color = AppColors.glassCardFill,
     Color? glowColor,
-    double opacity = 0.92,
+    double opacity = 1,
     double radius = 20,
   }) {
     return BoxDecoration(
       color: color.withValues(alpha: opacity),
       borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      border: Border.all(color: AppColors.glassCardBorder),
       boxShadow: [
         BoxShadow(
-          color: (glowColor ?? AppColors.teal).withValues(alpha: 0.08),
-          blurRadius: 32,
-          offset: const Offset(0, 12),
+          color: (glowColor ?? Colors.black).withValues(
+            alpha: glowColor == null ? 0.16 : 0.08,
+          ),
+          blurRadius: glowColor == null ? 18 : 32,
+          offset: const Offset(0, 10),
         ),
       ],
     );

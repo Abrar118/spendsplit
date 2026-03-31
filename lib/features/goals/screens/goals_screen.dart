@@ -93,11 +93,6 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                     delegate: SliverChildListDelegate([
                       Row(
                         children: [
-                          IconButton(
-                            onPressed: () {},
-                            icon: const Icon(LucideIcons.menu),
-                          ),
-                          const SizedBox(width: 4),
                           Text(
                             'Savings Goals',
                             style: theme.textTheme.titleLarge,

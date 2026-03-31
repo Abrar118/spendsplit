@@ -391,25 +391,27 @@ class _GoalIconChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Ink(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          color: selected
-              ? option.color.withValues(alpha: 0.18)
-              : Colors.white.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected
-                ? option.color
-                : Colors.white.withValues(alpha: 0.08),
-          ),
+    return ChoiceChip(
+      selected: selected,
+      onSelected: onTap == null ? null : (_) => onTap!(),
+      showCheckmark: false,
+      label: SizedBox(
+        width: 24,
+        height: 24,
+        child: Icon(
+          option.icon,
+          color: selected ? Colors.white : option.color,
+          size: 20,
         ),
-        child: Icon(option.icon, color: option.color),
       ),
+      selectedColor: option.color,
+      backgroundColor: Colors.white.withValues(alpha: 0.04),
+      side: BorderSide(
+        color: selected ? option.color : Colors.white.withValues(alpha: 0.08),
+      ),
+      padding: const EdgeInsets.all(14),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }
