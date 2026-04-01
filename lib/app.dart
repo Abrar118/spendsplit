@@ -18,6 +18,7 @@ import 'features/settings/screens/manage_templates_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 import 'features/transactions/screens/transactions_screen.dart';
 import 'features/transactions/widgets/add_transaction_sheet.dart';
+import 'features/widget/widget_data_service.dart';
 import 'providers/providers.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -133,12 +134,37 @@ class SpendSplitApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(
+      balanceSummaryProvider,
+      (previous, next) => _syncHomeWidget(ref),
+    );
+    ref.listen(
+      savingsInsightsProvider,
+      (previous, next) => _syncHomeWidget(ref),
+    );
+    _syncHomeWidget(ref);
+
     final router = ref.read(routerProvider);
     return MaterialApp.router(
       title: 'SpendSplit',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark(),
       routerConfig: router,
+    );
+  }
+
+  void _syncHomeWidget(WidgetRef ref) {
+    final balance = ref.read(balanceSummaryProvider).valueOrNull;
+    if (balance == null) return;
+
+    final savingsPercent =
+        (ref.read(savingsInsightsProvider).valueOrNull?.monthOverMonthDelta ??
+            0) *
+        100;
+
+    WidgetDataService.updateBalance(
+      availableBalance: balance.availableBalance,
+      savingsPercent: savingsPercent,
     );
   }
 }

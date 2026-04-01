@@ -752,22 +752,24 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final templates =
         ref.read(transactionTemplatesProvider).valueOrNull ?? const [];
     if (templates.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No templates saved yet.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No templates saved yet.')));
       return;
     }
 
     final categories =
-        ref.read(categoriesProvider).valueOrNull ?? const <CategoriesTableData>[];
+        ref.read(categoriesProvider).valueOrNull ??
+        const <CategoriesTableData>[];
     final catMap = {for (final c in categories) c.id: c};
 
     final selected = await showTemplatePickerSheet(
       context,
       templates: templates,
       categoriesById: catMap,
-      onDelete: (id) =>
-          ref.read(transactionTemplateRepositoryProvider).deleteTemplateById(id),
+      onDelete: (id) => ref
+          .read(transactionTemplateRepositoryProvider)
+          .deleteTemplateById(id),
     );
 
     if (selected == null || !mounted) return;
@@ -781,6 +783,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       }
       _noteController.text = template.note ?? '';
       _selectedCategoryId = template.categoryId;
+      _selectedSavingsGoalId = null;
       _didAutoSelectCategory = true;
       final type = TransactionType.fromDbValue(template.type);
       switch (type) {
@@ -801,6 +804,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   }
 
   Future<void> _saveAsTemplate(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
     final nameController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
@@ -839,33 +843,33 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     };
     final amount = double.tryParse(_amountController.text);
 
-    await ref.read(transactionTemplateRepositoryProvider).createTemplate(
-      TransactionTemplatesTableCompanion.insert(
-        name: name,
-        type: type.dbValue,
-        amount: Value(amount),
-        categoryId: Value(
-          _entryType == _TransactionEntryType.expense
-              ? _selectedCategoryId
-              : null,
-        ),
-        source: Value(
-          _entryType == _TransactionEntryType.income
-              ? _selectedIncomeSource
-              : null,
-        ),
-        note: Value(
-          _noteController.text.trim().isNotEmpty
-              ? _noteController.text.trim()
-              : null,
-        ),
-      ),
-    );
+    await ref
+        .read(transactionTemplateRepositoryProvider)
+        .createTemplate(
+          TransactionTemplatesTableCompanion.insert(
+            name: name,
+            type: type.dbValue,
+            amount: Value(amount),
+            categoryId: Value(
+              _entryType == _TransactionEntryType.expense
+                  ? _selectedCategoryId
+                  : null,
+            ),
+            source: Value(
+              _entryType == _TransactionEntryType.income
+                  ? _selectedIncomeSource
+                  : null,
+            ),
+            note: Value(
+              _noteController.text.trim().isNotEmpty
+                  ? _noteController.text.trim()
+                  : null,
+            ),
+          ),
+        );
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Template saved')),
-    );
+    messenger.showSnackBar(const SnackBar(content: Text('Template saved')));
   }
 
   Map<int, double> _goalAdjustmentsForSave({

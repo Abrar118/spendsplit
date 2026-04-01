@@ -10,7 +10,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../providers/providers.dart';
-import '../../widget/widget_data_service.dart';
 import '../widgets/active_goal_card.dart';
 import '../widgets/balance_card.dart';
 import '../widgets/dollar_summary_card.dart';
@@ -36,17 +35,6 @@ class DashboardScreen extends ConsumerWidget {
         transactions.isLoading ||
         goals.isLoading ||
         dollarSummary.isLoading;
-
-    // Push balance data to home screen widget
-    final insightsAsync = ref.watch(savingsInsightsProvider);
-    if (balanceSummary.hasValue) {
-      final savingsPercent =
-          insightsAsync.valueOrNull?.monthOverMonthDelta ?? 0;
-      WidgetDataService.updateBalance(
-        availableBalance: balanceSummary.value!.availableBalance,
-        savingsPercent: savingsPercent * 100,
-      );
-    }
 
     return SafeArea(
       bottom: false,

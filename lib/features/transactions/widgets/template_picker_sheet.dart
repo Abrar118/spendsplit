@@ -122,14 +122,15 @@ class _TemplatePickerBody extends StatelessWidget {
                                 children: [
                                   Text(
                                     t.name,
-                                    style: theme.textTheme.titleSmall
-                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     [
                                       _readableType(type),
-                                      if (catName != null) catName,
+                                      ?catName,
                                       if (t.amount case final a?)
                                         '৳${a.toStringAsFixed(0)}',
                                     ].join(' • '),

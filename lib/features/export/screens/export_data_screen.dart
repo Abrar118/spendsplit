@@ -161,10 +161,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                   label: 'Custom',
                   icon: LucideIcons.calendar,
                   selected: _selectedRange == _DateRange.custom,
-                  onTap: () async {
-                    setState(() => _selectedRange = _DateRange.custom);
-                    await _pickCustomRange();
-                  },
+                  onTap: _pickCustomRange,
                 ),
               ],
             ),
@@ -270,34 +267,28 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
       lastDate: now,
       initialDateRange: _customStart != null && _customEnd != null
           ? DateTimeRange(start: _customStart!, end: _customEnd!)
-          : DateTimeRange(
-              start: DateTime(now.year, now.month, 1),
-              end: now,
-            ),
+          : DateTimeRange(start: DateTime(now.year, now.month, 1), end: now),
     );
-    if (picked != null && mounted) {
-      setState(() {
-        _customStart = picked.start;
-        _customEnd = picked.end;
-      });
-    }
+    if (picked == null || !mounted) return;
+
+    setState(() {
+      _selectedRange = _DateRange.custom;
+      _customStart = picked.start;
+      _customEnd = picked.end;
+    });
   }
 
-  List<TransactionsTableData> _filterByRange(
-    List<TransactionsTableData> all,
-  ) {
+  List<TransactionsTableData> _filterByRange(List<TransactionsTableData> all) {
     switch (_selectedRange) {
       case _DateRange.allTime:
         return all;
       case _DateRange.thisMonth:
         final now = DateTime.now();
         return all
-            .where(
-              (t) => t.date.year == now.year && t.date.month == now.month,
-            )
+            .where((t) => t.date.year == now.year && t.date.month == now.month)
             .toList();
       case _DateRange.custom:
-        if (_customStart == null || _customEnd == null) return all;
+        if (_customStart == null || _customEnd == null) return const [];
         final endInclusive = DateTime(
           _customEnd!.year,
           _customEnd!.month,
@@ -322,6 +313,16 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No transactions to export.')),
+        );
+      }
+      return;
+    }
+
+    if (_selectedRange == _DateRange.custom &&
+        (_customStart == null || _customEnd == null)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Choose a custom date range first.')),
         );
       }
       return;
@@ -359,16 +360,15 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
       if (!mounted) return;
       setState(() => _exporting = false);
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'SpendSplit Export — $timestamp',
-      );
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], subject: 'SpendSplit Export — $timestamp');
     } on Exception catch (e) {
       if (!mounted) return;
       setState(() => _exporting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Export failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
     }
   }
 

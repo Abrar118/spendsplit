@@ -28,10 +28,14 @@ class ManageTemplatesScreen extends ConsumerWidget {
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.teal),
           ),
-          error: (_, _) => const Center(child: Text('Could not load templates')),
+          error: (_, _) =>
+              const Center(child: Text('Could not load templates')),
           data: (templates) => ListView(
             padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md, AppSpacing.md, AppSpacing.md, 32,
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+              32,
             ),
             children: [
               Row(
@@ -136,7 +140,7 @@ class ManageTemplatesScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 14),
                     DropdownButtonFormField<String>(
-                      value: selectedType,
+                      initialValue: selectedType,
                       decoration: const InputDecoration(labelText: 'Type'),
                       dropdownColor: AppColors.surfaceLight,
                       items: TransactionType.values
@@ -148,7 +152,18 @@ class ManageTemplatesScreen extends ConsumerWidget {
                           )
                           .toList(),
                       onChanged: (v) {
-                        if (v != null) setState(() => selectedType = v);
+                        if (v != null) {
+                          setState(() {
+                            selectedType = v;
+                            final nextType = TransactionType.fromDbValue(v);
+                            if (nextType != TransactionType.expense) {
+                              selectedCategoryId = null;
+                            }
+                            if (nextType != TransactionType.income) {
+                              selectedSource = null;
+                            }
+                          });
+                        }
                       },
                     ),
                     const SizedBox(height: 14),
@@ -165,7 +180,7 @@ class ManageTemplatesScreen extends ConsumerWidget {
                     if (isExpense && categories.isNotEmpty) ...[
                       const SizedBox(height: 14),
                       DropdownButtonFormField<int>(
-                        value: selectedCategoryId,
+                        initialValue: selectedCategoryId,
                         decoration: const InputDecoration(
                           labelText: 'Category (optional)',
                         ),
@@ -185,7 +200,7 @@ class ManageTemplatesScreen extends ConsumerWidget {
                     if (isIncome) ...[
                       const SizedBox(height: 14),
                       DropdownButtonFormField<String>(
-                        value: selectedSource,
+                        initialValue: selectedSource,
                         decoration: const InputDecoration(
                           labelText: 'Source (optional)',
                         ),
@@ -204,8 +219,7 @@ class ManageTemplatesScreen extends ConsumerWidget {
                             child: Text('Other'),
                           ),
                         ],
-                        onChanged: (v) =>
-                            setState(() => selectedSource = v),
+                        onChanged: (v) => setState(() => selectedSource = v),
                       ),
                     ],
                     const SizedBox(height: 14),
@@ -245,21 +259,33 @@ class ManageTemplatesScreen extends ConsumerWidget {
 
     final amount = double.tryParse(amountText);
 
-    await ref.read(transactionTemplateRepositoryProvider).createTemplate(
-      TransactionTemplatesTableCompanion.insert(
-        name: name,
-        type: selectedType,
-        amount: Value(amount),
-        categoryId: Value(selectedCategoryId),
-        source: Value(selectedSource),
-        note: Value(note.isNotEmpty ? note : null),
-      ),
-    );
+    await ref
+        .read(transactionTemplateRepositoryProvider)
+        .createTemplate(
+          TransactionTemplatesTableCompanion.insert(
+            name: name,
+            type: selectedType,
+            amount: Value(amount),
+            categoryId: Value(
+              TransactionType.fromDbValue(selectedType) ==
+                      TransactionType.expense
+                  ? selectedCategoryId
+                  : null,
+            ),
+            source: Value(
+              TransactionType.fromDbValue(selectedType) ==
+                      TransactionType.income
+                  ? selectedSource
+                  : null,
+            ),
+            note: Value(note.isNotEmpty ? note : null),
+          ),
+        );
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"$name" created')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('"$name" created')));
     }
   }
 
@@ -302,9 +328,9 @@ class ManageTemplatesScreen extends ConsumerWidget {
         .deleteTemplateById(template.id);
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"${template.name}" deleted')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('"${template.name}" deleted')));
     }
   }
 }
