@@ -41,7 +41,8 @@ abstract final class AppColors {
   static const balanceCardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1A1D2E), Color(0xFF4C1D95)],
+    colors: [Color(0xFF1E293B), Color(0xFF0C0E18), Color(0x664F319C)],
+    stops: [0.0, 0.45, 1.0],
   );
 
   static const primaryActionGradient = LinearGradient(

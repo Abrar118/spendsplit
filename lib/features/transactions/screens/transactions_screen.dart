@@ -1,7 +1,4 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -120,55 +117,55 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
                     final sections = _groupTransactions(filtered);
 
-                    return CustomScrollView(
+                    return ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      slivers: [
-                        for (final section in sections) ...[
-                          SliverPersistentHeader(
-                            key: ValueKey('header_${section.dateKey}'),
-                            pinned: true,
-                            delegate: _DateHeaderDelegate(section.header),
-                          ),
-                          SliverList(
-                            key: ValueKey('list_${section.dateKey}'),
-                            delegate: SliverChildBuilderDelegate((
-                              context,
-                              index,
-                            ) {
-                              final transaction = section.transactions[index];
-                              return Padding(
-                                key: ValueKey(transaction.id),
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child:
-                                    TransactionTile(
-                                          transaction: transaction,
-                                          category:
-                                              categoriesById[transaction
-                                                  .categoryId],
-                                          onTap: () => showAddTransactionSheet(
-                                            context,
-                                            existingTransaction: transaction,
-                                          ),
-                                          onDelete: () =>
-                                              _deleteTransaction(transaction),
-                                        )
-                                        .animate()
-                                        .fadeIn(
-                                          duration: 200.ms,
-                                          delay: (50 * index).ms,
-                                        )
-                                        .slideX(
-                                          begin: 0.03,
-                                          end: 0,
-                                          duration: 200.ms,
-                                          delay: (50 * index).ms,
-                                          curve: Curves.easeOutCubic,
-                                        ),
-                              );
-                            }, childCount: section.transactions.length),
-                          ),
-                        ],
-                      ],
+                      itemCount: sections.fold<int>(
+                        0,
+                        (sum, s) => sum + 1 + s.transactions.length,
+                      ),
+                      itemBuilder: (context, index) {
+                        var cursor = 0;
+                        for (final section in sections) {
+                          if (index == cursor) {
+                            // Date header row
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: 8,
+                                top: 6,
+                              ),
+                              child: Text(
+                                section.header,
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            );
+                          }
+                          cursor++;
+                          final itemIndex = index - cursor;
+                          if (itemIndex < section.transactions.length) {
+                            final transaction =
+                                section.transactions[itemIndex];
+                            return Padding(
+                              key: ValueKey(transaction.id),
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: TransactionTile(
+                                transaction: transaction,
+                                category:
+                                    categoriesById[transaction.categoryId],
+                                onTap: () => showAddTransactionSheet(
+                                  context,
+                                  existingTransaction: transaction,
+                                ),
+                                onDelete: () =>
+                                    _deleteTransaction(transaction),
+                              ),
+                            );
+                          }
+                          cursor += section.transactions.length;
+                        }
+                        return const SizedBox.shrink();
+                      },
                     );
                   },
                   loading: () => const _TransactionsSkeleton(),
@@ -428,43 +425,3 @@ class _TransactionSection {
   final List<TransactionsTableData> transactions;
 }
 
-class _DateHeaderDelegate extends SliverPersistentHeaderDelegate {
-  const _DateHeaderDelegate(this.label);
-
-  final String label;
-
-  @override
-  double get minExtent => 34;
-
-  @override
-  double get maxExtent => 34;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          alignment: Alignment.centerLeft,
-          color: AppColors.background.withValues(alpha: 0.85),
-          padding: const EdgeInsets.only(bottom: 8, top: 6),
-          child: Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(color: AppColors.textSecondary),
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _DateHeaderDelegate oldDelegate) {
-    return oldDelegate.label != label;
-  }
-}

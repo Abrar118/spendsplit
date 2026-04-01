@@ -79,17 +79,18 @@ abstract final class AppDecorations {
     );
   }
 
-  static BoxDecoration heroCard({double radius = 20}) {
+  static BoxDecoration heroCard({double radius = 24}) {
     return BoxDecoration(
       gradient: AppColors.balanceCardGradient,
       borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: AppColors.purple.withValues(alpha: 0.28)),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       boxShadow: [
         ...heroInnerGlow(),
-        BoxShadow(
-          color: AppColors.purple.withValues(alpha: 0.14),
-          blurRadius: 32,
-          offset: const Offset(0, 16),
+        const BoxShadow(
+          color: Color(0xB3000000),
+          blurRadius: 60,
+          spreadRadius: -15,
+          offset: Offset(0, 30),
         ),
       ],
     );

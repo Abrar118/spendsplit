@@ -27,8 +27,27 @@ class BalanceCard extends StatelessWidget {
         Hero(
           tag: 'balance-card',
           child: DecoratedBox(
-            decoration: AppDecorations.heroCard(radius: 20),
-            child: Padding(
+            decoration: AppDecorations.heroCard(),
+            child: Stack(
+              children: [
+                // Gloss finish overlay
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      gradient: LinearGradient(
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.05),
+                          Colors.transparent,
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
               padding: const EdgeInsets.all(22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,6 +143,8 @@ class BalanceCard extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+              ],
             ),
           ),
         ),

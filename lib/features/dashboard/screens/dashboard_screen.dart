@@ -110,6 +110,8 @@ class DashboardScreen extends ConsumerWidget {
                 loading: () => const _SnapshotSkeleton(),
               ),
               const SizedBox(height: AppSpacing.section),
+              const _QuickActions(),
+              const SizedBox(height: AppSpacing.section),
               transactions.when(
                 data: (entries) => SpendingChart(
                   transactions: entries,
@@ -331,6 +333,100 @@ class _CardSkeleton extends StatelessWidget {
       child: GlassCard(
         child: Container(color: Colors.white.withValues(alpha: 0.04)),
       ),
+    );
+  }
+}
+
+class _QuickActions extends StatelessWidget {
+  const _QuickActions();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: GlassCard(
+            glowColor: AppColors.teal,
+            radius: 20,
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.teal.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    LucideIcons.scanLine,
+                    color: AppColors.teal,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Scan Receipt',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'AI-Powered OCR',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: GlassCard(
+            glowColor: AppColors.purple,
+            radius: 20,
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.purple.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    LucideIcons.mic,
+                    color: AppColors.purple,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Voice Entry',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Natural Language',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
