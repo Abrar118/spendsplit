@@ -184,17 +184,10 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
         content: const Text('Deleted'),
         action: SnackBarAction(
           label: 'Undo',
-          onPressed: () {
+          onPressed: () async {
             if (undoFired) return;
             undoFired = true;
-            repository.createExpense(
-              DollarExpensesTableCompanion.insert(
-                amount: expense.amount,
-                purpose: expense.purpose,
-                categoryId: expense.categoryId,
-                date: expense.date,
-              ),
-            );
+            await repository.createExpenseWithId(expense);
           },
         ),
       ),

@@ -345,23 +345,23 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
     final catMap = {for (final c in categories) c.id: c.name};
 
     setState(() => _exporting = true);
+    File? exportedFile;
 
     try {
       final dir = await getTemporaryDirectory();
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
 
-      File file;
       if (_selectedFormat == _ExportFormat.csv) {
-        file = await _generateCsv(filtered, catMap, dir, timestamp);
+        exportedFile = await _generateCsv(filtered, catMap, dir, timestamp);
       } else {
-        file = await _generatePdf(filtered, catMap, dir, timestamp);
+        exportedFile = await _generatePdf(filtered, catMap, dir, timestamp);
       }
 
       if (!mounted) return;
       setState(() => _exporting = false);
 
       await Share.shareXFiles([
-        XFile(file.path),
+        XFile(exportedFile.path),
       ], subject: 'SpendSplit Export — $timestamp');
     } on Exception catch (e) {
       if (!mounted) return;
@@ -369,6 +369,17 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+    } finally {
+      final file = exportedFile;
+      if (file != null) {
+        try {
+          if (await file.exists()) {
+            await file.delete();
+          }
+        } on Exception {
+          // Best-effort cleanup for exported temp files.
+        }
+      }
     }
   }
 

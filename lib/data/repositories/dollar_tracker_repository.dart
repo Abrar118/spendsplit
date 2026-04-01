@@ -18,6 +18,10 @@ class DollarTrackerRepository {
     return _dollarExpenseDao.insertExpense(entry);
   }
 
+  Future<void> createExpenseWithId(DollarExpensesTableData entry) {
+    return _dollarExpenseDao.insertExpenseWithId(entry);
+  }
+
   Future<bool> updateExpense(DollarExpensesTableData entry) {
     return _dollarExpenseDao.updateExpense(entry);
   }

@@ -38,6 +38,15 @@ class DollarExpenseDao extends DatabaseAccessor<AppDatabase>
     return into(dollarExpensesTable).insert(entry);
   }
 
+  /// Re-inserts a complete row preserving its original ID and createdAt.
+  /// Used for undo-delete to maintain identity.
+  Future<void> insertExpenseWithId(DollarExpensesTableData entry) {
+    return into(dollarExpensesTable).insert(
+      entry.toCompanion(true),
+      mode: InsertMode.insertOrReplace,
+    );
+  }
+
   Future<bool> updateExpense(DollarExpensesTableData entry) {
     return update(dollarExpensesTable).replace(entry);
   }
