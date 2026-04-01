@@ -397,10 +397,17 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
   }
 
   String _csvEscape(String value) {
-    if (value.contains(',') || value.contains('"') || value.contains('\n')) {
-      return '"${value.replaceAll('"', '""')}"';
+    final sanitized = RegExp(r'^[\t\r ]*[=+@-]').hasMatch(value)
+        ? "'$value"
+        : value;
+
+    if (sanitized.contains(',') ||
+        sanitized.contains('"') ||
+        sanitized.contains('\n') ||
+        sanitized.contains('\r')) {
+      return '"${sanitized.replaceAll('"', '""')}"';
     }
-    return value;
+    return sanitized;
   }
 
   Future<File> _generatePdf(
