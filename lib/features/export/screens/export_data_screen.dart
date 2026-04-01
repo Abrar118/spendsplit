@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
+import 'package:file_selector/file_selector.dart' as fs;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +13,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/glass_card.dart';
@@ -34,6 +37,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
   DateTime? _customStart;
   DateTime? _customEnd;
   bool _exporting = false;
+  bool _importing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -85,9 +89,74 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Export your local transaction history for safekeeping or external analysis.',
+              'Export your local transaction history for safekeeping or import a previous SpendSplit CSV backup.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 36),
+
+            Text(
+              'IMPORT CSV',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppColors.textTertiary,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 16),
+            GlassCard(
+              radius: 24,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Import a CSV created by SpendSplit export. Duplicate rows are skipped automatically.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Missing expense categories will be recreated as custom categories.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.textTertiary,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  OutlinedButton.icon(
+                    onPressed: _exporting || _importing
+                        ? null
+                        : _handleImportCsv,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.teal,
+                      side: BorderSide(
+                        color: AppColors.teal.withValues(alpha: 0.35),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    icon: _importing
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.teal,
+                            ),
+                          )
+                        : const Icon(LucideIcons.upload, size: 18),
+                    label: Text(_importing ? 'IMPORTING...' : 'IMPORT CSV'),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 36),
@@ -383,6 +452,345 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
     }
   }
 
+  Future<void> _handleImportCsv() async {
+    final pickedFile = await fs.openFile(
+      acceptedTypeGroups: const [
+        fs.XTypeGroup(
+          label: 'CSV',
+          extensions: ['csv'],
+          mimeTypes: ['text/csv', 'text/plain', 'application/csv'],
+        ),
+      ],
+      confirmButtonText: 'Import',
+    );
+
+    if (pickedFile == null || !mounted) return;
+
+    setState(() => _importing = true);
+
+    try {
+      final content = await pickedFile.readAsString();
+      final result = await _importCsvContent(content);
+      if (!mounted) return;
+
+      final summary = switch (result.imported) {
+        0 when result.invalidRows > 0 =>
+          'No rows were imported. ${result.invalidRows} invalid row${result.invalidRows == 1 ? '' : 's'} skipped.',
+        0 =>
+          'No new transactions were imported. ${result.duplicateRows} duplicate row${result.duplicateRows == 1 ? '' : 's'} skipped.',
+        _ =>
+          'Imported ${result.imported} transaction${result.imported == 1 ? '' : 's'}'
+              '${result.duplicateRows > 0 ? ', skipped ${result.duplicateRows} duplicate${result.duplicateRows == 1 ? '' : 's'}' : ''}'
+              '${result.invalidRows > 0 ? ', skipped ${result.invalidRows} invalid row${result.invalidRows == 1 ? '' : 's'}' : ''}'
+              '${result.createdCategories > 0 ? ', created ${result.createdCategories} categor${result.createdCategories == 1 ? 'y' : 'ies'}' : ''}.',
+      };
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(summary)));
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Import failed: ${e.message}')));
+    } on Exception catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Import failed: $e')));
+    } finally {
+      if (mounted && _importing) {
+        setState(() => _importing = false);
+      }
+    }
+  }
+
+  Future<_CsvImportResult> _importCsvContent(String content) async {
+    final rows = _parseCsvRows(content);
+    if (rows.isEmpty) {
+      throw const FormatException('The selected file is empty.');
+    }
+
+    final header = rows.first.map((cell) => cell.trim().toLowerCase()).toList();
+    final headerIndex = {for (var i = 0; i < header.length; i++) header[i]: i};
+    const requiredHeaders = [
+      'date',
+      'type',
+      'amount',
+      'category',
+      'source',
+      'note',
+    ];
+    for (final column in requiredHeaders) {
+      if (!headerIndex.containsKey(column)) {
+        throw FormatException('Missing required "$column" column.');
+      }
+    }
+
+    final transactionRepository = ref.read(transactionRepositoryProvider);
+    final categoryRepository = ref.read(categoryRepositoryProvider);
+    final database = ref.read(appDatabaseProvider);
+
+    final categories = await categoryRepository.getMainCategories();
+    final existingTransactions = await transactionRepository.getTransactions();
+
+    final categoryIdByName = {
+      for (final category in categories)
+        _normalizeKey(category.name): category.id,
+    };
+    final categoryNameById = {
+      for (final category in categories)
+        category.id: _normalizeKey(category.name),
+    };
+    final existingSignatures = {
+      for (final transaction in existingTransactions)
+        _transactionSignature(
+          type: transaction.type,
+          amount: transaction.amount,
+          date: transaction.date,
+          categoryName: transaction.categoryId == null
+              ? null
+              : categoryNameById[transaction.categoryId],
+          source: transaction.source,
+          note: transaction.note,
+        ),
+    };
+
+    final parsedRows = <_ParsedCsvTransaction>[];
+    var invalidRows = 0;
+    var duplicateRows = 0;
+
+    for (final row in rows.skip(1)) {
+      if (row.every((cell) => cell.trim().isEmpty)) continue;
+
+      final parsed = _tryParseImportRow(row, headerIndex);
+      if (parsed == null) {
+        invalidRows += 1;
+        continue;
+      }
+
+      final signature = _transactionSignature(
+        type: parsed.type,
+        amount: parsed.amount,
+        date: parsed.date,
+        categoryName: parsed.categoryName,
+        source: parsed.source,
+        note: parsed.note,
+      );
+      if (existingSignatures.contains(signature)) {
+        duplicateRows += 1;
+        continue;
+      }
+
+      existingSignatures.add(signature);
+      parsedRows.add(parsed);
+    }
+
+    if (parsedRows.isEmpty) {
+      return _CsvImportResult(
+        imported: 0,
+        duplicateRows: duplicateRows,
+        invalidRows: invalidRows,
+        createdCategories: 0,
+      );
+    }
+
+    var createdCategories = 0;
+    await database.transaction(() async {
+      for (final row in parsedRows) {
+        int? categoryId;
+        if (row.type == TransactionType.expense.dbValue &&
+            row.categoryName != null &&
+            row.displayCategoryName != null) {
+          final normalized = row.categoryName!;
+          categoryId = categoryIdByName[normalized];
+          if (categoryId == null) {
+            categoryId = await categoryRepository.createCategory(
+              CategoriesTableCompanion.insert(
+                name: row.displayCategoryName!,
+                icon: 'more_horiz',
+                color: 0xFF8892A7,
+                isPredefined: const Value(false),
+                isDollarCategory: const Value(false),
+              ),
+            );
+            categoryIdByName[normalized] = categoryId;
+            createdCategories += 1;
+          }
+        }
+
+        await transactionRepository.createTransaction(
+          TransactionsTableCompanion.insert(
+            type: row.type,
+            amount: row.amount,
+            categoryId: Value(categoryId),
+            source: Value(row.source),
+            note: Value(row.note),
+            date: row.date,
+            savingsGoalId: const Value(null),
+          ),
+        );
+      }
+    });
+
+    return _CsvImportResult(
+      imported: parsedRows.length,
+      duplicateRows: duplicateRows,
+      invalidRows: invalidRows,
+      createdCategories: createdCategories,
+    );
+  }
+
+  _ParsedCsvTransaction? _tryParseImportRow(
+    List<String> row,
+    Map<String, int> headerIndex,
+  ) {
+    String cell(String name) {
+      final index = headerIndex[name];
+      if (index == null || index >= row.length) return '';
+      return row[index].trim();
+    }
+
+    final type = _parseImportedType(cell('type'));
+    if (type == null) return null;
+
+    final amount = double.tryParse(cell('amount').replaceAll(',', ''));
+    if (amount == null || amount <= 0) return null;
+
+    final dateText = cell('date');
+    DateTime? date;
+    try {
+      date = DateFormat('yyyy-MM-dd HH:mm').parseStrict(dateText);
+    } on FormatException {
+      date = DateTime.tryParse(dateText);
+    }
+    if (date == null) return null;
+
+    final categoryCell = cell('category');
+    final sourceCell = cell('source');
+    final noteCell = cell('note');
+
+    return _ParsedCsvTransaction(
+      type: type,
+      amount: amount,
+      date: date,
+      categoryName: categoryCell.isEmpty ? null : _normalizeKey(categoryCell),
+      displayCategoryName: categoryCell.isEmpty ? null : categoryCell,
+      source: sourceCell.isEmpty ? null : sourceCell,
+      note: noteCell.isEmpty ? null : noteCell,
+    );
+  }
+
+  List<List<String>> _parseCsvRows(String raw) {
+    final input = raw.replaceFirst('\ufeff', '');
+    final rows = <List<String>>[];
+    final currentRow = <String>[];
+    var currentField = StringBuffer();
+    var inQuotes = false;
+
+    void pushField() {
+      currentRow.add(currentField.toString());
+      currentField = StringBuffer();
+    }
+
+    void pushRow() {
+      pushField();
+      rows.add(List<String>.from(currentRow));
+      currentRow.clear();
+    }
+
+    for (var i = 0; i < input.length; i++) {
+      final char = input[i];
+
+      if (inQuotes) {
+        if (char == '"') {
+          final hasEscapedQuote = i + 1 < input.length && input[i + 1] == '"';
+          if (hasEscapedQuote) {
+            currentField.write('"');
+            i += 1;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          currentField.write(char);
+        }
+        continue;
+      }
+
+      if (char == '"') {
+        inQuotes = true;
+        continue;
+      }
+
+      if (char == ',') {
+        pushField();
+        continue;
+      }
+
+      if (char == '\n') {
+        pushRow();
+        continue;
+      }
+
+      if (char == '\r') {
+        final nextIsLf = i + 1 < input.length && input[i + 1] == '\n';
+        if (!nextIsLf) {
+          pushRow();
+        }
+        continue;
+      }
+
+      currentField.write(char);
+    }
+
+    if (inQuotes) {
+      throw const FormatException('CSV contains an unterminated quoted field.');
+    }
+
+    final hasTrailingData =
+        currentField.length > 0 || currentRow.any((field) => field.isNotEmpty);
+    if (hasTrailingData) {
+      pushRow();
+    }
+
+    return rows
+        .where((row) => row.any((cell) => cell.trim().isNotEmpty))
+        .toList();
+  }
+
+  String? _parseImportedType(String value) {
+    final normalized = value.trim().toLowerCase();
+    return switch (normalized) {
+      'income' => TransactionType.income.dbValue,
+      'expense' => TransactionType.expense.dbValue,
+      'savings_deposit' ||
+      'savings deposit' => TransactionType.savingsDeposit.dbValue,
+      'savings_withdrawal' ||
+      'savings withdrawal' => TransactionType.savingsWithdrawal.dbValue,
+      _ => null,
+    };
+  }
+
+  String _transactionSignature({
+    required String type,
+    required double amount,
+    required DateTime date,
+    required String? categoryName,
+    required String? source,
+    required String? note,
+  }) {
+    return [
+      type,
+      amount.toStringAsFixed(2),
+      date.toIso8601String(),
+      _normalizeKey(categoryName),
+      _normalizeKey(source),
+      _normalizeKey(note),
+    ].join('|');
+  }
+
+  String _normalizeKey(String? value) => value?.trim().toLowerCase() ?? '';
+
   Future<File> _generateCsv(
     List<TransactionsTableData> transactions,
     Map<int, String> catMap,
@@ -657,4 +1065,38 @@ class _RangeChip extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CsvImportResult {
+  const _CsvImportResult({
+    required this.imported,
+    required this.duplicateRows,
+    required this.invalidRows,
+    required this.createdCategories,
+  });
+
+  final int imported;
+  final int duplicateRows;
+  final int invalidRows;
+  final int createdCategories;
+}
+
+class _ParsedCsvTransaction {
+  const _ParsedCsvTransaction({
+    required this.type,
+    required this.amount,
+    required this.date,
+    required this.categoryName,
+    required this.displayCategoryName,
+    required this.source,
+    required this.note,
+  });
+
+  final String type;
+  final double amount;
+  final DateTime date;
+  final String? categoryName;
+  final String? displayCategoryName;
+  final String? source;
+  final String? note;
 }
