@@ -218,27 +218,42 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     });
 
     final authRepository = ref.read(authRepositoryProvider);
-    final isAvailable = await authRepository.isAvailable();
+    final deviceSupported = await authRepository.isDeviceSupported();
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
-    if (!isAvailable) {
+    if (!deviceSupported) {
       setState(() {
         _authenticating = false;
         _deviceSupported = false;
         _statusMessage =
-            'Biometric unlock is unavailable on this device. Use your device credentials instead.';
+            'No authentication method available on this device.';
+      });
+      return;
+    }
+
+    // Check if biometrics are enrolled; if not, fall back to device credentials
+    final hasBio = await authRepository.hasBiometrics();
+    if (!mounted) return;
+
+    final useBiometricOnly = biometricOnly && hasBio;
+
+    if (biometricOnly && !hasBio) {
+      // No biometrics enrolled — skip to device credentials UI
+      setState(() {
+        _authenticating = false;
+        _deviceSupported = true;
+        _statusMessage =
+            'No biometrics enrolled. Use your PIN, pattern, or password instead.';
       });
       return;
     }
 
     final success = await authRepository.authenticate(
-      reason: biometricOnly
+      reason: useBiometricOnly
           ? 'Authenticate to unlock SpendSplit'
           : 'Use your device credentials to unlock SpendSplit',
-      biometricOnly: biometricOnly,
+      biometricOnly: useBiometricOnly,
     );
 
     if (!mounted) {

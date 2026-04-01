@@ -66,10 +66,10 @@ class SettingsScreen extends ConsumerWidget {
                     value: settings.biometricEnabled,
                     onChanged: (value) async {
                       if (value) {
-                        final isAvailable = await ref
+                        final isSupported = await ref
                             .read(authRepositoryProvider)
-                            .isAvailable();
-                        if (!isAvailable) {
+                            .isDeviceSupported();
+                        if (!isSupported) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(

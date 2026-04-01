@@ -15,10 +15,19 @@ class AuthRepository {
 
   final LocalAuthentication _localAuthentication;
 
-  Future<bool> isAvailable() async {
+  /// Returns true if the device supports any form of local auth
+  /// (biometrics, PIN, pattern, password).
+  Future<bool> isDeviceSupported() async {
     try {
-      final supported = await _localAuthentication.isDeviceSupported();
-      if (!supported) return false;
+      return await _localAuthentication.isDeviceSupported();
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  /// Returns true if biometrics (fingerprint/face) are enrolled.
+  Future<bool> hasBiometrics() async {
+    try {
       final enrolled = await _localAuthentication.getAvailableBiometrics();
       return enrolled.isNotEmpty;
     } on PlatformException {
