@@ -137,7 +137,17 @@ class AppDatabase extends _$AppDatabase {
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    final directory = await getApplicationDocumentsDirectory();
+    // Store the database in Application Support on iOS and private app
+    // storage on Android. Backup exclusion is handled natively.
+    final directory = Platform.isIOS
+        ? await getApplicationSupportDirectory()
+        : await getApplicationDocumentsDirectory();
+
+    // Ensure the directory exists (applicationSupport may not on first run)
+    if (!directory.existsSync()) {
+      directory.createSync(recursive: true);
+    }
+
     final file = File(path.join(directory.path, 'spendsplit.sqlite'));
     return NativeDatabase.createInBackground(file);
   });

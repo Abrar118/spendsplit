@@ -129,20 +129,50 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-class SpendSplitApp extends ConsumerWidget {
+class SpendSplitApp extends ConsumerStatefulWidget {
   const SpendSplitApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SpendSplitApp> createState() => _SpendSplitAppState();
+}
+
+class _SpendSplitAppState extends ConsumerState<SpendSplitApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      // Re-lock when the app is backgrounded
+      final settings = ref.read(appSettingsProvider);
+      if (settings.biometricEnabled) {
+        ref.read(appSessionUnlockedProvider.notifier).lock();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     ref.listen(
       balanceSummaryProvider,
-      (previous, next) => _syncHomeWidget(ref),
+      (previous, next) => _syncHomeWidget(),
     );
     ref.listen(
       savingsInsightsProvider,
-      (previous, next) => _syncHomeWidget(ref),
+      (previous, next) => _syncHomeWidget(),
     );
-    _syncHomeWidget(ref);
+    _syncHomeWidget();
 
     final router = ref.read(routerProvider);
     return MaterialApp.router(
@@ -153,7 +183,7 @@ class SpendSplitApp extends ConsumerWidget {
     );
   }
 
-  void _syncHomeWidget(WidgetRef ref) {
+  void _syncHomeWidget() {
     final balance = ref.read(balanceSummaryProvider).valueOrNull;
     if (balance == null) return;
 

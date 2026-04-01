@@ -28,6 +28,7 @@ dependencies:
   flutter_slidable: ^3.1.0
   modal_bottom_sheet: ^3.0.0
   shared_preferences: ^2.2.3
+  flutter_secure_storage: ^9.2.4
   share_plus: ^10.1.4
   home_widget: ^0.7.0
   pdf: ^3.11.1

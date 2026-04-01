@@ -8,12 +8,21 @@ import '../data/repositories/category_repository.dart';
 import '../data/repositories/dollar_tracker_repository.dart';
 import '../data/repositories/savings_repository.dart';
 import '../data/repositories/settings_repository.dart';
+import '../data/repositories/secure_storage_repository.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../data/repositories/transaction_template_repository.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError('sharedPreferencesProvider must be overridden');
 });
+
+final secureStorageProvider = Provider<SecureStorageRepository>((ref) {
+  throw UnimplementedError('secureStorageProvider must be overridden');
+});
+
+/// Pre-loaded at startup from secure storage so providers can read synchronously.
+final secureCardNumberProvider = Provider<String>((ref) => '');
+final secureInitialBalanceProvider = Provider<double>((ref) => 0.0);
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final database = AppDatabase();
@@ -48,7 +57,12 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
 class SettingsController extends Notifier<AppSettings> {
   @override
   AppSettings build() {
-    return ref.watch(settingsRepositoryProvider).loadSettings();
+    final base = ref.watch(settingsRepositoryProvider).loadSettings();
+    // Override card number and initial balance from secure storage
+    return base.copyWith(
+      cardNumber: ref.read(secureCardNumberProvider),
+      initialBalance: ref.read(secureInitialBalanceProvider),
+    );
   }
 
   Future<void> setBiometricEnabled(bool value) async {
@@ -67,12 +81,12 @@ class SettingsController extends Notifier<AppSettings> {
   }
 
   Future<void> setInitialBalance(double value) async {
-    await ref.read(settingsRepositoryProvider).setInitialBalance(value);
+    await ref.read(secureStorageProvider).setInitialBalance(value);
     state = state.copyWith(initialBalance: value);
   }
 
   Future<void> setCardNumber(String value) async {
-    await ref.read(settingsRepositoryProvider).setCardNumber(value);
+    await ref.read(secureStorageProvider).setCardNumber(value);
     state = state.copyWith(cardNumber: value);
   }
 }
