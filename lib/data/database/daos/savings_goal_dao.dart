@@ -54,6 +54,14 @@ class SavingsGoalDao extends DatabaseAccessor<AppDatabase>
     )..where((table) => table.id.equals(id))).go();
   }
 
+  /// Clears linked transaction references and deletes the goal atomically.
+  Future<int> deleteGoalWithReferenceCleanup(int id) {
+    return attachedDatabase.transaction(() async {
+      await clearGoalReferencesOnTransactions(id);
+      return deleteGoalById(id);
+    });
+  }
+
   /// Adjusts the goal's currentAmount by [delta].
   /// Returns false if the goal doesn't exist or the result would go negative.
   Future<bool> adjustCurrentAmountBy(int id, double delta) async {

@@ -28,10 +28,9 @@ class SavingsRepository {
     return _savingsGoalDao.updateGoal(entry);
   }
 
-  /// Clears savingsGoalId on all linked transactions, then deletes the goal.
+  /// Clears linked transaction references and deletes the goal atomically.
   Future<int> deleteGoalById(int id) async {
-    await _savingsGoalDao.clearGoalReferencesOnTransactions(id);
-    return _savingsGoalDao.deleteGoalById(id);
+    return _savingsGoalDao.deleteGoalWithReferenceCleanup(id);
   }
 
   Future<bool> adjustGoalAmountBy(int id, double delta) {
