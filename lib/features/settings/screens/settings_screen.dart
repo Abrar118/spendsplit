@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -170,6 +171,30 @@ class SettingsScreen extends ConsumerWidget {
                           controller.setDollarLimitYear(DateTime.now().year),
                     ),
                   ],
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.section),
+            GlassCard(
+              glowColor: AppColors.teal,
+              radius: 24,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'DATA',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _ActionRow(
+                    icon: LucideIcons.download,
+                    title: 'Export Data',
+                    subtitle: 'CSV or PDF of your transactions',
+                    value: '',
+                    onTap: () => context.push(AppRoute.exportData.path),
+                  ),
                 ],
               ),
             ),

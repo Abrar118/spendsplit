@@ -10,6 +10,7 @@ import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/screens/lock_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/dollar_tracker/screens/dollar_tracker_screen.dart';
+import 'features/export/screens/export_data_screen.dart';
 import 'features/goals/screens/goals_screen.dart';
 import 'features/monthly/screens/monthly_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
@@ -103,6 +104,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         path: AppRoute.settings.path,
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoute.exportData.path,
+        builder: (context, state) => const ExportDataScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,

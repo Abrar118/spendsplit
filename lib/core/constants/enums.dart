@@ -32,6 +32,7 @@ enum AppRoute {
   goals('/goals'),
   dollarTracker('/dollar-tracker'),
   settings('/settings'),
+  exportData('/export'),
   lock('/lock');
 
   const AppRoute(this.path);
