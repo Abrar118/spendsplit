@@ -10,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../providers/providers.dart';
+import '../../widget/widget_data_service.dart';
 import '../widgets/active_goal_card.dart';
 import '../widgets/balance_card.dart';
 import '../widgets/dollar_summary_card.dart';
@@ -35,6 +36,17 @@ class DashboardScreen extends ConsumerWidget {
         transactions.isLoading ||
         goals.isLoading ||
         dollarSummary.isLoading;
+
+    // Push balance data to home screen widget
+    final insightsAsync = ref.watch(savingsInsightsProvider);
+    if (balanceSummary.hasValue) {
+      final savingsPercent =
+          insightsAsync.valueOrNull?.monthOverMonthDelta ?? 0;
+      WidgetDataService.updateBalance(
+        availableBalance: balanceSummary.value!.availableBalance,
+        savingsPercent: savingsPercent * 100,
+      );
+    }
 
     return SafeArea(
       bottom: false,
@@ -109,8 +121,6 @@ class DashboardScreen extends ConsumerWidget {
                 error: (error, stackTrace) => const _SectionError(),
                 loading: () => const _SnapshotSkeleton(),
               ),
-              const SizedBox(height: AppSpacing.section),
-              const _QuickActions(),
               const SizedBox(height: AppSpacing.section),
               transactions.when(
                 data: (entries) => SpendingChart(
@@ -333,100 +343,6 @@ class _CardSkeleton extends StatelessWidget {
       child: GlassCard(
         child: Container(color: Colors.white.withValues(alpha: 0.04)),
       ),
-    );
-  }
-}
-
-class _QuickActions extends StatelessWidget {
-  const _QuickActions();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Expanded(
-          child: GlassCard(
-            glowColor: AppColors.teal,
-            radius: 20,
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.teal.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    LucideIcons.scanLine,
-                    color: AppColors.teal,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  'Scan Receipt',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'AI-Powered OCR',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: GlassCard(
-            glowColor: AppColors.purple,
-            radius: 20,
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.purple.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    LucideIcons.mic,
-                    color: AppColors.purple,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  'Voice Entry',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Natural Language',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
