@@ -12,12 +12,14 @@ class TransactionAdvancedFilters {
     this.categoryIds = const {},
     this.startDate,
     this.endDate,
+    this.searchQuery = '',
   });
 
   final Set<TransactionType> transactionTypes;
   final Set<int> categoryIds;
   final DateTime? startDate;
   final DateTime? endDate;
+  final String searchQuery;
 
   bool get hasActiveFilters =>
       transactionTypes.isNotEmpty ||
@@ -30,6 +32,7 @@ class TransactionAdvancedFilters {
     Set<int>? categoryIds,
     DateTime? startDate,
     DateTime? endDate,
+    String? searchQuery,
     bool clearStartDate = false,
     bool clearEndDate = false,
   }) {
@@ -38,6 +41,7 @@ class TransactionAdvancedFilters {
       categoryIds: categoryIds ?? this.categoryIds,
       startDate: clearStartDate ? null : startDate ?? this.startDate,
       endDate: clearEndDate ? null : endDate ?? this.endDate,
+      searchQuery: searchQuery ?? this.searchQuery,
     );
   }
 }

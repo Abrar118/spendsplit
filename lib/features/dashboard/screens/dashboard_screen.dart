@@ -89,7 +89,7 @@ class DashboardScreen extends ConsumerWidget {
                       ),
                       TextSpan(
                         text: 'Split',
-                        style: TextStyle(color: AppColors.green),
+                        style: TextStyle(color: Colors.white),
                       ),
                     ],
                   ),

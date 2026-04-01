@@ -10,9 +10,11 @@ import 'daos/category_dao.dart';
 import 'daos/dollar_expense_dao.dart';
 import 'daos/savings_goal_dao.dart';
 import 'daos/transaction_dao.dart';
+import 'daos/transaction_template_dao.dart';
 import 'tables/categories_table.dart';
 import 'tables/dollar_expenses_table.dart';
 import 'tables/savings_goals_table.dart';
+import 'tables/transaction_templates_table.dart';
 import 'tables/transactions_table.dart';
 
 part 'app_database.g.dart';
@@ -23,14 +25,21 @@ part 'app_database.g.dart';
     CategoriesTable,
     SavingsGoalsTable,
     DollarExpensesTable,
+    TransactionTemplatesTable,
   ],
-  daos: [TransactionDao, CategoryDao, SavingsGoalDao, DollarExpenseDao],
+  daos: [
+    TransactionDao,
+    CategoryDao,
+    SavingsGoalDao,
+    DollarExpenseDao,
+    TransactionTemplateDao,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -75,6 +84,10 @@ class AppDatabase extends _$AppDatabase {
 
       if (from < 4) {
         await m.addColumn(transactionsTable, transactionsTable.savingsGoalId);
+      }
+
+      if (from < 5) {
+        await m.createTable(transactionTemplatesTable);
       }
     },
     beforeOpen: (_) async {

@@ -1,4 +1,6 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -15,9 +17,10 @@ import '../widgets/filter_chips_row.dart';
 import '../widgets/transaction_tile.dart';
 
 class TransactionsScreen extends ConsumerStatefulWidget {
-  const TransactionsScreen({super.key, this.initialMonth});
+  const TransactionsScreen({super.key, this.initialMonth, this.initialCategoryId});
 
   final DateTime? initialMonth;
+  final int? initialCategoryId;
 
   @override
   ConsumerState<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -27,11 +30,22 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   TransactionQuickFilter _quickFilter = TransactionQuickFilter.all;
   TransactionAdvancedFilters _advancedFilters =
       const TransactionAdvancedFilters();
+  int _visibleCount = 40;
+  bool _showSearch = false;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _advancedFilters = _filtersForMonth(widget.initialMonth);
+    _advancedFilters = _filtersForMonth(
+      widget.initialMonth,
+      categoryId: widget.initialCategoryId,
+    );
+    _searchController.addListener(() {
+      setState(() {
+        _visibleCount = 40;
+      });
+    });
   }
 
   @override
@@ -40,11 +54,22 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final oldMonth = oldWidget.initialMonth;
     final newMonth = widget.initialMonth;
     final hasChanged =
-        oldMonth?.year != newMonth?.year || oldMonth?.month != newMonth?.month;
+        oldMonth?.year != newMonth?.year ||
+        oldMonth?.month != newMonth?.month ||
+        oldWidget.initialCategoryId != widget.initialCategoryId;
 
     if (hasChanged) {
-      _advancedFilters = _filtersForMonth(newMonth);
+      _advancedFilters = _filtersForMonth(
+        newMonth,
+        categoryId: widget.initialCategoryId,
+      );
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -65,6 +90,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 Text('Transactions', style: theme.textTheme.titleLarge),
                 const Spacer(),
                 IconButton(
+                  onPressed: () => setState(() {
+                    _showSearch = !_showSearch;
+                    if (!_showSearch) _searchController.clear();
+                  }),
+                  icon: Icon(
+                    _showSearch ? LucideIcons.x : LucideIcons.search,
+                    color: _showSearch ? AppColors.teal : null,
+                  ),
+                ),
+                IconButton(
                   onPressed: categoriesAsync.hasValue
                       ? () => _openFilters(categoriesAsync.value!)
                       : null,
@@ -83,9 +118,38 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               onSelected: (value) {
                 setState(() {
                   _quickFilter = value;
+                  _visibleCount = 40;
                 });
               },
             ),
+            if (_showSearch) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search amount, note, category...',
+                  prefixIcon: const Icon(LucideIcons.search, size: 18),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(LucideIcons.x, size: 16),
+                          onPressed: _searchController.clear,
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: AppColors.surfaceLight.withValues(alpha: 0.6),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             Expanded(
               child: RefreshIndicator(
@@ -99,7 +163,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                               const <CategoriesTableData>[])
                         category.id: category,
                     };
-                    final filtered = _applyFilters(transactions);
+                    final filtered = _applyFilters(transactions, categoriesById);
 
                     if (filtered.isEmpty) {
                       return ListView(
@@ -115,56 +179,79 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       );
                     }
 
-                    final sections = _groupTransactions(filtered);
+                    // Paginate: show only _visibleCount items
+                    final paginated = filtered.length > _visibleCount
+                        ? filtered.sublist(0, _visibleCount)
+                        : filtered;
+                    final hasMore = filtered.length > _visibleCount;
+                    final sections = _groupTransactions(paginated);
+
+                    // Flatten sections into a list of items
+                    final items = <_ListItem>[];
+                    for (final section in sections) {
+                      items.add(_ListItem.header(section.header));
+                      for (final t in section.transactions) {
+                        items.add(_ListItem.transaction(t));
+                      }
+                    }
+                    if (hasMore) {
+                      items.add(const _ListItem.loadMore());
+                    }
 
                     return ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: sections.fold<int>(
-                        0,
-                        (sum, s) => sum + 1 + s.transactions.length,
-                      ),
+                      itemCount: items.length,
                       itemBuilder: (context, index) {
-                        var cursor = 0;
-                        for (final section in sections) {
-                          if (index == cursor) {
-                            // Date header row
-                            return Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: 8,
-                                top: 6,
+                        final item = items[index];
+
+                        if (item.isHeader) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8, top: 6),
+                            child: Text(
+                              item.headerText!,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: AppColors.textSecondary,
                               ),
-                              child: Text(
-                                section.header,
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            );
-                          }
-                          cursor++;
-                          final itemIndex = index - cursor;
-                          if (itemIndex < section.transactions.length) {
-                            final transaction =
-                                section.transactions[itemIndex];
-                            return Padding(
-                              key: ValueKey(transaction.id),
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: TransactionTile(
-                                transaction: transaction,
-                                category:
-                                    categoriesById[transaction.categoryId],
-                                onTap: () => showAddTransactionSheet(
-                                  context,
-                                  existingTransaction: transaction,
-                                ),
-                                onDelete: () =>
-                                    _deleteTransaction(transaction),
-                              ),
-                            );
-                          }
-                          cursor += section.transactions.length;
+                            ),
+                          );
                         }
-                        return const SizedBox.shrink();
+
+                        if (item.isLoadMore) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: TextButton(
+                                onPressed: () => setState(
+                                  () => _visibleCount += 40,
+                                ),
+                                child: Text(
+                                  'Load more (${filtered.length - _visibleCount} remaining)',
+                                  style: TextStyle(color: AppColors.teal),
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+
+                        final transaction = item.transaction!;
+                        return Padding(
+                          key: ValueKey(transaction.id),
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: TransactionTile(
+                            transaction: transaction,
+                            category:
+                                categoriesById[transaction.categoryId],
+                            onTap: () => showAddTransactionSheet(
+                              context,
+                              existingTransaction: transaction,
+                            ),
+                            onLongPress: () => _copyAmount(transaction),
+                            onSaveAsTemplate: () =>
+                                _saveTransactionAsTemplate(transaction),
+                            onDelete: () =>
+                                _deleteTransaction(transaction),
+                          ),
+                        );
                       },
                     );
                   },
@@ -194,7 +281,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
   List<TransactionsTableData> _applyFilters(
     List<TransactionsTableData> transactions,
+    Map<int, CategoriesTableData> categoriesById,
   ) {
+    final query = _searchController.text.trim().toLowerCase();
+
     return transactions.where((transaction) {
       final type = TransactionType.fromDbValue(transaction.type);
 
@@ -238,18 +328,104 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         }
       }
 
+      // Fuzzy search
+      if (query.isNotEmpty) {
+        final amountStr = transaction.amount.toStringAsFixed(2);
+        final note = transaction.note?.toLowerCase() ?? '';
+        final catName =
+            categoriesById[transaction.categoryId]?.name.toLowerCase() ?? '';
+        if (!amountStr.contains(query) &&
+            !note.contains(query) &&
+            !catName.contains(query)) {
+          return false;
+        }
+      }
+
       return true;
     }).toList();
   }
 
-  TransactionAdvancedFilters _filtersForMonth(DateTime? month) {
-    if (month == null) {
+  Future<void> _copyAmount(TransactionsTableData transaction) async {
+    final amountStr = transaction.amount.toStringAsFixed(2);
+    await Clipboard.setData(ClipboardData(text: amountStr));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Copied ৳$amountStr'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _saveTransactionAsTemplate(
+    TransactionsTableData transaction,
+  ) async {
+    final nameController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceLight,
+        title: const Text('Save as Template'),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            hintText: transaction.note?.isNotEmpty == true
+                ? transaction.note
+                : 'Template name',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final name = nameController.text.trim();
+    if (name.isEmpty) return;
+
+    await ref.read(transactionTemplateRepositoryProvider).createTemplate(
+      TransactionTemplatesTableCompanion.insert(
+        name: name,
+        type: transaction.type,
+        amount: Value(transaction.amount),
+        categoryId: Value(transaction.categoryId),
+        source: Value(transaction.source),
+        note: Value(transaction.note),
+      ),
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Template saved')),
+    );
+  }
+
+  TransactionAdvancedFilters _filtersForMonth(DateTime? month, {int? categoryId}) {
+    if (month == null && categoryId == null) {
       return const TransactionAdvancedFilters();
     }
 
-    final startDate = DateTime(month.year, month.month);
-    final endDate = DateTime(month.year, month.month + 1, 0);
-    return TransactionAdvancedFilters(startDate: startDate, endDate: endDate);
+    DateTime? startDate;
+    DateTime? endDate;
+    if (month != null) {
+      startDate = DateTime(month.year, month.month);
+      endDate = DateTime(month.year, month.month + 1, 0);
+    }
+
+    return TransactionAdvancedFilters(
+      startDate: startDate,
+      endDate: endDate,
+      categoryIds: categoryId != null ? {categoryId} : const {},
+    );
   }
 
   /// Groups transactions by date (normalized to midnight), sorted descending.
@@ -423,5 +599,26 @@ class _TransactionSection {
   final DateTime dateKey;
   final String header;
   final List<TransactionsTableData> transactions;
+}
+
+class _ListItem {
+  const _ListItem.header(this.headerText)
+      : transaction = null,
+        isHeader = true,
+        isLoadMore = false;
+  const _ListItem.transaction(this.transaction)
+      : headerText = null,
+        isHeader = false,
+        isLoadMore = false;
+  const _ListItem.loadMore()
+      : headerText = null,
+        transaction = null,
+        isHeader = false,
+        isLoadMore = true;
+
+  final String? headerText;
+  final TransactionsTableData? transaction;
+  final bool isHeader;
+  final bool isLoadMore;
 }
 

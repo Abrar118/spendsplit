@@ -189,6 +189,22 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   _ActionRow(
+                    icon: LucideIcons.layoutGrid,
+                    title: 'Manage Categories',
+                    subtitle: 'View and delete custom categories',
+                    value: '',
+                    onTap: () => context.push(AppRoute.manageCategories.path),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _ActionRow(
+                    icon: LucideIcons.bookmark,
+                    title: 'Manage Templates',
+                    subtitle: 'View and delete transaction templates',
+                    value: '',
+                    onTap: () => context.push(AppRoute.manageTemplates.path),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _ActionRow(
                     icon: LucideIcons.download,
                     title: 'Export Data',
                     subtitle: 'CSV or PDF of your transactions',

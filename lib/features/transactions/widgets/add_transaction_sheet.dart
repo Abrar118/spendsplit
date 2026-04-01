@@ -11,6 +11,7 @@ import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/input_formatters.dart';
 import '../../../data/database/app_database.dart';
 import '../../../providers/providers.dart';
+import 'template_picker_sheet.dart';
 
 Future<void> showAddTransactionSheet(
   BuildContext context, {
@@ -231,6 +232,35 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // --- From Template button ---
+                              if (!_isEditing) ...[
+                                const SizedBox(height: 8),
+                                Center(
+                                  child: OutlinedButton.icon(
+                                    onPressed: _saving
+                                        ? null
+                                        : () => _openTemplatePicker(context),
+                                    icon: const Icon(
+                                      LucideIcons.layoutTemplate,
+                                      size: 16,
+                                    ),
+                                    label: const Text('From Template'),
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.12,
+                                        ),
+                                      ),
+                                      foregroundColor: AppColors.textSecondary,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 10,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
                               // --- Amount input with ambient glow ---
                               Center(
                                 child: Column(
@@ -450,6 +480,21 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                           ),
                         ),
                       ),
+                      if (!_isEditing) ...[
+                        const SizedBox(height: 8),
+                        Center(
+                          child: TextButton.icon(
+                            onPressed: _saving
+                                ? null
+                                : () => _saveAsTemplate(context),
+                            icon: const Icon(LucideIcons.bookmark, size: 15),
+                            label: const Text('Save as Template'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -701,6 +746,126 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         _saving = false;
       });
     }
+  }
+
+  Future<void> _openTemplatePicker(BuildContext context) async {
+    final templates =
+        ref.read(transactionTemplatesProvider).valueOrNull ?? const [];
+    if (templates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No templates saved yet.')),
+      );
+      return;
+    }
+
+    final categories =
+        ref.read(categoriesProvider).valueOrNull ?? const <CategoriesTableData>[];
+    final catMap = {for (final c in categories) c.id: c};
+
+    final selected = await showTemplatePickerSheet(
+      context,
+      templates: templates,
+      categoriesById: catMap,
+      onDelete: (id) =>
+          ref.read(transactionTemplateRepositoryProvider).deleteTemplateById(id),
+    );
+
+    if (selected == null || !mounted) return;
+    _applyTemplate(selected);
+  }
+
+  void _applyTemplate(TransactionTemplatesTableData template) {
+    setState(() {
+      if (template.amount != null) {
+        _amountController.text = template.amount!.toStringAsFixed(2);
+      }
+      _noteController.text = template.note ?? '';
+      _selectedCategoryId = template.categoryId;
+      _didAutoSelectCategory = true;
+      final type = TransactionType.fromDbValue(template.type);
+      switch (type) {
+        case TransactionType.income:
+          _entryType = _TransactionEntryType.income;
+          _selectedIncomeSource =
+              template.source ?? IncomeSource.salary.dbValue;
+        case TransactionType.expense:
+          _entryType = _TransactionEntryType.expense;
+        case TransactionType.savingsDeposit:
+          _entryType = _TransactionEntryType.savings;
+          _savingsFlowType = _SavingsFlowType.deposit;
+        case TransactionType.savingsWithdrawal:
+          _entryType = _TransactionEntryType.savings;
+          _savingsFlowType = _SavingsFlowType.withdrawal;
+      }
+    });
+  }
+
+  Future<void> _saveAsTemplate(BuildContext context) async {
+    final nameController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceLight,
+        title: const Text('Save Template'),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(hintText: 'Template name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final name = nameController.text.trim();
+    if (name.isEmpty) return;
+
+    final type = switch (_entryType) {
+      _TransactionEntryType.expense => TransactionType.expense,
+      _TransactionEntryType.income => TransactionType.income,
+      _TransactionEntryType.savings =>
+        _savingsFlowType == _SavingsFlowType.deposit
+            ? TransactionType.savingsDeposit
+            : TransactionType.savingsWithdrawal,
+    };
+    final amount = double.tryParse(_amountController.text);
+
+    await ref.read(transactionTemplateRepositoryProvider).createTemplate(
+      TransactionTemplatesTableCompanion.insert(
+        name: name,
+        type: type.dbValue,
+        amount: Value(amount),
+        categoryId: Value(
+          _entryType == _TransactionEntryType.expense
+              ? _selectedCategoryId
+              : null,
+        ),
+        source: Value(
+          _entryType == _TransactionEntryType.income
+              ? _selectedIncomeSource
+              : null,
+        ),
+        note: Value(
+          _noteController.text.trim().isNotEmpty
+              ? _noteController.text.trim()
+              : null,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Template saved')),
+    );
   }
 
   Map<int, double> _goalAdjustmentsForSave({

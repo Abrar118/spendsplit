@@ -46,4 +46,8 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
   Future<int> insertCategory(CategoriesTableCompanion entry) {
     return into(categoriesTable).insert(entry);
   }
+
+  Future<int> deleteCategory(int id) {
+    return (delete(categoriesTable)..where((t) => t.id.equals(id))).go();
+  }
 }

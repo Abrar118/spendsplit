@@ -13,17 +13,15 @@ import 'features/dollar_tracker/screens/dollar_tracker_screen.dart';
 import 'features/export/screens/export_data_screen.dart';
 import 'features/goals/screens/goals_screen.dart';
 import 'features/monthly/screens/monthly_screen.dart';
+import 'features/settings/screens/manage_categories_screen.dart';
+import 'features/settings/screens/manage_templates_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 import 'features/transactions/screens/transactions_screen.dart';
 import 'features/transactions/widgets/add_transaction_sheet.dart';
 import 'providers/providers.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
-  debugLabel: 'root',
-);
-final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(
-  debugLabel: 'shell',
-);
+final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
 
 /// A [ChangeNotifier] that listens to auth-related Riverpod providers and
 /// calls [notifyListeners] to trigger GoRouter's [redirect] re-evaluation
@@ -49,13 +47,11 @@ class _RouterNotifier extends ChangeNotifier {
 }
 
 final _routerNotifierProvider = Provider<_RouterNotifier>((ref) {
-  final notifier = _RouterNotifier(ref);
-  ref.onDispose(notifier.dispose);
-  return notifier;
+  return _RouterNotifier(ref);
 });
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final notifier = ref.watch(_routerNotifierProvider);
+  final notifier = ref.read(_routerNotifierProvider);
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: AppRoute.dashboard.path,
@@ -79,6 +75,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: TransactionsScreen(
                 initialMonth: _parseMonthQuery(
                   state.uri.queryParameters['month'],
+                ),
+                initialCategoryId: int.tryParse(
+                  state.uri.queryParameters['categoryId'] ?? '',
                 ),
               ),
             ),
@@ -112,6 +111,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoute.manageCategories.path,
+        builder: (context, state) => const ManageCategoriesScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoute.manageTemplates.path,
+        builder: (context, state) => const ManageTemplatesScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
         path: AppRoute.lock.path,
         builder: (context, state) => const LockScreen(),
       ),
@@ -124,7 +133,7 @@ class SpendSplitApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final router = ref.watch(routerProvider);
+    final router = ref.read(routerProvider);
     return MaterialApp.router(
       title: 'SpendSplit',
       debugShowCheckedModeBanner: false,
@@ -193,45 +202,6 @@ class _NoiseBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: const BoxDecoration(color: AppColors.background),
-      child: CustomPaint(
-        painter: _NoisePainter(
-          baseColor: AppColors.background,
-          grainColor: colors.onSurface.withValues(alpha: 0.018),
-        ),
-      ),
-    );
-  }
-}
-
-class _NoisePainter extends CustomPainter {
-  const _NoisePainter({required this.baseColor, required this.grainColor});
-
-  final Color baseColor;
-  final Color grainColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final basePaint = Paint()..color = baseColor;
-    canvas.drawRect(Offset.zero & size, basePaint);
-
-    final grainPaint = Paint()..color = grainColor;
-    const step = 6.0;
-    for (double dx = 0; dx < size.width; dx += step) {
-      for (double dy = 0; dy < size.height; dy += step) {
-        final seed = ((dx + 3) * (dy + 5)).toInt();
-        if (seed % 5 == 0) {
-          canvas.drawRect(Rect.fromLTWH(dx, dy, 1.2, 1.2), grainPaint);
-        }
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _NoisePainter oldDelegate) {
-    return oldDelegate.baseColor != baseColor ||
-        oldDelegate.grainColor != grainColor;
+    return const ColoredBox(color: AppColors.background);
   }
 }

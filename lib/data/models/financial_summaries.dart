@@ -28,6 +28,7 @@ class MonthlyFinanceSummary {
 
 class MonthlyCategoryBreakdown {
   const MonthlyCategoryBreakdown({
+    required this.categoryId,
     required this.name,
     required this.iconKey,
     required this.colorValue,
@@ -35,6 +36,7 @@ class MonthlyCategoryBreakdown {
     required this.share,
   });
 
+  final int? categoryId;
   final String name;
   final String iconKey;
   final int colorValue;
@@ -237,6 +239,7 @@ abstract final class FinanceCalculators {
       final category = categoriesById[entry.key];
       final amount = entry.value;
       return MonthlyCategoryBreakdown(
+        categoryId: entry.key,
         name: category?.name ?? 'Uncategorized',
         iconKey: category?.icon ?? 'more_horiz',
         colorValue: category?.color ?? 0xFF8892A7,

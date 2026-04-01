@@ -184,6 +184,15 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
                                 onViewAll: () => context.go(
                                   '${AppRoute.transactions.path}?month=${_formatMonthQuery(_visibleMonth)}',
                                 ),
+                                onCategoryTap: (item) {
+                                  final monthParam = _formatMonthQuery(_visibleMonth);
+                                  final catParam = item.categoryId != null
+                                      ? '&categoryId=${item.categoryId}'
+                                      : '';
+                                  context.go(
+                                    '${AppRoute.transactions.path}?month=$monthParam$catParam',
+                                  );
+                                },
                               )
                               .animate()
                               .fadeIn(duration: 260.ms, delay: 180.ms)
@@ -377,7 +386,7 @@ class _TopBar extends StatelessWidget {
               ),
               TextSpan(
                 text: 'Split',
-                style: TextStyle(color: AppColors.green),
+                style: TextStyle(color: Colors.white),
               ),
             ],
           ),
@@ -550,10 +559,15 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _CategoryDonutCard extends StatelessWidget {
-  const _CategoryDonutCard({required this.analytics, required this.onViewAll});
+  const _CategoryDonutCard({
+    required this.analytics,
+    required this.onViewAll,
+    this.onCategoryTap,
+  });
 
   final MonthlyAnalytics analytics;
   final VoidCallback onViewAll;
+  final void Function(MonthlyCategoryBreakdown)? onCategoryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -620,6 +634,20 @@ class _CategoryDonutCard extends StatelessWidget {
                       sectionsSpace: 0,
                       centerSpaceRadius: 96,
                       startDegreeOffset: -90,
+                      pieTouchData: PieTouchData(
+                        touchCallback: (event, response) {
+                          if (event is FlTapUpEvent &&
+                              response?.touchedSection != null &&
+                              onCategoryTap != null) {
+                            final idx = response!
+                                .touchedSection!.touchedSectionIndex;
+                            if (idx >= 0 &&
+                                idx < analytics.categories.length) {
+                              onCategoryTap!(analytics.categories[idx]);
+                            }
+                          }
+                        },
+                      ),
                       sections: [
                         for (var i = 0; i < analytics.categories.length; i++)
                           PieChartSectionData(

@@ -33,6 +33,8 @@ enum AppRoute {
   dollarTracker('/dollar-tracker'),
   settings('/settings'),
   exportData('/export'),
+  manageCategories('/manage-categories'),
+  manageTemplates('/manage-templates'),
   lock('/lock');
 
   const AppRoute(this.path);

@@ -9,6 +9,7 @@ import '../data/repositories/dollar_tracker_repository.dart';
 import '../data/repositories/savings_repository.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/transaction_repository.dart';
+import '../data/repositories/transaction_template_repository.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError('sharedPreferencesProvider must be overridden');
@@ -215,4 +216,15 @@ final savingsInsightsProvider = Provider<AsyncValue<SavingsInsights>>((ref) {
       referenceMonth: DateTime.now(),
     ),
   );
+});
+
+final transactionTemplateRepositoryProvider =
+    Provider<TransactionTemplateRepository>((ref) {
+  return TransactionTemplateRepository(
+    ref.watch(appDatabaseProvider).transactionTemplateDao,
+  );
+});
+
+final transactionTemplatesProvider = StreamProvider((ref) {
+  return ref.watch(transactionTemplateRepositoryProvider).watchTemplates();
 });
