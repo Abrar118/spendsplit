@@ -357,19 +357,19 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
         exportedFile = await _generatePdf(filtered, catMap, dir, timestamp);
       }
 
-      if (!mounted) return;
-      setState(() => _exporting = false);
-
       await Share.shareXFiles([
         XFile(exportedFile.path),
       ], subject: 'SpendSplit Export — $timestamp');
     } on Exception catch (e) {
       if (!mounted) return;
-      setState(() => _exporting = false);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
     } finally {
+      if (mounted && _exporting) {
+        setState(() => _exporting = false);
+      }
+
       final file = exportedFile;
       if (file != null) {
         try {

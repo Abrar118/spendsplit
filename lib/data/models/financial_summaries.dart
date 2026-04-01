@@ -90,6 +90,8 @@ class SavingsInsights {
 }
 
 abstract final class FinanceCalculators {
+  static const double _epsilon = 1e-9;
+
   static BalanceSummary balanceSummary({
     required Iterable<TransactionsTableData> transactions,
     required double initialBalance,
@@ -160,7 +162,7 @@ abstract final class FinanceCalculators {
         'savings_withdrawal' => -entry.amount,
         _ => 0.0,
       };
-      if (delta == 0) continue;
+      if (_isNearZero(delta)) continue;
       bucketedSavings.update(
         monthKey,
         (value) => value + delta,
@@ -192,8 +194,8 @@ abstract final class FinanceCalculators {
       month: previousMonth,
     ).saved;
 
-    final delta = previous == 0
-        ? (current == 0 ? 0.0 : 1.0)
+    final delta = _isNearZero(previous)
+        ? (_isNearZero(current) ? 0.0 : 1.0)
         : (current - previous) / previous;
 
     return SavingsInsights(
@@ -285,10 +287,12 @@ abstract final class FinanceCalculators {
     required double current,
     required double previous,
   }) {
-    if (previous == 0) {
-      return current == 0 ? 0 : 1;
+    if (_isNearZero(previous)) {
+      return _isNearZero(current) ? 0 : 1;
     }
 
     return (current - previous) / previous;
   }
+
+  static bool _isNearZero(double value) => value.abs() < _epsilon;
 }
