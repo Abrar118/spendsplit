@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
@@ -16,6 +16,7 @@ import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/shimmer_skeleton.dart';
 import '../../../data/models/financial_summaries.dart';
 import '../../../providers/providers.dart';
+import '../widgets/monthly_budget_card.dart';
 
 class MonthlyScreen extends ConsumerStatefulWidget {
   const MonthlyScreen({super.key});
@@ -93,6 +94,8 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
                               ? null
                               : () => _changeMonth(1),
                         ),
+                        const SizedBox(height: AppSpacing.section),
+                        MonthlyBudgetCard(spent: analytics.summary.expenses),
                         const SizedBox(height: AppSpacing.section),
                         if (analytics.transactionCount == 0)
                           const SizedBox.shrink()

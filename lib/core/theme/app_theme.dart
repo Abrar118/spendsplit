@@ -44,7 +44,7 @@ abstract final class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: Colors.transparent,
+      scaffoldBackgroundColor: AppColors.background,
       textTheme: AppTypography.textTheme(),
       canvasColor: AppColors.surface,
       cardTheme: CardThemeData(

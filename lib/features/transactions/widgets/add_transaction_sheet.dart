@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
@@ -121,14 +121,20 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final categoriesAsync = ref.watch(categoriesProvider);
     final categories =
         categoriesAsync.valueOrNull ?? const <CategoriesTableData>[];
+    final goalsAsync = ref.watch(savingsGoalsProvider);
     final openGoals =
-        (ref.watch(savingsGoalsProvider).valueOrNull ??
-                const <SavingsGoalsTableData>[])
-            .where((goal) => !goal.isCompleted)
+        (goalsAsync.valueOrNull ?? const <SavingsGoalsTableData>[])
+            .where(
+              (goal) =>
+                  !goal.isCompleted ||
+                  goal.id == widget.existingTransaction?.savingsGoalId,
+            )
             .toList();
 
-    // Clear stale goal reference if the linked goal was completed or deleted
-    if (_selectedSavingsGoalId != null &&
+    // Loading is not evidence that a goal was deleted. Preserve edited links,
+    // including completed goals, until the stream has resolved.
+    if (goalsAsync.hasValue &&
+        _selectedSavingsGoalId != null &&
         !openGoals.any((g) => g.id == _selectedSavingsGoalId)) {
       _selectedSavingsGoalId = null;
     }
@@ -592,10 +598,11 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   }
 
   Future<void> _saveTransaction() async {
+    if (_saving) return;
     final messenger = ScaffoldMessenger.of(context);
     final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
 
-    if (amount == null || amount <= 0) {
+    if (amount == null || !amount.isFinite || amount <= 0) {
       messenger.showSnackBar(
         const SnackBar(content: Text('Enter a valid amount')),
       );
@@ -628,28 +635,6 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       nextType: transactionType,
       nextAmount: amount,
     );
-
-    if (goalAdjustments.isNotEmpty) {
-      final savingsRepository = ref.read(savingsRepositoryProvider);
-      for (final entry in goalAdjustments.entries) {
-        final goal = await savingsRepository.getGoalById(entry.key);
-        if (goal == null) {
-          messenger.showSnackBar(
-            const SnackBar(content: Text('Selected goal could not be found')),
-          );
-          return;
-        }
-        final projected = goal.currentAmount + entry.value;
-        if (projected < 0) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text('This would make "${goal.name}" go below zero.'),
-            ),
-          );
-          return;
-        }
-      }
-    }
 
     setState(() {
       _saving = true;
@@ -717,7 +702,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             entry.value,
           );
           if (!updated) {
-            throw StateError('Failed to update linked savings goal.');
+            throw StateError(
+              'The goal changed or has insufficient savings. Please review and try again.',
+            );
           }
         }
       });
@@ -737,7 +724,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         ),
       );
       Navigator.of(context).pop();
-    } on Exception catch (e) {
+    } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text('Failed to save: ${e.toString()}')),

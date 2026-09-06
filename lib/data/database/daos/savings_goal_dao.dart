@@ -64,17 +64,20 @@ class SavingsGoalDao extends DatabaseAccessor<AppDatabase>
 
   /// Adjusts the goal's currentAmount by [delta].
   /// Returns false if the goal doesn't exist or the result would go negative.
-  Future<bool> adjustCurrentAmountBy(int id, double delta) async {
-    if (delta.abs() < 1e-9) return true; // skip dust deltas
-    final existing = await getGoalById(id);
-    if (existing == null) return false;
+  Future<bool> adjustCurrentAmountBy(int id, double delta) {
+    if (!delta.isFinite) return Future.value(false);
+    return attachedDatabase.transaction(() async {
+      if (delta.abs() < 1e-9) return true; // skip dust deltas
+      final existing = await getGoalById(id);
+      if (existing == null) return false;
 
-    final raw = existing.currentAmount + delta;
-    if (raw < -1e-9) return false;
-    final nextAmount = raw.abs() < 1e-9 ? 0.0 : raw;
-    return update(
-      savingsGoalsTable,
-    ).replace(existing.copyWith(currentAmount: nextAmount));
+      final raw = existing.currentAmount + delta;
+      if (raw < -1e-9) return false;
+      final nextAmount = raw.abs() < 1e-9 ? 0.0 : raw;
+      return update(
+        savingsGoalsTable,
+      ).replace(existing.copyWith(currentAmount: nextAmount));
+    });
   }
 
   /// Nulls out savingsGoalId on all transactions that reference [goalId].

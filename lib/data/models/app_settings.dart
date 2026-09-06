@@ -4,6 +4,7 @@ class AppSettings {
     required this.dollarAnnualLimit,
     required this.dollarLimitYear,
     required this.initialBalance,
+    this.monthlyExpenseBudget = 0,
     String? cardNumber,
   }) : cardNumber = _normalizeCardNumber(cardNumber);
 
@@ -11,6 +12,7 @@ class AppSettings {
   final double dollarAnnualLimit;
   final int dollarLimitYear;
   final double initialBalance;
+  final double monthlyExpenseBudget;
   final String cardNumber;
 
   bool get needsDollarLimitRefresh => dollarLimitYear != DateTime.now().year;
@@ -20,6 +22,7 @@ class AppSettings {
     double? dollarAnnualLimit,
     int? dollarLimitYear,
     double? initialBalance,
+    double? monthlyExpenseBudget,
     String? cardNumber,
   }) {
     return AppSettings(
@@ -27,6 +30,7 @@ class AppSettings {
       dollarAnnualLimit: dollarAnnualLimit ?? this.dollarAnnualLimit,
       dollarLimitYear: dollarLimitYear ?? this.dollarLimitYear,
       initialBalance: initialBalance ?? this.initialBalance,
+      monthlyExpenseBudget: monthlyExpenseBudget ?? this.monthlyExpenseBudget,
       cardNumber: cardNumber ?? this.cardNumber,
     );
   }

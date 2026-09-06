@@ -265,7 +265,7 @@ abstract final class FinanceCalculators {
       savingsRate: currentSummary.income <= 0
           ? 0
           : currentSummary.saved / currentSummary.income,
-      transactionCount: expenseTransactions.length,
+      transactionCount: scopedTransactions.length,
       categories: breakdown,
     );
   }

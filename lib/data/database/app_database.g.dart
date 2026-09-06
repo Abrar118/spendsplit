@@ -581,7 +581,7 @@ class $CategoriesTableTable extends CategoriesTable
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+    $customConstraints: 'NOT NULL COLLATE NOCASE',
   );
   static const VerificationMeta _iconMeta = const VerificationMeta('icon');
   @override
@@ -702,6 +702,10 @@ class $CategoriesTableTable extends CategoriesTable
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {name, isDollarCategory},
+  ];
   @override
   CategoriesTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -2723,7 +2727,18 @@ class $$TransactionsTableTableTableManager
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$TransactionsTableTable, TransactionsTableData>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $TransactionsTableTable,
+                    TransactionsTableData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -2950,7 +2965,18 @@ class $$CategoriesTableTableTableManager
                 isDollarCategory: isDollarCategory,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$CategoriesTableTable, CategoriesTableData>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $CategoriesTableTable,
+                    CategoriesTableData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -3241,7 +3267,18 @@ class $$SavingsGoalsTableTableTableManager
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$SavingsGoalsTableTable, SavingsGoalsTableData>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $SavingsGoalsTableTable,
+                    SavingsGoalsTableData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -3472,7 +3509,19 @@ class $$DollarExpensesTableTableTableManager
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<
+                    $DollarExpensesTableTable,
+                    DollarExpensesTableData
+                  >(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $DollarExpensesTableTable,
+                    DollarExpensesTableData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -3744,7 +3793,19 @@ class $$TransactionTemplatesTableTableTableManager
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<
+                    $TransactionTemplatesTableTable,
+                    TransactionTemplatesTableData
+                  >(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $TransactionTemplatesTableTable,
+                    TransactionTemplatesTableData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),

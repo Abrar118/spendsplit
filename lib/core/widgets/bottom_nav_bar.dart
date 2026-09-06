@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_decorations.dart';
@@ -21,51 +21,53 @@ class BottomNavBar extends StatelessWidget {
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 0, 16, 12 + bottomInset),
-      child: DecoratedBox(
-        decoration: AppDecorations.navBar(),
-        child: SizedBox(
-          height: 72,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              SizedBox(
-                width: 64,
-                child: _NavItem(
-                  icon: LucideIcons.home,
-                  label: 'HOME',
-                  active: currentIndex == 0,
-                  onTap: () => onDestinationSelected(0),
-                ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: AppDecorations.glassBlur(),
+          child: DecoratedBox(
+            decoration: AppDecorations.navBar(),
+            child: SizedBox(
+              height: 60 + MediaQuery.textScalerOf(context).scale(12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: _NavItem(
+                      icon: LucideIcons.home,
+                      label: 'HOME',
+                      active: currentIndex == 0,
+                      onTap: () => onDestinationSelected(0),
+                    ),
+                  ),
+                  Expanded(
+                    child: _NavItem(
+                      icon: LucideIcons.receipt,
+                      label: 'HISTORY',
+                      active: currentIndex == 1,
+                      onTap: () => onDestinationSelected(1),
+                    ),
+                  ),
+                  Expanded(child: _AddNavItem(onTap: onAddPressed)),
+                  Expanded(
+                    child: _NavItem(
+                      icon: LucideIcons.calendarDays,
+                      label: 'MONTHLY',
+                      active: currentIndex == 3,
+                      onTap: () => onDestinationSelected(3),
+                    ),
+                  ),
+                  Expanded(
+                    child: _NavItem(
+                      icon: LucideIcons.flag,
+                      label: 'GOALS',
+                      active: currentIndex == 4,
+                      onTap: () => onDestinationSelected(4),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(
-                width: 64,
-                child: _NavItem(
-                  icon: LucideIcons.receipt,
-                  label: 'HISTORY',
-                  active: currentIndex == 1,
-                  onTap: () => onDestinationSelected(1),
-                ),
-              ),
-              SizedBox(width: 64, child: _AddNavItem(onTap: onAddPressed)),
-              SizedBox(
-                width: 64,
-                child: _NavItem(
-                  icon: LucideIcons.calendarDays,
-                  label: 'MONTHLY',
-                  active: currentIndex == 3,
-                  onTap: () => onDestinationSelected(3),
-                ),
-              ),
-              SizedBox(
-                width: 64,
-                child: _NavItem(
-                  icon: LucideIcons.flag,
-                  label: 'GOALS',
-                  active: currentIndex == 4,
-                  onTap: () => onDestinationSelected(4),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -90,36 +92,45 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final foreground = active ? AppColors.teal : AppColors.textSecondary;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: foreground, size: 22),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: theme.textTheme.labelMedium?.copyWith(color: foreground),
-              ),
-              const SizedBox(height: 5),
-              AnimatedOpacity(
-                duration: const Duration(milliseconds: 180),
-                opacity: active ? 1 : 0,
-                child: Container(
-                  width: 5,
-                  height: 5,
-                  decoration: const BoxDecoration(
-                    color: AppColors.teal,
-                    shape: BoxShape.circle,
+    return Semantics(
+      selected: active,
+      button: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: foreground, size: 22),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: foreground,
+                    fontSize: 10,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 5),
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 180),
+                  opacity: active ? 1 : 0,
+                  child: Container(
+                    width: 5,
+                    height: 5,
+                    decoration: const BoxDecoration(
+                      color: AppColors.teal,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -154,6 +165,7 @@ class _AddNavItem extends StatelessWidget {
                 ),
                 child: const Icon(
                   LucideIcons.plus,
+                  semanticLabel: 'Add transaction',
                   color: AppColors.onPrimary,
                   size: 24,
                 ),

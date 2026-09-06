@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:spendsplit/core/icons/lucide_icons.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -244,7 +244,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
-    if (picked == null) return;
+    if (!mounted || picked == null) return;
     setState(() {
       _selectedDate = picked;
     });
@@ -266,24 +266,35 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
       return;
     }
 
-    final appearance = _guessDollarCategoryAppearance(name);
-    final categoryId = await ref
-        .read(categoryRepositoryProvider)
-        .createCategory(
-          CategoriesTableCompanion.insert(
-            name: name,
-            icon: appearance.iconKey,
-            color: appearance.colorValue,
-            isPredefined: const drift.Value(false),
-            isDollarCategory: const drift.Value(true),
-          ),
-        );
+    try {
+      final appearance = _guessDollarCategoryAppearance(name);
+      final categoryId = await ref
+          .read(categoryRepositoryProvider)
+          .createCategory(
+            CategoriesTableCompanion.insert(
+              name: name,
+              icon: appearance.iconKey,
+              color: appearance.colorValue,
+              isPredefined: const drift.Value(false),
+              isDollarCategory: const drift.Value(true),
+            ),
+          );
 
-    if (!mounted) return;
-    setState(() {
-      _selectedCategoryId = categoryId;
-      _didAutoSelectCategory = true;
-    });
+      if (!mounted) return;
+      setState(() {
+        _selectedCategoryId = categoryId;
+        _didAutoSelectCategory = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not create category. Check for an existing name and try again.',
+          ),
+        ),
+      );
+    }
   }
 
   void _syncInitialCategory(List<CategoriesTableData> categories) {
@@ -304,10 +315,12 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
   }
 
   Future<void> _saveExpense() async {
+    if (_saving) return;
     final amount = double.tryParse(_amountController.text.trim());
     final purpose = _purposeController.text.trim();
 
     if (amount == null ||
+        !amount.isFinite ||
         amount <= 0 ||
         purpose.isEmpty ||
         _selectedCategoryId == null) {

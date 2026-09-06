@@ -66,9 +66,9 @@ abstract final class AppDecorations {
 
   static BoxDecoration navBar() {
     return BoxDecoration(
-      color: AppColors.navBar,
+      color: AppColors.navBar.withValues(alpha: 0.68),
       borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.16)),
       boxShadow: const [
         BoxShadow(
           color: Color(0x4D000000),

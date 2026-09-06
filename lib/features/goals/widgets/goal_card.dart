@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/constants/goal_icons.dart';
 import '../../../core/theme/app_colors.dart';

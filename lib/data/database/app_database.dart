@@ -36,10 +36,10 @@ part 'app_database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  AppDatabase({QueryExecutor? executor}) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -89,6 +89,50 @@ class AppDatabase extends _$AppDatabase {
       if (from < 5) {
         await m.createTable(transactionTemplatesTable);
       }
+      if (from < 6) {
+        await transaction(() async {
+          // Older versions allowed case-only duplicates. Merge references before
+          // rebuilding the table, preserving the canonical category ID.
+          final sequence = await customSelect(
+            "SELECT seq FROM sqlite_sequence WHERE name = 'categories_table'",
+          ).getSingleOrNull();
+          final previousSequence = sequence?.read<int>('seq') ?? 0;
+          final rows = await (select(
+            categoriesTable,
+          )..orderBy([(t) => OrderingTerm.asc(t.id)])).get();
+          final canonical = <String, int>{};
+          for (final row in rows) {
+            final key =
+                '${row.isDollarCategory}:${row.name.trim().toLowerCase()}';
+            final keep = canonical[key];
+            if (keep == null) {
+              canonical[key] = row.id;
+              continue;
+            }
+            await (update(transactionsTable)
+                  ..where((t) => t.categoryId.equals(row.id)))
+                .write(TransactionsTableCompanion(categoryId: Value(keep)));
+            await (update(dollarExpensesTable)
+                  ..where((t) => t.categoryId.equals(row.id)))
+                .write(DollarExpensesTableCompanion(categoryId: Value(keep)));
+            await (update(
+              transactionTemplatesTable,
+            )..where((t) => t.categoryId.equals(row.id))).write(
+              TransactionTemplatesTableCompanion(categoryId: Value(keep)),
+            );
+            await (delete(
+              categoriesTable,
+            )..where((t) => t.id.equals(row.id))).go();
+          }
+          await m.alterTable(TableMigration(categoriesTable));
+          // Table rebuilds otherwise reuse deleted IDs, which could reattach
+          // older uncategorized transactions to an unrelated new category.
+          await customStatement(
+            "UPDATE sqlite_sequence SET seq = MAX(seq, ?) WHERE name = 'categories_table'",
+            [previousSequence],
+          );
+        });
+      }
     },
     beforeOpen: (_) async {
       await _ensureDefaultCategories();
@@ -96,13 +140,16 @@ class AppDatabase extends _$AppDatabase {
   );
 
   Future<void> _ensureDefaultCategories() async {
-    final existingNames = (await select(
-      categoriesTable,
-    ).get()).map((row) => row.name).toSet();
+    final existingNames = (await select(categoriesTable).get())
+        .map((row) => '${row.isDollarCategory}:${row.name.toLowerCase()}')
+        .toSet();
 
     final entries = [
       ...DefaultCategories.seeds
-          .where((seed) => !existingNames.contains(seed.name))
+          .where(
+            (seed) =>
+                !existingNames.contains('false:${seed.name.toLowerCase()}'),
+          )
           .map(
             (seed) => CategoriesTableCompanion.insert(
               name: seed.name,
@@ -113,7 +160,10 @@ class AppDatabase extends _$AppDatabase {
             ),
           ),
       ...DefaultDollarCategories.seeds
-          .where((seed) => !existingNames.contains(seed.name))
+          .where(
+            (seed) =>
+                !existingNames.contains('true:${seed.name.toLowerCase()}'),
+          )
           .map(
             (seed) => CategoriesTableCompanion.insert(
               name: seed.name,

@@ -6,4 +6,16 @@ part of 'transaction_template_dao.dart';
 mixin _$TransactionTemplateDaoMixin on DatabaseAccessor<AppDatabase> {
   $TransactionTemplatesTableTable get transactionTemplatesTable =>
       attachedDatabase.transactionTemplatesTable;
+  TransactionTemplateDaoManager get managers =>
+      TransactionTemplateDaoManager(this);
+}
+
+class TransactionTemplateDaoManager {
+  final _$TransactionTemplateDaoMixin _db;
+  TransactionTemplateDaoManager(this._db);
+  $$TransactionTemplatesTableTableTableManager get transactionTemplatesTable =>
+      $$TransactionTemplatesTableTableTableManager(
+        _db.attachedDatabase,
+        _db.transactionTemplatesTable,
+      );
 }

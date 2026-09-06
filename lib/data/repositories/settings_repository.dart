@@ -10,6 +10,8 @@ class SettingsRepository {
 
   AppSettings loadSettings() {
     return AppSettings(
+      monthlyExpenseBudget:
+          _preferences.getDouble('monthly_expense_budget') ?? 0,
       biometricEnabled:
           _preferences.getBool(AppSettingsKey.biometricEnabled.value) ?? false,
       dollarAnnualLimit:
@@ -43,6 +45,14 @@ class SettingsRepository {
 
   Future<void> setInitialBalance(double value) {
     return _preferences.setDouble(AppSettingsKey.initialBalance.value, value);
+  }
+
+  Future<void> setMonthlyExpenseBudget(double value) async {
+    if (!value.isFinite || value < 0) {
+      throw ArgumentError.value(value, 'budget');
+    }
+    final saved = await _preferences.setDouble('monthly_expense_budget', value);
+    if (!saved) throw StateError('Could not save the monthly budget');
   }
 
   Future<void> setCardNumber(String value) {

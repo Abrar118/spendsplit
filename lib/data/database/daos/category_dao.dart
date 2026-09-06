@@ -44,7 +44,9 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<int> insertCategory(CategoriesTableCompanion entry) {
-    return into(categoriesTable).insert(entry);
+    final name = entry.name.value.trim();
+    if (name.isEmpty) throw ArgumentError('Category name cannot be empty');
+    return into(categoriesTable).insert(entry.copyWith(name: Value(name)));
   }
 
   Future<int> deleteCategory(int id) {
