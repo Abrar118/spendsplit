@@ -147,7 +147,7 @@ class TotalSavingsBanner extends StatelessWidget {
               ),
               const SizedBox(height: 22),
               Text(
-                'Across $activeGoalCount active goals',
+                'Across $activeGoalCount active goal${activeGoalCount == 1 ? '' : 's'}',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   color: AppColors.textPrimary.withValues(alpha: 0.76),
                   fontWeight: FontWeight.w500,
