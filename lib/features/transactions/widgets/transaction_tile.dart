@@ -29,6 +29,12 @@ class TransactionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final presentation = _presentationFor(transaction, category);
+    final iconColor =
+        TransactionType.fromDbValue(transaction.type) ==
+                TransactionType.expense &&
+            category != null
+        ? Color(category!.color)
+        : presentation.amountColor;
 
     return Slidable(
       key: ValueKey(transaction.id),
@@ -86,12 +92,12 @@ class TransactionTile extends StatelessWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: presentation.amountColor.withValues(alpha: 0.14),
+                      color: iconColor.withValues(alpha: 0.14),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       presentation.icon,
-                      color: presentation.amountColor,
+                      color: iconColor,
                       size: 19,
                     ),
                   ),
