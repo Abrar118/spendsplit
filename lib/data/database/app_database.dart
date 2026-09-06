@@ -12,6 +12,7 @@ import 'daos/savings_goal_dao.dart';
 import 'daos/transaction_dao.dart';
 import 'daos/transaction_template_dao.dart';
 import 'tables/categories_table.dart';
+import 'tables/category_budgets_table.dart';
 import 'tables/dollar_expenses_table.dart';
 import 'tables/savings_goals_table.dart';
 import 'tables/transaction_templates_table.dart';
@@ -26,6 +27,7 @@ part 'app_database.g.dart';
     SavingsGoalsTable,
     DollarExpensesTable,
     TransactionTemplatesTable,
+    CategoryBudgetsTable,
   ],
   daos: [
     TransactionDao,
@@ -39,7 +41,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? executor}) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -132,6 +134,17 @@ class AppDatabase extends _$AppDatabase {
             [previousSequence],
           );
         });
+      }
+      if (from < 7) {
+        await m.createTable(categoryBudgetsTable);
+        await m.addColumn(
+          transactionTemplatesTable,
+          transactionTemplatesTable.useCount,
+        );
+        await m.addColumn(
+          transactionTemplatesTable,
+          transactionTemplatesTable.isMonthly,
+        );
       }
     },
     beforeOpen: (_) async {

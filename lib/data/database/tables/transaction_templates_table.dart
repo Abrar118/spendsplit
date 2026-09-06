@@ -9,4 +9,6 @@ class TransactionTemplatesTable extends Table {
   TextColumn get source => text().nullable()();
   TextColumn get note => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  IntColumn get useCount => integer().withDefault(const Constant(0))();
+  BoolColumn get isMonthly => boolean().withDefault(const Constant(false))();
 }

@@ -2023,6 +2023,33 @@ class $TransactionTemplatesTableTable extends TransactionTemplatesTable
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _useCountMeta = const VerificationMeta(
+    'useCount',
+  );
+  @override
+  late final GeneratedColumn<int> useCount = GeneratedColumn<int>(
+    'use_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _isMonthlyMeta = const VerificationMeta(
+    'isMonthly',
+  );
+  @override
+  late final GeneratedColumn<bool> isMonthly = GeneratedColumn<bool>(
+    'is_monthly',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_monthly" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2033,6 +2060,8 @@ class $TransactionTemplatesTableTable extends TransactionTemplatesTable
     source,
     note,
     createdAt,
+    useCount,
+    isMonthly,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2095,6 +2124,18 @@ class $TransactionTemplatesTableTable extends TransactionTemplatesTable
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('use_count')) {
+      context.handle(
+        _useCountMeta,
+        useCount.isAcceptableOrUnknown(data['use_count']!, _useCountMeta),
+      );
+    }
+    if (data.containsKey('is_monthly')) {
+      context.handle(
+        _isMonthlyMeta,
+        isMonthly.isAcceptableOrUnknown(data['is_monthly']!, _isMonthlyMeta),
+      );
+    }
     return context;
   }
 
@@ -2139,6 +2180,14 @@ class $TransactionTemplatesTableTable extends TransactionTemplatesTable
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      useCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}use_count'],
+      )!,
+      isMonthly: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_monthly'],
+      )!,
     );
   }
 
@@ -2158,6 +2207,8 @@ class TransactionTemplatesTableData extends DataClass
   final String? source;
   final String? note;
   final DateTime createdAt;
+  final int useCount;
+  final bool isMonthly;
   const TransactionTemplatesTableData({
     required this.id,
     required this.name,
@@ -2167,6 +2218,8 @@ class TransactionTemplatesTableData extends DataClass
     this.source,
     this.note,
     required this.createdAt,
+    required this.useCount,
+    required this.isMonthly,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2187,6 +2240,8 @@ class TransactionTemplatesTableData extends DataClass
       map['note'] = Variable<String>(note);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
+    map['use_count'] = Variable<int>(useCount);
+    map['is_monthly'] = Variable<bool>(isMonthly);
     return map;
   }
 
@@ -2206,6 +2261,8 @@ class TransactionTemplatesTableData extends DataClass
           : Value(source),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       createdAt: Value(createdAt),
+      useCount: Value(useCount),
+      isMonthly: Value(isMonthly),
     );
   }
 
@@ -2223,6 +2280,8 @@ class TransactionTemplatesTableData extends DataClass
       source: serializer.fromJson<String?>(json['source']),
       note: serializer.fromJson<String?>(json['note']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      useCount: serializer.fromJson<int>(json['useCount']),
+      isMonthly: serializer.fromJson<bool>(json['isMonthly']),
     );
   }
   @override
@@ -2237,6 +2296,8 @@ class TransactionTemplatesTableData extends DataClass
       'source': serializer.toJson<String?>(source),
       'note': serializer.toJson<String?>(note),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'useCount': serializer.toJson<int>(useCount),
+      'isMonthly': serializer.toJson<bool>(isMonthly),
     };
   }
 
@@ -2249,6 +2310,8 @@ class TransactionTemplatesTableData extends DataClass
     Value<String?> source = const Value.absent(),
     Value<String?> note = const Value.absent(),
     DateTime? createdAt,
+    int? useCount,
+    bool? isMonthly,
   }) => TransactionTemplatesTableData(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -2258,6 +2321,8 @@ class TransactionTemplatesTableData extends DataClass
     source: source.present ? source.value : this.source,
     note: note.present ? note.value : this.note,
     createdAt: createdAt ?? this.createdAt,
+    useCount: useCount ?? this.useCount,
+    isMonthly: isMonthly ?? this.isMonthly,
   );
   TransactionTemplatesTableData copyWithCompanion(
     TransactionTemplatesTableCompanion data,
@@ -2273,6 +2338,8 @@ class TransactionTemplatesTableData extends DataClass
       source: data.source.present ? data.source.value : this.source,
       note: data.note.present ? data.note.value : this.note,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      useCount: data.useCount.present ? data.useCount.value : this.useCount,
+      isMonthly: data.isMonthly.present ? data.isMonthly.value : this.isMonthly,
     );
   }
 
@@ -2286,14 +2353,26 @@ class TransactionTemplatesTableData extends DataClass
           ..write('categoryId: $categoryId, ')
           ..write('source: $source, ')
           ..write('note: $note, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('useCount: $useCount, ')
+          ..write('isMonthly: $isMonthly')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, type, amount, categoryId, source, note, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    type,
+    amount,
+    categoryId,
+    source,
+    note,
+    createdAt,
+    useCount,
+    isMonthly,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2305,7 +2384,9 @@ class TransactionTemplatesTableData extends DataClass
           other.categoryId == this.categoryId &&
           other.source == this.source &&
           other.note == this.note &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.useCount == this.useCount &&
+          other.isMonthly == this.isMonthly);
 }
 
 class TransactionTemplatesTableCompanion
@@ -2318,6 +2399,8 @@ class TransactionTemplatesTableCompanion
   final Value<String?> source;
   final Value<String?> note;
   final Value<DateTime> createdAt;
+  final Value<int> useCount;
+  final Value<bool> isMonthly;
   const TransactionTemplatesTableCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -2327,6 +2410,8 @@ class TransactionTemplatesTableCompanion
     this.source = const Value.absent(),
     this.note = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.useCount = const Value.absent(),
+    this.isMonthly = const Value.absent(),
   });
   TransactionTemplatesTableCompanion.insert({
     this.id = const Value.absent(),
@@ -2337,6 +2422,8 @@ class TransactionTemplatesTableCompanion
     this.source = const Value.absent(),
     this.note = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.useCount = const Value.absent(),
+    this.isMonthly = const Value.absent(),
   }) : name = Value(name),
        type = Value(type);
   static Insertable<TransactionTemplatesTableData> custom({
@@ -2348,6 +2435,8 @@ class TransactionTemplatesTableCompanion
     Expression<String>? source,
     Expression<String>? note,
     Expression<DateTime>? createdAt,
+    Expression<int>? useCount,
+    Expression<bool>? isMonthly,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2358,6 +2447,8 @@ class TransactionTemplatesTableCompanion
       if (source != null) 'source': source,
       if (note != null) 'note': note,
       if (createdAt != null) 'created_at': createdAt,
+      if (useCount != null) 'use_count': useCount,
+      if (isMonthly != null) 'is_monthly': isMonthly,
     });
   }
 
@@ -2370,6 +2461,8 @@ class TransactionTemplatesTableCompanion
     Value<String?>? source,
     Value<String?>? note,
     Value<DateTime>? createdAt,
+    Value<int>? useCount,
+    Value<bool>? isMonthly,
   }) {
     return TransactionTemplatesTableCompanion(
       id: id ?? this.id,
@@ -2380,6 +2473,8 @@ class TransactionTemplatesTableCompanion
       source: source ?? this.source,
       note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
+      useCount: useCount ?? this.useCount,
+      isMonthly: isMonthly ?? this.isMonthly,
     );
   }
 
@@ -2410,6 +2505,12 @@ class TransactionTemplatesTableCompanion
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (useCount.present) {
+      map['use_count'] = Variable<int>(useCount.value);
+    }
+    if (isMonthly.present) {
+      map['is_monthly'] = Variable<bool>(isMonthly.value);
+    }
     return map;
   }
 
@@ -2423,7 +2524,282 @@ class TransactionTemplatesTableCompanion
           ..write('categoryId: $categoryId, ')
           ..write('source: $source, ')
           ..write('note: $note, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('useCount: $useCount, ')
+          ..write('isMonthly: $isMonthly')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CategoryBudgetsTableTable extends CategoryBudgetsTable
+    with TableInfo<$CategoryBudgetsTableTable, CategoryBudgetsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CategoryBudgetsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<int> categoryId = GeneratedColumn<int>(
+    'category_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _monthlyLimitMeta = const VerificationMeta(
+    'monthlyLimit',
+  );
+  @override
+  late final GeneratedColumn<double> monthlyLimit = GeneratedColumn<double>(
+    'monthly_limit',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, categoryId, monthlyLimit];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'category_budgets_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CategoryBudgetsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryIdMeta);
+    }
+    if (data.containsKey('monthly_limit')) {
+      context.handle(
+        _monthlyLimitMeta,
+        monthlyLimit.isAcceptableOrUnknown(
+          data['monthly_limit']!,
+          _monthlyLimitMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_monthlyLimitMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CategoryBudgetsTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CategoryBudgetsTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}category_id'],
+      )!,
+      monthlyLimit: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monthly_limit'],
+      )!,
+    );
+  }
+
+  @override
+  $CategoryBudgetsTableTable createAlias(String alias) {
+    return $CategoryBudgetsTableTable(attachedDatabase, alias);
+  }
+}
+
+class CategoryBudgetsTableData extends DataClass
+    implements Insertable<CategoryBudgetsTableData> {
+  final int id;
+
+  /// One budget per category. No FK constraint — matches the other tables'
+  /// style; orphan rows for deleted categories are ignored by joins and
+  /// cleaned up when a category is deleted.
+  final int categoryId;
+  final double monthlyLimit;
+  const CategoryBudgetsTableData({
+    required this.id,
+    required this.categoryId,
+    required this.monthlyLimit,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['category_id'] = Variable<int>(categoryId);
+    map['monthly_limit'] = Variable<double>(monthlyLimit);
+    return map;
+  }
+
+  CategoryBudgetsTableCompanion toCompanion(bool nullToAbsent) {
+    return CategoryBudgetsTableCompanion(
+      id: Value(id),
+      categoryId: Value(categoryId),
+      monthlyLimit: Value(monthlyLimit),
+    );
+  }
+
+  factory CategoryBudgetsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CategoryBudgetsTableData(
+      id: serializer.fromJson<int>(json['id']),
+      categoryId: serializer.fromJson<int>(json['categoryId']),
+      monthlyLimit: serializer.fromJson<double>(json['monthlyLimit']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'categoryId': serializer.toJson<int>(categoryId),
+      'monthlyLimit': serializer.toJson<double>(monthlyLimit),
+    };
+  }
+
+  CategoryBudgetsTableData copyWith({
+    int? id,
+    int? categoryId,
+    double? monthlyLimit,
+  }) => CategoryBudgetsTableData(
+    id: id ?? this.id,
+    categoryId: categoryId ?? this.categoryId,
+    monthlyLimit: monthlyLimit ?? this.monthlyLimit,
+  );
+  CategoryBudgetsTableData copyWithCompanion(
+    CategoryBudgetsTableCompanion data,
+  ) {
+    return CategoryBudgetsTableData(
+      id: data.id.present ? data.id.value : this.id,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      monthlyLimit: data.monthlyLimit.present
+          ? data.monthlyLimit.value
+          : this.monthlyLimit,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CategoryBudgetsTableData(')
+          ..write('id: $id, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('monthlyLimit: $monthlyLimit')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, categoryId, monthlyLimit);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CategoryBudgetsTableData &&
+          other.id == this.id &&
+          other.categoryId == this.categoryId &&
+          other.monthlyLimit == this.monthlyLimit);
+}
+
+class CategoryBudgetsTableCompanion
+    extends UpdateCompanion<CategoryBudgetsTableData> {
+  final Value<int> id;
+  final Value<int> categoryId;
+  final Value<double> monthlyLimit;
+  const CategoryBudgetsTableCompanion({
+    this.id = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.monthlyLimit = const Value.absent(),
+  });
+  CategoryBudgetsTableCompanion.insert({
+    this.id = const Value.absent(),
+    required int categoryId,
+    required double monthlyLimit,
+  }) : categoryId = Value(categoryId),
+       monthlyLimit = Value(monthlyLimit);
+  static Insertable<CategoryBudgetsTableData> custom({
+    Expression<int>? id,
+    Expression<int>? categoryId,
+    Expression<double>? monthlyLimit,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (categoryId != null) 'category_id': categoryId,
+      if (monthlyLimit != null) 'monthly_limit': monthlyLimit,
+    });
+  }
+
+  CategoryBudgetsTableCompanion copyWith({
+    Value<int>? id,
+    Value<int>? categoryId,
+    Value<double>? monthlyLimit,
+  }) {
+    return CategoryBudgetsTableCompanion(
+      id: id ?? this.id,
+      categoryId: categoryId ?? this.categoryId,
+      monthlyLimit: monthlyLimit ?? this.monthlyLimit,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<int>(categoryId.value);
+    }
+    if (monthlyLimit.present) {
+      map['monthly_limit'] = Variable<double>(monthlyLimit.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CategoryBudgetsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('monthlyLimit: $monthlyLimit')
           ..write(')'))
         .toString();
   }
@@ -2443,6 +2819,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $DollarExpensesTableTable(this);
   late final $TransactionTemplatesTableTable transactionTemplatesTable =
       $TransactionTemplatesTableTable(this);
+  late final $CategoryBudgetsTableTable categoryBudgetsTable =
+      $CategoryBudgetsTableTable(this);
   late final TransactionDao transactionDao = TransactionDao(
     this as AppDatabase,
   );
@@ -2465,6 +2843,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     savingsGoalsTable,
     dollarExpensesTable,
     transactionTemplatesTable,
+    categoryBudgetsTable,
   ];
 }
 
@@ -3559,6 +3938,8 @@ typedef $$TransactionTemplatesTableTableCreateCompanionBuilder =
       Value<String?> source,
       Value<String?> note,
       Value<DateTime> createdAt,
+      Value<int> useCount,
+      Value<bool> isMonthly,
     });
 typedef $$TransactionTemplatesTableTableUpdateCompanionBuilder =
     TransactionTemplatesTableCompanion Function({
@@ -3570,6 +3951,8 @@ typedef $$TransactionTemplatesTableTableUpdateCompanionBuilder =
       Value<String?> source,
       Value<String?> note,
       Value<DateTime> createdAt,
+      Value<int> useCount,
+      Value<bool> isMonthly,
     });
 
 class $$TransactionTemplatesTableTableFilterComposer
@@ -3618,6 +4001,16 @@ class $$TransactionTemplatesTableTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get useCount => $composableBuilder(
+    column: $table.useCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isMonthly => $composableBuilder(
+    column: $table.isMonthly,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3670,6 +4063,16 @@ class $$TransactionTemplatesTableTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get useCount => $composableBuilder(
+    column: $table.useCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isMonthly => $composableBuilder(
+    column: $table.isMonthly,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TransactionTemplatesTableTableAnnotationComposer
@@ -3706,6 +4109,12 @@ class $$TransactionTemplatesTableTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get useCount =>
+      $composableBuilder(column: $table.useCount, builder: (column) => column);
+
+  GeneratedColumn<bool> get isMonthly =>
+      $composableBuilder(column: $table.isMonthly, builder: (column) => column);
 }
 
 class $$TransactionTemplatesTableTableTableManager
@@ -3762,6 +4171,8 @@ class $$TransactionTemplatesTableTableTableManager
                 Value<String?> source = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<int> useCount = const Value.absent(),
+                Value<bool> isMonthly = const Value.absent(),
               }) => TransactionTemplatesTableCompanion(
                 id: id,
                 name: name,
@@ -3771,6 +4182,8 @@ class $$TransactionTemplatesTableTableTableManager
                 source: source,
                 note: note,
                 createdAt: createdAt,
+                useCount: useCount,
+                isMonthly: isMonthly,
               ),
           createCompanionCallback:
               ({
@@ -3782,6 +4195,8 @@ class $$TransactionTemplatesTableTableTableManager
                 Value<String?> source = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<int> useCount = const Value.absent(),
+                Value<bool> isMonthly = const Value.absent(),
               }) => TransactionTemplatesTableCompanion.insert(
                 id: id,
                 name: name,
@@ -3791,6 +4206,8 @@ class $$TransactionTemplatesTableTableTableManager
                 source: source,
                 note: note,
                 createdAt: createdAt,
+                useCount: useCount,
+                isMonthly: isMonthly,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -3833,6 +4250,194 @@ typedef $$TransactionTemplatesTableTableProcessedTableManager =
       TransactionTemplatesTableData,
       PrefetchHooks Function()
     >;
+typedef $$CategoryBudgetsTableTableCreateCompanionBuilder =
+    CategoryBudgetsTableCompanion Function({
+      Value<int> id,
+      required int categoryId,
+      required double monthlyLimit,
+    });
+typedef $$CategoryBudgetsTableTableUpdateCompanionBuilder =
+    CategoryBudgetsTableCompanion Function({
+      Value<int> id,
+      Value<int> categoryId,
+      Value<double> monthlyLimit,
+    });
+
+class $$CategoryBudgetsTableTableFilterComposer
+    extends Composer<_$AppDatabase, $CategoryBudgetsTableTable> {
+  $$CategoryBudgetsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monthlyLimit => $composableBuilder(
+    column: $table.monthlyLimit,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CategoryBudgetsTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $CategoryBudgetsTableTable> {
+  $$CategoryBudgetsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get monthlyLimit => $composableBuilder(
+    column: $table.monthlyLimit,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CategoryBudgetsTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CategoryBudgetsTableTable> {
+  $$CategoryBudgetsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get monthlyLimit => $composableBuilder(
+    column: $table.monthlyLimit,
+    builder: (column) => column,
+  );
+}
+
+class $$CategoryBudgetsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CategoryBudgetsTableTable,
+          CategoryBudgetsTableData,
+          $$CategoryBudgetsTableTableFilterComposer,
+          $$CategoryBudgetsTableTableOrderingComposer,
+          $$CategoryBudgetsTableTableAnnotationComposer,
+          $$CategoryBudgetsTableTableCreateCompanionBuilder,
+          $$CategoryBudgetsTableTableUpdateCompanionBuilder,
+          (
+            CategoryBudgetsTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $CategoryBudgetsTableTable,
+              CategoryBudgetsTableData
+            >,
+          ),
+          CategoryBudgetsTableData,
+          PrefetchHooks Function()
+        > {
+  $$CategoryBudgetsTableTableTableManager(
+    _$AppDatabase db,
+    $CategoryBudgetsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CategoryBudgetsTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CategoryBudgetsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CategoryBudgetsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> categoryId = const Value.absent(),
+                Value<double> monthlyLimit = const Value.absent(),
+              }) => CategoryBudgetsTableCompanion(
+                id: id,
+                categoryId: categoryId,
+                monthlyLimit: monthlyLimit,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int categoryId,
+                required double monthlyLimit,
+              }) => CategoryBudgetsTableCompanion.insert(
+                id: id,
+                categoryId: categoryId,
+                monthlyLimit: monthlyLimit,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $CategoryBudgetsTableTable,
+                    CategoryBudgetsTableData
+                  >(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $CategoryBudgetsTableTable,
+                    CategoryBudgetsTableData
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CategoryBudgetsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CategoryBudgetsTableTable,
+      CategoryBudgetsTableData,
+      $$CategoryBudgetsTableTableFilterComposer,
+      $$CategoryBudgetsTableTableOrderingComposer,
+      $$CategoryBudgetsTableTableAnnotationComposer,
+      $$CategoryBudgetsTableTableCreateCompanionBuilder,
+      $$CategoryBudgetsTableTableUpdateCompanionBuilder,
+      (
+        CategoryBudgetsTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $CategoryBudgetsTableTable,
+          CategoryBudgetsTableData
+        >,
+      ),
+      CategoryBudgetsTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3850,4 +4455,6 @@ class $AppDatabaseManager {
         _db,
         _db.transactionTemplatesTable,
       );
+  $$CategoryBudgetsTableTableTableManager get categoryBudgetsTable =>
+      $$CategoryBudgetsTableTableTableManager(_db, _db.categoryBudgetsTable);
 }
