@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:spendsplit/core/icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/glass_card.dart';
@@ -15,6 +16,41 @@ class MonthlyBudgetCard extends ConsumerWidget {
     final remaining = budget - spent;
     final enabled = budget > 0;
     final color = remaining < 0 ? AppColors.coral : AppColors.blue;
+
+    if (!enabled) {
+      return GlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => showDialog<void>(
+            context: context,
+            builder: (_) => _BudgetDialog(initialBudget: budget),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                LucideIcons.wallet,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Set a monthly spending limit',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              const Icon(
+                LucideIcons.chevronRight,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
