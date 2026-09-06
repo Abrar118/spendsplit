@@ -33,6 +33,34 @@ DollarExpensesTableData _dollar({
   createdAt: date,
 );
 
+TransactionsTableData _linkedDeposit({
+  required double amount,
+  required DateTime date,
+  required int goalId,
+}) => TransactionsTableData(
+  id: date.microsecondsSinceEpoch % 100000000,
+  type: 'savings_deposit',
+  amount: amount,
+  date: date,
+  createdAt: date,
+  savingsGoalId: goalId,
+);
+
+SavingsGoalsTableData _goal({
+  required double target,
+  required double current,
+  DateTime? deadline,
+}) => SavingsGoalsTableData(
+  id: 7,
+  name: 'Mac Mini',
+  currentAmount: current,
+  targetAmount: target,
+  icon: 'flag',
+  deadline: deadline,
+  isCompleted: false,
+  createdAt: DateTime(2026, 1, 1),
+);
+
 void main() {
   test('income-only months contain activity', () {
     final month = DateTime(2026, 9);
@@ -93,6 +121,82 @@ void main() {
         asOf: asOf,
       );
       expect(runway.daysRemaining, 0);
+    });
+  });
+
+  group('goalProjection', () {
+    test('projects completion from a known weekly cadence', () {
+      final asOf = DateTime(2026, 3, 1); // 8 weeks after first contribution
+      final goal = _goal(target: 10000, current: 4000);
+      final projection = FinanceCalculators.goalProjection(
+        goal: goal,
+        linkedTransactions: [
+          _linkedDeposit(amount: 2000, date: DateTime(2026, 1, 4), goalId: 7),
+          _linkedDeposit(amount: 2000, date: DateTime(2026, 2, 1), goalId: 7),
+        ],
+        asOf: asOf,
+      );
+      // 4000 over 8 weeks -> 500/week; 6000 remaining -> 12 weeks -> ~May 24.
+      expect(projection.weeklyRate, closeTo(500, 1));
+      expect(projection.estimatedCompletion, isNotNull);
+      expect(projection.estimatedCompletion!.isAfter(asOf), isTrue);
+      expect(projection.requiredWeeklyForDeadline, isNull);
+    });
+
+    test('no contributions -> null completion, zero rate', () {
+      final projection = FinanceCalculators.goalProjection(
+        goal: _goal(target: 10000, current: 0),
+        linkedTransactions: const [],
+        asOf: DateTime(2026, 3, 1),
+      );
+      expect(projection.weeklyRate, 0);
+      expect(projection.estimatedCompletion, isNull);
+    });
+
+    test('deadline -> required weekly amount', () {
+      final projection = FinanceCalculators.goalProjection(
+        goal: _goal(
+          target: 10000,
+          current: 2000,
+          deadline: DateTime(2026, 4, 1),
+        ),
+        linkedTransactions: [
+          _linkedDeposit(amount: 2000, date: DateTime(2026, 2, 1), goalId: 7),
+        ],
+        asOf: DateTime(2026, 3, 4), // 4 weeks to deadline
+      );
+      // 8000 remaining over 4 weeks -> 2000/week.
+      expect(projection.requiredWeeklyForDeadline, closeTo(2000, 50));
+    });
+  });
+
+  group('monthRecap', () {
+    test('summarises net saved, savings rate, and budget delta', () {
+      final month = DateTime(2026, 9);
+      final recap = FinanceCalculators.monthRecap(
+        month: month,
+        transactions: [
+          _income(amount: 10000, date: DateTime(2026, 9, 1)),
+          _expense(amount: 3000, date: DateTime(2026, 9, 5)),
+          _savingsDeposit(amount: 2000, date: DateTime(2026, 9, 10)),
+        ],
+        categories: const [],
+        monthlyExpenseBudget: 5000,
+      );
+      expect(recap.income, 10000);
+      expect(recap.expenses, 3000);
+      expect(recap.netSaved, 2000);
+      expect(recap.savingsRate, closeTo(0.2, 1e-9));
+      expect(recap.budgetDelta, 2000); // 5000 - 3000, under
+    });
+
+    test('no budget -> null budgetDelta', () {
+      final recap = FinanceCalculators.monthRecap(
+        month: DateTime(2026, 9),
+        transactions: [_expense(amount: 100, date: DateTime(2026, 9, 2))],
+        categories: const [],
+      );
+      expect(recap.budgetDelta, isNull);
     });
   });
 

@@ -135,6 +135,52 @@ class BalancePoint {
   final double available;
 }
 
+class GoalProjection {
+  const GoalProjection({
+    required this.weeklyRate,
+    required this.estimatedCompletion,
+    required this.requiredWeeklyForDeadline,
+  });
+
+  /// Net linked contributions per week since the first contribution.
+  final double weeklyRate;
+
+  /// When the goal is projected to be fully funded at [weeklyRate].
+  /// Null when there is no positive contribution rate to project from.
+  final DateTime? estimatedCompletion;
+
+  /// Weekly amount needed to hit the goal by its deadline. Null when the
+  /// goal has no deadline.
+  final double? requiredWeeklyForDeadline;
+}
+
+class MonthRecap {
+  const MonthRecap({
+    required this.month,
+    required this.income,
+    required this.expenses,
+    required this.netSaved,
+    required this.savingsRate,
+    required this.topCategories,
+    required this.budgetDelta,
+    required this.expenseVsPrevMonth,
+  });
+
+  final DateTime month;
+  final double income;
+  final double expenses;
+  final double netSaved;
+  final double savingsRate;
+  final List<MonthlyCategoryBreakdown> topCategories;
+
+  /// `monthlyExpenseBudget - expenses` when a budget is set (positive = under).
+  /// Null when there is no global monthly budget.
+  final double? budgetDelta;
+
+  /// Proportional change in expenses vs. the previous month.
+  final double expenseVsPrevMonth;
+}
+
 abstract final class FinanceCalculators {
   static const double _epsilon = 1e-9;
 
@@ -414,6 +460,88 @@ abstract final class FinanceCalculators {
           : currentSummary.saved / currentSummary.income,
       transactionCount: scopedTransactions.length,
       categories: breakdown,
+    );
+  }
+
+  /// Projects when a goal will be funded from the cadence of its linked
+  /// contributions. [linkedTransactions] must already be filtered to the
+  /// goal (`savingsGoalId == goal.id`).
+  static GoalProjection goalProjection({
+    required SavingsGoalsTableData goal,
+    required Iterable<TransactionsTableData> linkedTransactions,
+    DateTime? asOf,
+  }) {
+    final now = asOf ?? DateTime.now();
+    final linked = linkedTransactions.toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+
+    var net = 0.0;
+    for (final t in linked) {
+      net += switch (t.type) {
+        'savings_deposit' => t.amount,
+        'savings_withdrawal' => -t.amount,
+        _ => 0.0,
+      };
+    }
+
+    final remaining = (goal.targetAmount - goal.currentAmount) <= 0
+        ? 0.0
+        : goal.targetAmount - goal.currentAmount;
+
+    double weeklyRate = 0;
+    if (linked.isNotEmpty && net > _epsilon) {
+      final elapsedDays = now.difference(linked.first.date).inDays;
+      final weeks = elapsedDays < 7 ? 1.0 : elapsedDays / 7.0;
+      weeklyRate = net / weeks;
+    }
+
+    DateTime? estimatedCompletion;
+    if (weeklyRate > _epsilon && remaining > _epsilon) {
+      final weeksLeft = remaining / weeklyRate;
+      estimatedCompletion = now.add(Duration(days: (weeksLeft * 7).ceil()));
+    }
+
+    double? requiredWeeklyForDeadline;
+    if (goal.deadline != null) {
+      final daysUntil = goal.deadline!.difference(now).inDays;
+      final weeksUntil = daysUntil < 7 ? 1.0 : daysUntil / 7.0;
+      requiredWeeklyForDeadline = remaining / weeksUntil;
+    }
+
+    return GoalProjection(
+      weeklyRate: weeklyRate,
+      estimatedCompletion: estimatedCompletion,
+      requiredWeeklyForDeadline: requiredWeeklyForDeadline,
+    );
+  }
+
+  /// A summary of the given [month] for the month-end recap card.
+  static MonthRecap monthRecap({
+    required DateTime month,
+    required Iterable<TransactionsTableData> transactions,
+    required Iterable<CategoriesTableData> categories,
+    Map<int, double> categoryBudgets = const {},
+    double monthlyExpenseBudget = 0,
+  }) {
+    final analytics = monthlyAnalytics(
+      transactions: transactions,
+      categories: categories,
+      month: month,
+      categoryBudgets: categoryBudgets,
+    );
+    final expenses = analytics.summary.expenses;
+
+    return MonthRecap(
+      month: DateTime(month.year, month.month),
+      income: analytics.summary.income,
+      expenses: expenses,
+      netSaved: analytics.summary.saved,
+      savingsRate: analytics.savingsRate,
+      topCategories: analytics.categories.take(3).toList(),
+      budgetDelta: monthlyExpenseBudget > 0
+          ? monthlyExpenseBudget - expenses
+          : null,
+      expenseVsPrevMonth: analytics.expenseDelta,
     );
   }
 
