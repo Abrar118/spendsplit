@@ -135,6 +135,8 @@ Each feature follows: `screens/`, `widgets/`, `providers/` structure.
 ├── /goals               → GoalsScreen (tab 4)
 └── /dollar-tracker      → DollarTrackerScreen (push, not tab)
 
+/goal/:id                → GoalDetailScreen (push)
+/settings, /export, /manage-categories, /manage-templates  (push)
 /lock                    → LockScreen (initial route if biometric enabled)
 ```
 
@@ -145,10 +147,14 @@ Center "+" tab (index 2) triggers `showModalBottomSheet` for AddTransactionSheet
 
 ## Database Schema (Drift)
 
-Five tables: `transactions_table`, `categories_table`, `savings_goals_table`,
-`dollar_expenses_table`, `transaction_templates_table`.
+Six tables (`schemaVersion` 7): `transactions_table`, `categories_table`,
+`savings_goals_table`, `dollar_expenses_table`, `transaction_templates_table`
+(carries `use_count` + `is_monthly`), `category_budgets_table` (one
+`monthly_limit` per `category_id`). The v6 → v7 migration is additive only.
 Settings via SharedPreferences: `biometric_enabled`, `dollar_annual_limit`,
-`dollar_limit_year`, `initial_balance`, `monthly_expense_budget`, `card_number`.
+`dollar_limit_year`, `monthly_expense_budget`, `recap_dismissed_month`.
+`initial_balance` and `card_number` live in the platform keystore
+(`SecureStorageRepository`), not SharedPreferences.
 
 ### Calculated Values (derived, never stored)
 - **Total Balance** = initial_balance + SUM(income) - SUM(expenses)
@@ -176,15 +182,23 @@ Settings via SharedPreferences: `biometric_enabled`, `dollar_annual_limit`,
   30-day expense burn rate.
 - **Balance trend** — 6-month reconstructed Available/Savings area chart.
 - **Spending Velocity** — rolling 12-month expense bars with an income overlay.
-- **Category budgets** — optional per-category monthly limits, shown on Monthly.
-- **Goal contributions** — log a deposit against a goal; goal detail screen with
-  contribution history and a completion projection.
+- **Category budgets** — optional per-category monthly limits, edited inline on
+  the Monthly screen's Category Details rows.
+- **Category editor** — custom categories can be renamed / re-iconed / recoloured
+  (`_CategoryEditorSheet`); predefined categories stay fully locked.
+- **Goal contributions** — "Add Contribution" from the goal menu logs a linked
+  `savings_deposit` and bumps the goal; tapping a goal card opens the Goal
+  Detail screen (`/goal/:id`) with contribution history and a completion
+  projection.
 - **Dollar pacing** — projected year-end USD spend vs. the annual limit.
 - **Month-end recap** — dismissible dashboard card (days 1–5) summarising the
-  prior month.
-- **Template checklist** — templates flagged "monthly" that haven't been logged
-  yet this month surface on the dashboard.
-- **JSON snapshot backup** — full export/restore of all data (Export screen).
+  prior month; the dismissed month key is stored in `recap_dismissed_month`.
+- **Template quick-apply** — the three most-used templates show as chips in the
+  add-transaction sheet; `use_count` increments on apply.
+- **Template checklist** — templates toggled "Expected monthly" in Manage
+  Templates that haven't been logged yet this month surface on the dashboard.
+- **JSON snapshot backup** — full export/restore of all six tables plus settings
+  (`SnapshotService`), restore behind a hold-to-confirm (Export screen).
 
 ---
 
