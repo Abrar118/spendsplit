@@ -139,6 +139,22 @@ final balanceSummaryProvider = Provider<AsyncValue<BalanceSummary>>((ref) {
   );
 });
 
+final spendingRunwayProvider = Provider<AsyncValue<SpendingRunway>>((ref) {
+  final transactions = ref.watch(transactionsProvider);
+  final balance = ref.watch(balanceSummaryProvider);
+
+  return transactions.when(
+    loading: () => const AsyncValue.loading(),
+    error: AsyncValue.error,
+    data: (entries) => balance.whenData(
+      (summary) => FinanceCalculators.spendingRunway(
+        transactions: entries,
+        availableBalance: summary.availableBalance,
+      ),
+    ),
+  );
+});
+
 final currentMonthSummaryProvider = Provider<AsyncValue<MonthlyFinanceSummary>>(
   (ref) {
     final transactions = ref.watch(transactionsProvider);
