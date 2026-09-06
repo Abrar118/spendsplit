@@ -34,6 +34,7 @@ class MonthlyCategoryBreakdown {
     required this.colorValue,
     required this.amount,
     required this.share,
+    this.monthlyLimit,
   });
 
   final int? categoryId;
@@ -42,6 +43,10 @@ class MonthlyCategoryBreakdown {
   final int colorValue;
   final double amount;
   final double share;
+
+  /// Optional per-category monthly spending cap. Null when the category has no
+  /// budget set (or is the uncategorized bucket).
+  final double? monthlyLimit;
 }
 
 class MonthlyAnalytics {
@@ -286,6 +291,7 @@ abstract final class FinanceCalculators {
     required Iterable<TransactionsTableData> transactions,
     required Iterable<CategoriesTableData> categories,
     required DateTime month,
+    Map<int, double> categoryBudgets = const {},
   }) {
     final normalizedMonth = DateTime(month.year, month.month);
     final currentSummary = monthlySummary(
@@ -327,6 +333,7 @@ abstract final class FinanceCalculators {
         share: currentSummary.expenses <= 0
             ? 0
             : amount / currentSummary.expenses,
+        monthlyLimit: entry.key == null ? null : categoryBudgets[entry.key],
       );
     }).toList()..sort((a, b) => b.amount.compareTo(a.amount));
 

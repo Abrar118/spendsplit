@@ -228,6 +228,13 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
                               _CategoryDetailTile(
                                     item: analytics.categories[i],
                                     highlightAsTop: i == 0,
+                                    onEditBudget:
+                                        analytics.categories[i].categoryId ==
+                                            null
+                                        ? null
+                                        : () => _editCategoryBudget(
+                                            analytics.categories[i],
+                                          ),
                                   )
                                   .animate()
                                   .fadeIn(
@@ -314,6 +321,58 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
 
   String _formatMonthQuery(DateTime month) {
     return '${month.year}-${month.month.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _editCategoryBudget(MonthlyCategoryBreakdown item) async {
+    final id = item.categoryId;
+    if (id == null) return;
+    final controller = TextEditingController(
+      text: item.monthlyLimit == null
+          ? ''
+          : item.monthlyLimit!.toStringAsFixed(0),
+    );
+    final result = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceLight,
+        title: Text('${item.name} budget'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Monthly limit (৳)',
+            helperText: 'Leave empty to remove the budget.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final raw = controller.text.replaceAll(',', '').trim();
+              if (raw.isEmpty) {
+                Navigator.of(ctx).pop(-1.0); // sentinel: clear
+                return;
+              }
+              final value = double.tryParse(raw);
+              if (value == null || !value.isFinite || value < 0) return;
+              Navigator.of(ctx).pop(value);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result == null) return;
+    final dao = ref.read(appDatabaseProvider).categoryBudgetDao;
+    if (result < 0) {
+      await dao.clearBudget(id);
+    } else {
+      await dao.setBudget(id, result);
+    }
   }
 
   Future<void> _refreshMonthlyAnalytics() async {
@@ -760,31 +819,44 @@ class _CategoryDonutCard extends StatelessWidget {
 }
 
 class _CategoryDetailTile extends StatelessWidget {
-  const _CategoryDetailTile({required this.item, required this.highlightAsTop});
+  const _CategoryDetailTile({
+    required this.item,
+    required this.highlightAsTop,
+    this.onEditBudget,
+  });
 
   final MonthlyCategoryBreakdown item;
   final bool highlightAsTop;
+  final VoidCallback? onEditBudget;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = highlightAsTop ? AppColors.teal : Color(item.colorValue);
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceDim,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.background.withValues(alpha: 0.3),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 14, 22, 14),
-        child: Row(
-          children: [
+    final limit = item.monthlyLimit;
+    final overBudget = limit != null && limit > 0 && item.amount > limit;
+    return InkWell(
+      onTap: onEditBudget,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceDim,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.background.withValues(alpha: 0.3),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 14, 22, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
             Container(
               width: 18,
               height: 72,
@@ -846,14 +918,33 @@ class _CategoryDetailTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '${(item.share * 100).toStringAsFixed(1)}% OF TOTAL',
+                  limit != null
+                      ? '${formatBdtAmount(item.amount)} / ${formatBdtAmount(limit)}'
+                      : '${(item.share * 100).toStringAsFixed(1)}% OF TOTAL',
                   style: theme.textTheme.labelMedium?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: overBudget
+                        ? AppColors.coral
+                        : AppColors.textSecondary,
                   ),
                 ),
               ],
             ),
-          ],
+                ],
+              ),
+              if (limit != null && limit > 0) ...[
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    minHeight: 3,
+                    value: (item.amount / limit).clamp(0.0, 1.0),
+                    backgroundColor: Colors.white.withValues(alpha: 0.06),
+                    color: overBudget ? AppColors.coral : AppColors.teal,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

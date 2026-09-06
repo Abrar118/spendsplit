@@ -204,11 +204,16 @@ final monthlyAnalyticsProvider =
         return const AsyncLoading();
       }
 
+      final budgets =
+          ref.watch(categoryBudgetsProvider).valueOrNull ??
+          const <int, double>{};
+
       return AsyncData(
         FinanceCalculators.monthlyAnalytics(
           transactions: transactions.value!,
           categories: categories.value!,
           month: month,
+          categoryBudgets: budgets,
         ),
       );
     });

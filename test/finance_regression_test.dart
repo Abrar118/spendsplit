@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spendsplit/data/database/app_database.dart';
 import 'package:spendsplit/data/models/financial_summaries.dart';
@@ -92,6 +93,60 @@ void main() {
         asOf: asOf,
       );
       expect(runway.daysRemaining, 0);
+    });
+  });
+
+  group('monthlyAnalytics budgets', () {
+    final month = DateTime(2026, 9);
+
+    CategoriesTableData cat(int id, String name) => CategoriesTableData(
+      id: id,
+      name: name,
+      icon: 'restaurant',
+      color: 0xFFFF6B6B,
+      isPredefined: true,
+      isDollarCategory: false,
+    );
+
+    test('breakdown carries the matching category budget', () {
+      final analytics = FinanceCalculators.monthlyAnalytics(
+        transactions: [
+          _mkTx(
+            'expense',
+            1200,
+            DateTime(2026, 9, 4),
+          ).copyWith(categoryId: const Value(1)),
+          _mkTx(
+            'expense',
+            300,
+            DateTime(2026, 9, 9),
+          ).copyWith(categoryId: const Value(2)),
+        ],
+        categories: [cat(1, 'Food'), cat(2, 'Transport')],
+        month: month,
+        categoryBudgets: const {1: 2000.0},
+      );
+      final food = analytics.categories.firstWhere((c) => c.categoryId == 1);
+      final transport = analytics.categories.firstWhere(
+        (c) => c.categoryId == 2,
+      );
+      expect(food.monthlyLimit, 2000.0);
+      expect(transport.monthlyLimit, isNull);
+    });
+
+    test('no budgets map -> all limits null', () {
+      final analytics = FinanceCalculators.monthlyAnalytics(
+        transactions: [
+          _mkTx(
+            'expense',
+            500,
+            DateTime(2026, 9, 4),
+          ).copyWith(categoryId: const Value(1)),
+        ],
+        categories: [cat(1, 'Food')],
+        month: month,
+      );
+      expect(analytics.categories.single.monthlyLimit, isNull);
     });
   });
 
