@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -6,8 +7,9 @@ import '../../../core/theme/app_decorations.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/amount_text.dart';
 import '../../../data/models/financial_summaries.dart';
+import '../../../providers/providers.dart';
 
-class BalanceCard extends StatelessWidget {
+class BalanceCard extends ConsumerWidget {
   const BalanceCard({
     required this.summary,
     required this.cardNumber,
@@ -20,7 +22,7 @@ class BalanceCard extends StatelessWidget {
   final VoidCallback onEditCardNumber;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Column(
       children: [
@@ -154,11 +156,19 @@ class BalanceCard extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(left: 12, right: 6),
-                child: _BalanceSegment(
-                  label: 'AVAILABLE',
-                  amount: summary.availableBalance,
-                  color: AppColors.teal,
-                  alignEnd: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _BalanceSegment(
+                      label: 'AVAILABLE',
+                      amount: summary.availableBalance,
+                      color: AppColors.teal,
+                      alignEnd: false,
+                      emphasize: true,
+                    ),
+                    const SizedBox(height: 4),
+                    _RunwayLine(runway: ref.watch(spendingRunwayProvider)),
+                  ],
                 ),
               ),
             ),
@@ -198,16 +208,25 @@ class _BalanceSegment extends StatelessWidget {
     required this.amount,
     required this.color,
     required this.alignEnd,
+    this.emphasize = false,
   });
 
   final String label;
   final double amount;
   final Color color;
   final bool alignEnd;
+  final bool emphasize;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final amountStyle = theme.textTheme.headlineMedium?.copyWith(
+      color: color,
+      fontSize: emphasize ? 26 : null,
+      shadows: [
+        Shadow(color: color.withValues(alpha: 0.35), blurRadius: 16),
+      ],
+    );
     return Column(
       crossAxisAlignment: alignEnd
           ? CrossAxisAlignment.end
@@ -218,15 +237,39 @@ class _BalanceSegment extends StatelessWidget {
         AnimatedAmountText(
           value: amount,
           formatter: (value) => formatBdtAmount(value, fractionDigits: 0),
-          textStyle: theme.textTheme.headlineMedium?.copyWith(
-            color: color,
-            shadows: [
-              Shadow(color: color.withValues(alpha: 0.35), blurRadius: 16),
-            ],
-          ),
+          textStyle: amountStyle,
           textAlign: alignEnd ? TextAlign.right : TextAlign.left,
         ),
       ],
+    );
+  }
+}
+
+class _RunwayLine extends StatelessWidget {
+  const _RunwayLine({required this.runway});
+
+  final AsyncValue<SpendingRunway> runway;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelSmall;
+    return runway.maybeWhen(
+      orElse: () => const SizedBox(height: 14),
+      data: (r) {
+        if (r.daysRemaining == null) {
+          return Text(
+            'No recent spending',
+            style: style?.copyWith(color: AppColors.textTertiary),
+          );
+        }
+        final tight = r.daysRemaining! < 14;
+        return Text(
+          '~${r.daysRemaining} days left · ${formatCompactBdt(r.avgDailyBurn)}/day',
+          style: style?.copyWith(
+            color: tight ? AppColors.coral : AppColors.textSecondary,
+          ),
+        );
+      },
     );
   }
 }
