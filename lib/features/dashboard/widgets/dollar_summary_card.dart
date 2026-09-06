@@ -96,11 +96,30 @@ class DollarSummaryCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _GlowingProgressBar(progress: progress),
+            if (summary.spentYtd > 0) ...[
+              const SizedBox(height: 12),
+              Text(
+                _paceText(summary),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: summary.projectedVsLimit > 0
+                      ? AppColors.amber
+                      : AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+}
+
+String _paceText(DollarTrackerSummary s) {
+  final projected = formatUsdAmount(s.projectedYearEnd, fractionDigits: 0);
+  final diff = formatUsdAmount(s.projectedVsLimit.abs(), fractionDigits: 0);
+  final verb = s.projectedVsLimit > 0 ? 'over' : 'under';
+  return 'On pace for $projected by Dec · $diff $verb limit';
 }
 
 class _AmountColumn extends StatelessWidget {
