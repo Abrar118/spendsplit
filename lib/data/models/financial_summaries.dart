@@ -71,12 +71,24 @@ class DollarTrackerSummary {
     required this.annualLimit,
     required this.spentYtd,
     required this.remaining,
+    required this.pacePerDay,
+    required this.projectedYearEnd,
+    required this.projectedVsLimit,
   });
 
   final int year;
   final double annualLimit;
   final double spentYtd;
   final double remaining;
+
+  /// Average USD spent per elapsed day of [year].
+  final double pacePerDay;
+
+  /// [pacePerDay] extrapolated across the whole year.
+  final double projectedYearEnd;
+
+  /// [projectedYearEnd] minus [annualLimit] — positive means projected over.
+  final double projectedVsLimit;
 }
 
 class SavingsInsights {
@@ -150,16 +162,29 @@ abstract final class FinanceCalculators {
     required Iterable<DollarExpensesTableData> expenses,
     required double annualLimit,
     required int year,
+    DateTime? asOf,
   }) {
     final spentYtd = expenses
         .where((expense) => expense.date.year == year)
         .fold<double>(0, (sum, expense) => sum + expense.amount);
+
+    final now = asOf ?? DateTime.now();
+    final refInYear = now.year == year
+        ? now
+        : (now.year > year ? DateTime(year, 12, 31) : DateTime(year));
+    final dayOfYear = refInYear.difference(DateTime(year)).inDays + 1;
+    final daysInYear = DateTime(year + 1).difference(DateTime(year)).inDays;
+    final pacePerDay = dayOfYear <= 0 ? 0.0 : spentYtd / dayOfYear;
+    final projectedYearEnd = pacePerDay * daysInYear;
 
     return DollarTrackerSummary(
       year: year,
       annualLimit: annualLimit,
       spentYtd: spentYtd,
       remaining: annualLimit - spentYtd,
+      pacePerDay: pacePerDay,
+      projectedYearEnd: projectedYearEnd,
+      projectedVsLimit: projectedYearEnd - annualLimit,
     );
   }
 

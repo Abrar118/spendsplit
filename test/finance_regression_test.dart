@@ -20,6 +20,18 @@ TransactionsTableData _savingsDeposit({
   required DateTime date,
 }) => _mkTx('savings_deposit', amount, date);
 
+DollarExpensesTableData _dollar({
+  required double amount,
+  required DateTime date,
+}) => DollarExpensesTableData(
+  id: date.microsecondsSinceEpoch % 100000000,
+  amount: amount,
+  purpose: 'test',
+  categoryId: 0,
+  date: date,
+  createdAt: date,
+);
+
 void main() {
   test('income-only months contain activity', () {
     final month = DateTime(2026, 9);
@@ -80,6 +92,38 @@ void main() {
         asOf: asOf,
       );
       expect(runway.daysRemaining, 0);
+    });
+  });
+
+  group('dollarSummary pacing', () {
+    test('projects year-end from ytd spend at day-of-year rate', () {
+      final asOf = DateTime(2026, 4, 10); // day 100 of a 365-day year
+      final summary = FinanceCalculators.dollarSummary(
+        expenses: [
+          _dollar(amount: 300, date: DateTime(2026, 2, 1)),
+          _dollar(amount: 200, date: DateTime(2026, 3, 1)),
+          _dollar(amount: 100, date: DateTime(2025, 12, 1)),
+        ],
+        annualLimit: 1000,
+        year: 2026,
+        asOf: asOf,
+      );
+      expect(summary.spentYtd, 500);
+      expect(summary.pacePerDay, closeTo(5, 1e-6));
+      expect(summary.projectedYearEnd, closeTo(1825, 1e-3));
+      expect(summary.projectedVsLimit, closeTo(825, 1e-3));
+    });
+
+    test('zero ytd spend -> zero projection', () {
+      final summary = FinanceCalculators.dollarSummary(
+        expenses: const [],
+        annualLimit: 1000,
+        year: 2026,
+        asOf: DateTime(2026, 6, 1),
+      );
+      expect(summary.pacePerDay, 0);
+      expect(summary.projectedYearEnd, 0);
+      expect(summary.projectedVsLimit, -1000);
     });
   });
 }
