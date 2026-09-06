@@ -46,7 +46,6 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
         ref.watch(transactionsProvider).valueOrNull?.length ?? 0;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
         child: ListView(

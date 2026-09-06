@@ -220,7 +220,7 @@ class _SpendingChartState extends State<SpendingChart> {
     }
 
     if (month.isCurrent) {
-      // Current month: glowing teal-to-blue gradient
+      // Current month: solid accent
       return BarChartGroupData(
         x: i,
         barRods: [
@@ -230,17 +230,13 @@ class _SpendingChartState extends State<SpendingChart> {
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(8),
             ),
-            gradient: const LinearGradient(
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-              colors: [Color(0xFF2563EB), AppColors.teal],
-            ),
+            color: AppColors.teal,
           ),
         ],
       );
     }
 
-    // Past months with data: dimmed teal-to-blue gradient
+    // Past months with data: dimmed accent
     return BarChartGroupData(
       x: i,
       barRods: [
@@ -250,14 +246,7 @@ class _SpendingChartState extends State<SpendingChart> {
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(6),
           ),
-          gradient: LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [
-              const Color(0xFF2563EB).withValues(alpha: 0.45),
-              AppColors.teal.withValues(alpha: 0.35),
-            ],
-          ),
+          color: AppColors.teal.withValues(alpha: 0.4),
         ),
       ],
     );

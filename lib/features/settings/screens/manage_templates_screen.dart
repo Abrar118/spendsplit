@@ -21,7 +21,6 @@ class ManageTemplatesScreen extends ConsumerWidget {
     final catMap = {for (final c in categories) c.id: c};
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
         child: templatesAsync.when(

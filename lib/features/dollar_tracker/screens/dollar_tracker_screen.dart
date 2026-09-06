@@ -54,7 +54,6 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
     };
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(

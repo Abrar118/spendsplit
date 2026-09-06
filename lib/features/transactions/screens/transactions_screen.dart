@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/constants/enums.dart';
@@ -212,7 +213,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
                         if (item.isHeader) {
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: 8, top: 6),
+                            padding: const EdgeInsets.only(
+                              left: 84,
+                              bottom: 10,
+                              top: 8,
+                            ),
                             child: Text(
                               item.headerText!,
                               style: theme.textTheme.labelMedium?.copyWith(
@@ -240,9 +245,18 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         }
 
                         final transaction = item.transaction!;
-                        return Padding(
+                        final topLine = index > 0 &&
+                            items[index - 1].transaction != null;
+                        final bottomLine = index + 1 < items.length &&
+                            items[index + 1].transaction != null;
+                        return _TimelineEntry(
                           key: ValueKey(transaction.id),
-                          padding: const EdgeInsets.only(bottom: 12),
+                          time: DateFormat('h:mm a')
+                              .format(transaction.date)
+                              .toLowerCase(),
+                          accent: transactionAccentColor(transaction),
+                          topLine: topLine,
+                          bottomLine: bottomLine,
                           child: TransactionTile(
                             transaction: transaction,
                             category:
@@ -626,5 +640,98 @@ class _ListItem {
   final TransactionsTableData? transaction;
   final bool isHeader;
   final bool isLoadMore;
+}
+
+/// A history row hung off a left-hand timeline: the time of day sits in a
+/// gutter, a coloured node marks the entry on a vertical rail, and the tile
+/// itself carries no time.
+class _TimelineEntry extends StatelessWidget {
+  const _TimelineEntry({
+    required this.time,
+    required this.accent,
+    required this.topLine,
+    required this.bottomLine,
+    required this.child,
+    super.key,
+  });
+
+  final String time;
+  final Color accent;
+  final bool topLine;
+  final bool bottomLine;
+  final Widget child;
+
+  // Distance from the row's top to the node's centre — lines up with the
+  // tile's icon.
+  static const double _nodeOffset = 32;
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 62,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 6, top: _nodeOffset - 10),
+              child: Text(
+                time,
+                textAlign: TextAlign.right,
+                maxLines: 1,
+                overflow: TextOverflow.clip,
+                softWrap: false,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppColors.textTertiary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 22,
+            child: Column(
+              children: [
+                _RailSegment(visible: topLine, height: _nodeOffset - 5),
+                Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accent,
+                  ),
+                ),
+                Expanded(child: _RailSegment(visible: bottomLine)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: child,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RailSegment extends StatelessWidget {
+  const _RailSegment({required this.visible, this.height});
+
+  final bool visible;
+  final double? height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 2,
+      height: height,
+      color: visible ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
+    );
+  }
 }
 

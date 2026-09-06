@@ -22,7 +22,6 @@ class SettingsScreen extends ConsumerWidget {
     final controller = ref.read(appSettingsProvider.notifier);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
         child: ListView(

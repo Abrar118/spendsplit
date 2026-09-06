@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:intl/intl.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/constants/categories.dart';
@@ -79,19 +78,9 @@ class TransactionTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, 0, 16, 0),
+              padding: const EdgeInsets.fromLTRB(14, 12, 16, 12),
               child: Row(
                 children: [
-                  // Accent bar
-                  Container(
-                    width: 3,
-                    height: 68,
-                    decoration: BoxDecoration(
-                      color: presentation.amountColor,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
                   // Icon
                   Container(
                     width: 40,
@@ -109,18 +98,17 @@ class TransactionTile extends StatelessWidget {
                   const SizedBox(width: 14),
                   // Title + subtitle
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            presentation.title,
-                            style: theme.textTheme.titleMedium,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          presentation.title,
+                          style: theme.textTheme.titleMedium,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (presentation.subtitle != presentation.title) ...[
                           const SizedBox(height: 4),
                           Text(
                             presentation.subtitle,
@@ -131,7 +119,7 @@ class TransactionTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
-                      ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -169,20 +157,30 @@ class _TransactionPresentation {
   final IconData icon;
 }
 
+/// Accent colour for a transaction, shared with the history timeline rail.
+Color transactionAccentColor(TransactionsTableData transaction) {
+  return switch (TransactionType.fromDbValue(transaction.type)) {
+    TransactionType.expense => AppColors.coral,
+    TransactionType.income => AppColors.green,
+    TransactionType.savingsDeposit => AppColors.purple,
+    TransactionType.savingsWithdrawal => AppColors.amber,
+  };
+}
+
 _TransactionPresentation _presentationFor(
   TransactionsTableData transaction,
   CategoriesTableData? category,
 ) {
   final type = TransactionType.fromDbValue(transaction.type);
-  final dateText = DateFormat('MMM d • h:mm a').format(transaction.date);
+  final note = transaction.note?.trim();
+  final hasNote = note != null && note.isNotEmpty;
 
   switch (type) {
     case TransactionType.expense:
+      final categoryName = category?.name ?? 'Expense';
       return _TransactionPresentation(
-        title: transaction.note?.trim().isNotEmpty == true
-            ? transaction.note!.trim()
-            : (category?.name ?? 'Expense'),
-        subtitle: '${category?.name ?? 'Expense'} • $dateText',
+        title: hasNote ? note : categoryName,
+        subtitle: categoryName,
         amountText: '- ৳${transaction.amount.toStringAsFixed(2)}',
         amountColor: AppColors.coral,
         icon: iconForCategoryKey(category?.icon ?? 'category'),
@@ -194,30 +192,24 @@ _TransactionPresentation _presentationFor(
         _ => 'Income',
       };
       return _TransactionPresentation(
-        title: transaction.note?.trim().isNotEmpty == true
-            ? transaction.note!.trim()
-            : sourceLabel,
-        subtitle: '$sourceLabel • $dateText',
+        title: hasNote ? note : sourceLabel,
+        subtitle: sourceLabel,
         amountText: '+ ৳${transaction.amount.toStringAsFixed(2)}',
         amountColor: AppColors.green,
         icon: LucideIcons.trendingUp,
       );
     case TransactionType.savingsDeposit:
       return _TransactionPresentation(
-        title: transaction.note?.trim().isNotEmpty == true
-            ? transaction.note!.trim()
-            : 'Savings Deposit',
-        subtitle: 'Savings • $dateText',
+        title: hasNote ? note : 'Savings Deposit',
+        subtitle: 'Savings',
         amountText: '↓ ৳${transaction.amount.toStringAsFixed(2)}',
         amountColor: AppColors.purple,
         icon: LucideIcons.arrowDownToLine,
       );
     case TransactionType.savingsWithdrawal:
       return _TransactionPresentation(
-        title: transaction.note?.trim().isNotEmpty == true
-            ? transaction.note!.trim()
-            : 'Savings Withdrawal',
-        subtitle: 'Savings • $dateText',
+        title: hasNote ? note : 'Savings Withdrawal',
+        subtitle: 'Savings',
         amountText: '↑ ৳${transaction.amount.toStringAsFixed(2)}',
         amountColor: AppColors.amber,
         icon: LucideIcons.arrowUpFromLine,

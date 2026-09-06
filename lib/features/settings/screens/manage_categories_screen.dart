@@ -21,7 +21,6 @@ class ManageCategoriesScreen extends ConsumerWidget {
         ref.watch(dollarCategoriesProvider).valueOrNull ?? const [];
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
         child: ListView(
