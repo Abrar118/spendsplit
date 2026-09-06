@@ -214,7 +214,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         if (item.isHeader) {
                           return Padding(
                             padding: const EdgeInsets.only(
-                              left: 84,
+                              left: 78,
                               bottom: 10,
                               top: 8,
                             ),
@@ -642,9 +642,9 @@ class _ListItem {
   final bool isLoadMore;
 }
 
-/// A history row hung off a left-hand timeline: the time of day sits in a
-/// gutter, a coloured node marks the entry on a vertical rail, and the tile
-/// itself carries no time.
+/// A history row hung off a left-hand timeline: a coloured node marks the
+/// entry on a vertical rail at the far left, the time of day sits in the
+/// gutter beside it, and the tile itself carries no time.
 class _TimelineEntry extends StatelessWidget {
   const _TimelineEntry({
     required this.time,
@@ -672,26 +672,7 @@ class _TimelineEntry extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(
-            width: 62,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 6, top: _nodeOffset - 10),
-              child: Text(
-                time,
-                textAlign: TextAlign.right,
-                maxLines: 1,
-                overflow: TextOverflow.clip,
-                softWrap: false,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.textTertiary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 10,
-                  letterSpacing: 0,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 22,
+            width: 20,
             child: Column(
               children: [
                 _RailSegment(visible: topLine, height: _nodeOffset - 5),
@@ -705,6 +686,28 @@ class _TimelineEntry extends StatelessWidget {
                 ),
                 Expanded(child: _RailSegment(visible: bottomLine)),
               ],
+            ),
+          ),
+          SizedBox(
+            width: 58,
+            child: Padding(
+              padding: const EdgeInsets.only(
+                left: 6,
+                right: 8,
+                top: _nodeOffset - 10,
+              ),
+              child: Text(
+                time,
+                maxLines: 1,
+                overflow: TextOverflow.clip,
+                softWrap: false,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppColors.textTertiary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                  letterSpacing: 0,
+                ),
+              ),
             ),
           ),
           Expanded(

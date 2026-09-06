@@ -5,6 +5,7 @@ import 'package:spendsplit/core/icons/lucide_icons.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_decorations.dart';
 import '../../../data/database/app_database.dart';
 
 class TransactionTile extends StatelessWidget {
@@ -27,7 +28,6 @@ class TransactionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final presentation = _presentationFor(transaction, category);
     final iconColor =
         TransactionType.fromDbValue(transaction.type) ==
@@ -38,108 +38,162 @@ class TransactionTile extends StatelessWidget {
 
     return Slidable(
       key: ValueKey(transaction.id),
-      startActionPane: ActionPane(
-        motion: const BehindMotion(),
-        extentRatio: onSaveAsTemplate != null ? 0.32 : 0.16,
-        children: [
-          SlidableAction(
-            onPressed: (_) => onTap(),
-            backgroundColor: AppColors.blue,
-            foregroundColor: Colors.white,
-            icon: LucideIcons.pencil,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          if (onSaveAsTemplate != null)
-            SlidableAction(
-              onPressed: (_) => onSaveAsTemplate!(),
-              backgroundColor: AppColors.purple,
-              foregroundColor: Colors.white,
-              icon: LucideIcons.bookmark,
-              borderRadius: BorderRadius.circular(20),
+      startActionPane: onSaveAsTemplate == null
+          ? null
+          : ActionPane(
+              motion: const BehindMotion(),
+              extentRatio: 0.18,
+              children: [
+                CustomSlidableAction(
+                  onPressed: (_) => onSaveAsTemplate!(),
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: AppColors.purple,
+                  padding: EdgeInsets.zero,
+                  child: const Icon(LucideIcons.bookmark, size: 22),
+                ),
+              ],
             ),
-        ],
-      ),
       endActionPane: ActionPane(
         motion: const BehindMotion(),
-        extentRatio: 0.16,
+        extentRatio: 0.18,
         children: [
-          SlidableAction(
+          CustomSlidableAction(
             onPressed: (_) => onDelete(),
-            backgroundColor: AppColors.coral,
-            foregroundColor: Colors.white,
-            icon: LucideIcons.trash2,
-            borderRadius: BorderRadius.circular(20),
+            backgroundColor: Colors.transparent,
+            foregroundColor: AppColors.coral,
+            padding: EdgeInsets.zero,
+            child: const Icon(LucideIcons.trash2, size: 22),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          onLongPress: onLongPress,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppColors.surfaceLight.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(20),
+      child: Builder(
+        builder: (context) {
+          final animation =
+              Slidable.of(context)?.animation ??
+              const AlwaysStoppedAnimation<double>(0);
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, _) => _TileBody(
+              presentation: presentation,
+              iconColor: iconColor,
+              frosted: animation.value.abs() > 0.001,
+              onTap: onTap,
+              onLongPress: onLongPress,
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 16, 12),
-              child: Row(
-                children: [
-                  // Icon
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: 0.14),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      presentation.icon,
-                      color: iconColor,
-                      size: 19,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  // Title + subtitle
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          presentation.title,
-                          style: theme.textTheme.titleMedium,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (presentation.subtitle != presentation.title) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            presentation.subtitle,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Amount
-                  Text(
-                    presentation.amountText,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: presentation.amountColor,
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TileBody extends StatelessWidget {
+  const _TileBody({
+    required this.presentation,
+    required this.iconColor,
+    required this.frosted,
+    required this.onTap,
+    this.onLongPress,
+  });
+
+  final _TransactionPresentation presentation;
+  final Color iconColor;
+  final bool frosted;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final content = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 16, 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(presentation.icon, color: iconColor, size: 19),
               ),
-            ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      presentation.title,
+                      style: theme.textTheme.titleMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (presentation.subtitle != presentation.title) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        presentation.subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                presentation.amountText,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: presentation.amountColor,
+                ),
+                textAlign: TextAlign.right,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!frosted) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLight.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: content,
+      );
+    }
+
+    // Swiped-open: frost the row like the bottom nav pill so the revealed
+    // action icon reads through a glassy panel.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: AppDecorations.navFrost(),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.navBar.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Stack(
+            children: [
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(gradient: AppDecorations.navSheen),
+                ),
+              ),
+              content,
+            ],
           ),
         ),
       ),
