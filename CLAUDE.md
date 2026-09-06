@@ -33,34 +33,44 @@ All design assets live in `asset/`:
 
 ## Design System Rules (MUST follow)
 
+Source of truth is `lib/core/theme/` (`app_colors.dart`, `app_typography.dart`,
+`app_decorations.dart`, `app_spacing.dart`). The values below mirror it.
+
 ### Dark Theme Only
-- Base void: `#0A0E1A` (deep dark navy) — NEVER use pure black `#000000`
-- Card surfaces: `#141829`, elevated: `#1C2137`
+- Base void: pure black `#000000` (`AppColors.background`). The earlier
+  "never use #000000" rule was deliberately overridden — the app is OLED black.
+- Card surfaces: `#15131F` (`AppColors.surface`), elevated `#1E1A2C`
+  (`AppColors.surfaceLight`). Faintly purple-tinted charcoal.
 - All UI is dark theme. No light mode toggle.
 
 ### Glassmorphism
-- All floating UI (modals, navbars, sheets) use: surface at 80% opacity + backdrop blur 12px
-- No solid 1px borders for sectioning — use surface layering and whitespace instead
-- Ghost borders only: white at ~6% opacity when a stroke is truly needed
+- Floating UI (sheets, the nav pill) uses a backdrop blur over a low-opacity
+  tint. The nav additionally composes a saturation matrix onto the blur so it
+  reads as frosted glass rather than grey haze (`AppDecorations.navFrost()`).
+- No solid 1px borders for sectioning — use surface layering, a faint top
+  highlight, and a soft drop shadow instead. Cards carry no stroke.
 
-### Color Accents
-- **Teal** `#00E5BF` — Primary actions, available balance, active nav
-- **Coral** `#FF6B6B` — Expenses, negative amounts, delete actions
-- **Green** `#34D399` — Income, positive amounts
-- **Purple** `#9C7CFF` — Savings, goal progress
-- **Amber** `#FBBF24` — Warnings, deadlines, dollar tracker ring
-- **Blue** `#60A5FA` — Charts, secondary highlights
+### Color Accents (see `lib/core/theme/app_colors.dart`)
+- **Gold** `#ECBB7E` (`AppColors.teal`) — primary actions, available balance, active nav, chart bars
+- **Coral** `#F26D3D` (`AppColors.coral`) — expenses, negative amounts, delete
+- **Green** `#34D89C` (`AppColors.green`) — income, positive amounts
+- **Purple** `#9B8BFF` (`AppColors.purple`) — savings, goal progress
+- **Amber** `#ECB877` (`AppColors.amber`) — warnings, deadlines, dollar ring
+- **Violet** `#7A46E0` (`AppColors.blue`) — charts, secondary highlights, links
 
 ### Typography
-- Use Google Fonts **Inter** for clean modern look
-- Large balance numbers: Bold 28-36sp with subtle glow effect
-- Labels: All caps, tracked spacing (e.g., "TOTAL BALANCE", "ENTER AMOUNT")
-- Muted text: `#8892A7`
+- Use Google Fonts **Manrope** (see `lib/core/theme/app_typography.dart`)
+- Large balance numbers: bold with a subtle glow shadow
+- Labels: all caps, tracked spacing (e.g., "TOTAL BALANCE", "ENTER AMOUNT")
+- Muted text: `AppColors.textSecondary` / `textTertiary`
 
 ### Cards & Components
 - No horizontal dividers between list items — use vertical spacing (16px)
-- Hero cards: 16-20dp radius with glow border
-- Pill-shaped bottom nav bar: floating, 24dp radius, dark `#0F1322` background
+- Hero cards: 16–24dp radius with a soft glow shadow (no border)
+- Bottom nav: a floating frosted-glass pill (radius 28), no border — a strong
+  backdrop blur with a saturation matrix composed on top, a faint white sheen,
+  and a soft outer shadow. Tint `#16121F`. Content scrolls behind it; pages
+  reserve `AppSpacing.navClearance` at the bottom.
 - Progress bars: gradient fill on dark track, rounded ends
 
 ---
@@ -128,14 +138,17 @@ Each feature follows: `screens/`, `widgets/`, `providers/` structure.
 /lock                    → LockScreen (initial route if biometric enabled)
 ```
 
+Tab indices: dashboard 0, transactions 1, add 2 (sheet — no route), monthly 3, goals 4.
 Center "+" tab (index 2) triggers `showModalBottomSheet` for AddTransactionSheet — it does NOT navigate.
 
 ---
 
 ## Database Schema (Drift)
 
-Four tables: `transactions_table`, `categories_table`, `savings_goals_table`, `dollar_expenses_table`
-Settings via SharedPreferences: `biometric_enabled`, `dollar_annual_limit`, `dollar_limit_year`, `initial_balance`
+Five tables: `transactions_table`, `categories_table`, `savings_goals_table`,
+`dollar_expenses_table`, `transaction_templates_table`.
+Settings via SharedPreferences: `biometric_enabled`, `dollar_annual_limit`,
+`dollar_limit_year`, `initial_balance`, `monthly_expense_budget`, `card_number`.
 
 ### Calculated Values (derived, never stored)
 - **Total Balance** = initial_balance + SUM(income) - SUM(expenses)
@@ -157,17 +170,37 @@ Settings via SharedPreferences: `biometric_enabled`, `dollar_annual_limit`, `dol
 
 ---
 
+## Features
+
+- **Runway** — dashboard shows how many days Available lasts at the trailing
+  30-day expense burn rate.
+- **Balance trend** — 6-month reconstructed Available/Savings area chart.
+- **Spending Velocity** — rolling 12-month expense bars with an income overlay.
+- **Category budgets** — optional per-category monthly limits, shown on Monthly.
+- **Goal contributions** — log a deposit against a goal; goal detail screen with
+  contribution history and a completion projection.
+- **Dollar pacing** — projected year-end USD spend vs. the annual limit.
+- **Month-end recap** — dismissible dashboard card (days 1–5) summarising the
+  prior month.
+- **Template checklist** — templates flagged "monthly" that haven't been logged
+  yet this month surface on the dashboard.
+- **JSON snapshot backup** — full export/restore of all data (Export screen).
+
+---
+
 ## What NOT to Implement
 
-- Cloud sync / backup
+- Cloud sync
 - Multiple accounts
-- Notifications / reminders
+- Push notifications / reminders
 - Recurring transactions
 - Currency conversion
 - Light mode
 - Onboarding tutorial
-- Export to CSV/PDF
-- Home screen widgets
+
+> Recurring transactions remain unimplemented; the monthly-template checklist
+> (see Features) is the lightweight substitute. CSV/PDF export, CSV import, and
+> the Android home-screen widget are already built.
 
 ---
 
@@ -184,8 +217,12 @@ flutter run
 
 ## When Building UI
 
-1. **Always read the screen's PNG** in `asset/stitch_add_transaction_sheet/` and its `code.html` for reference before implementing.
-2. **Always follow `asset/DESIGN.md`** for the design system (Luminous Depth).
-3. **Always follow `asset/SpendSplit_Flutter_Guide.md`** for component specs, spacing, and interaction details.
+1. The `asset/stitch_*` PNGs and `asset/DESIGN.md` are **historical** reference —
+   the live design (pure-black, frosted glass, Manrope) has deliberately moved
+   past them. Match the current in-app style; treat the mockups as directional.
+2. Source of truth for theme is `lib/core/theme/`. Reuse `AppColors`,
+   `AppDecorations`, `AppSpacing`, `AppTypography` — don't hand-roll colors.
+3. `asset/SpendSplit_Flutter_Guide.md` is still useful for screen specs and
+   calculated-value definitions.
 4. Use `flutter_animate` for micro-interactions: number count-ups, shimmer loading, progress bar fills, chart bar stagger animations.
 5. Add haptic feedback on: FAB tap, save button, swipe delete confirm.
