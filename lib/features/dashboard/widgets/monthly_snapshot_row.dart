@@ -28,31 +28,35 @@ class MonthlySnapshotRow extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(
-          height: 126,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            physics: const ClampingScrollPhysics(),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _SnapshotCard(
-                label: 'INCOME',
-                rawAmount: summary.income,
-                icon: LucideIcons.trendingUp,
-                color: AppColors.green,
+              Expanded(
+                child: _SnapshotCard(
+                  label: 'INCOME',
+                  rawAmount: summary.income,
+                  icon: LucideIcons.trendingUp,
+                  color: AppColors.green,
+                ),
               ),
-              const SizedBox(width: 14),
-              _SnapshotCard(
-                label: 'SPENT',
-                rawAmount: summary.expenses,
-                icon: LucideIcons.trendingDown,
-                color: AppColors.coral,
+              const SizedBox(width: 10),
+              Expanded(
+                child: _SnapshotCard(
+                  label: 'SPENT',
+                  rawAmount: summary.expenses,
+                  icon: LucideIcons.trendingDown,
+                  color: AppColors.coral,
+                ),
               ),
-              const SizedBox(width: 14),
-              _SnapshotCard(
-                label: 'SAVED',
-                rawAmount: summary.saved,
-                icon: LucideIcons.piggyBank,
-                color: AppColors.purple,
+              const SizedBox(width: 10),
+              Expanded(
+                child: _SnapshotCard(
+                  label: 'SAVED',
+                  rawAmount: summary.saved,
+                  icon: LucideIcons.piggyBank,
+                  color: AppColors.purple,
+                ),
               ),
             ],
           ),
@@ -78,48 +82,48 @@ class _SnapshotCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return SizedBox(
-      width: 136,
-      child: GlassCard(
-        glowColor: color,
-        radius: 16,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        opacity: 0.8,
-        child: Column(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.2),
-                    blurRadius: 15,
-                  ),
-                ],
-              ),
-              child: Icon(icon, color: color, size: 18),
+    return GlassCard(
+      glowColor: color,
+      radius: 16,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      opacity: 0.8,
+      child: Column(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.2),
+                  blurRadius: 15,
+                ),
+              ],
             ),
-            const Spacer(),
-            Text(
-              label,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
+            child: Icon(icon, color: color, size: 17),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: AppColors.textSecondary,
             ),
-            const SizedBox(height: 4),
-            AnimatedAmountText(
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: AnimatedAmountText(
               value: rawAmount,
               formatter: (value) => formatCompactBdt(value),
-              textStyle: theme.textTheme.titleMedium?.copyWith(
+              textStyle: theme.textTheme.titleSmall?.copyWith(
                 color: Colors.white,
               ),
               textAlign: TextAlign.center,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

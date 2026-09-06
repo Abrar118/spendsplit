@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spendsplit/core/widgets/bottom_nav_bar.dart';
+import 'package:spendsplit/data/models/financial_summaries.dart';
+import 'package:spendsplit/features/dashboard/widgets/monthly_snapshot_row.dart';
 import 'package:spendsplit/features/monthly/widgets/monthly_budget_card.dart';
 import 'package:spendsplit/providers/providers.dart';
 
@@ -33,6 +35,44 @@ void main() {
     expect(added, isTrue);
     expect(tester.takeException(), isNull);
   });
+  testWidgets(
+      'MonthlySnapshotRow shows all three cards with no overflow at 320dp', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MonthlySnapshotRow(
+            summary: MonthlyFinanceSummary(
+              month: DateTime(2026, 9),
+              income: 77000,
+              expenses: 12345,
+              saved: 5000,
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('INCOME'), findsOneWidget);
+    expect(find.text('SPENT'), findsOneWidget);
+    expect(find.text('SAVED'), findsOneWidget);
+    // The row must lay all three out at once — no horizontal scroll view that
+    // pushes SAVED off-screen.
+    expect(
+      find.descendant(
+        of: find.byType(MonthlySnapshotRow),
+        matching: find.byType(Scrollable),
+      ),
+      findsNothing,
+    );
+    // SAVED's amount stays within the 320dp viewport.
+    expect(tester.getBottomRight(find.text('SAVED')).dx, lessThanOrEqualTo(320));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('budget reports overspending and persists an edit', (
     tester,
   ) async {
