@@ -36,6 +36,39 @@ void main() {
       );
     },
   );
+  test('category budget upsert keeps one row per category', () async {
+    await db.categoryBudgetDao.setBudget(3, 5000);
+    await db.categoryBudgetDao.setBudget(3, 7500); // update, not insert
+    final rows = await db.categoryBudgetDao.watchAll().first;
+    expect(rows, hasLength(1));
+    expect(rows.single.categoryId, 3);
+    expect(rows.single.monthlyLimit, 7500);
+
+    await db.categoryBudgetDao.clearBudget(3);
+    expect(await db.categoryBudgetDao.watchAll().first, isEmpty);
+  });
+
+  test('updateCategory changes name, icon, and color', () async {
+    final id = await db.categoryDao.insertCategory(
+      CategoriesTableCompanion.insert(
+        name: 'Snacks',
+        icon: 'misc',
+        color: 0xFFF26D3D,
+        isDollarCategory: const Value(false),
+      ),
+    );
+    await db.categoryDao.updateCategory(
+      id: id,
+      name: 'Groceries',
+      icon: 'food',
+      color: 0xFF34D89C,
+    );
+    final row = await db.categoryDao.getCategoryById(id);
+    expect(row!.name, 'Groceries');
+    expect(row.icon, 'food');
+    expect(row.color, 0xFF34D89C);
+  });
+
   test(
     'concurrent case variants produce one category within a tracker',
     () async {

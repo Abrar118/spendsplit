@@ -263,3 +263,10 @@ final transactionTemplateRepositoryProvider =
 final transactionTemplatesProvider = StreamProvider((ref) {
   return ref.watch(transactionTemplateRepositoryProvider).watchTemplates();
 });
+
+final categoryBudgetsProvider = StreamProvider<Map<int, double>>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return db.categoryBudgetDao.watchAll().map(
+    (rows) => {for (final row in rows) row.categoryId: row.monthlyLimit},
+  );
+});

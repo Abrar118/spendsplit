@@ -6,6 +6,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/constants/categories.dart';
+import 'daos/category_budget_dao.dart';
 import 'daos/category_dao.dart';
 import 'daos/dollar_expense_dao.dart';
 import 'daos/savings_goal_dao.dart';
@@ -35,6 +36,7 @@ part 'app_database.g.dart';
     SavingsGoalDao,
     DollarExpenseDao,
     TransactionTemplateDao,
+    CategoryBudgetDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {

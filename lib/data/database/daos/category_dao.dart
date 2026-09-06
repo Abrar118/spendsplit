@@ -49,6 +49,21 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
     return into(categoriesTable).insert(entry.copyWith(name: Value(name)));
   }
 
+  Future<void> updateCategory({
+    required int id,
+    String? name,
+    String? icon,
+    int? color,
+  }) async {
+    final companion = CategoriesTableCompanion(
+      name: name == null ? const Value.absent() : Value(name.trim()),
+      icon: icon == null ? const Value.absent() : Value(icon),
+      color: color == null ? const Value.absent() : Value(color),
+    );
+    await (update(categoriesTable)..where((t) => t.id.equals(id)))
+        .write(companion);
+  }
+
   Future<int> deleteCategory(int id) {
     return (delete(categoriesTable)..where((t) => t.id.equals(id))).go();
   }

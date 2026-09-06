@@ -2833,6 +2833,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final TransactionTemplateDao transactionTemplateDao =
       TransactionTemplateDao(this as AppDatabase);
+  late final CategoryBudgetDao categoryBudgetDao = CategoryBudgetDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
