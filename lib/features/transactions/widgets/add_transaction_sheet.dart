@@ -16,6 +16,7 @@ import 'template_picker_sheet.dart';
 Future<void> showAddTransactionSheet(
   BuildContext context, {
   TransactionsTableData? existingTransaction,
+  TransactionTemplatesTableData? fromTemplate,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -23,8 +24,10 @@ Future<void> showAddTransactionSheet(
     isScrollControlled: true,
     isDismissible: true,
     enableDrag: true,
-    builder: (context) =>
-        AddTransactionSheet(existingTransaction: existingTransaction),
+    builder: (context) => AddTransactionSheet(
+      existingTransaction: existingTransaction,
+      fromTemplate: fromTemplate,
+    ),
   );
 }
 
@@ -43,9 +46,14 @@ const _customCategoryColors = [
 ];
 
 class AddTransactionSheet extends ConsumerStatefulWidget {
-  const AddTransactionSheet({super.key, this.existingTransaction});
+  const AddTransactionSheet({
+    super.key,
+    this.existingTransaction,
+    this.fromTemplate,
+  });
 
   final TransactionsTableData? existingTransaction;
+  final TransactionTemplatesTableData? fromTemplate;
 
   @override
   ConsumerState<AddTransactionSheet> createState() =>
@@ -97,6 +105,32 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
           _entryType = _TransactionEntryType.savings;
           _savingsFlowType = _SavingsFlowType.withdrawal;
       }
+    } else if (widget.fromTemplate != null) {
+      final tpl = widget.fromTemplate!;
+      if (tpl.amount != null) {
+        _amountController.text = tpl.amount!.toStringAsFixed(2);
+      }
+      _noteController.text = tpl.note ?? '';
+      _selectedCategoryId = tpl.categoryId;
+      _didAutoSelectCategory = true;
+      switch (TransactionType.fromDbValue(tpl.type)) {
+        case TransactionType.income:
+          _entryType = _TransactionEntryType.income;
+          _selectedIncomeSource = tpl.source ?? IncomeSource.salary.dbValue;
+        case TransactionType.expense:
+          _entryType = _TransactionEntryType.expense;
+        case TransactionType.savingsDeposit:
+          _entryType = _TransactionEntryType.savings;
+          _savingsFlowType = _SavingsFlowType.deposit;
+        case TransactionType.savingsWithdrawal:
+          _entryType = _TransactionEntryType.savings;
+          _savingsFlowType = _SavingsFlowType.withdrawal;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref
+            .read(transactionTemplateRepositoryProvider)
+            .markUsed(tpl.id);
+      });
     }
   }
 
@@ -235,7 +269,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // --- From Template button ---
+                              // --- From Template button + most-used chips ---
                               if (!_isEditing) ...[
                                 const SizedBox(height: 8),
                                 Center(
@@ -261,6 +295,37 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                                       ),
                                     ),
                                   ),
+                                ),
+                                Builder(
+                                  builder: (context) {
+                                    final chips = ref.watch(
+                                      mostUsedTemplatesProvider,
+                                    );
+                                    if (chips.isEmpty) {
+                                      return const SizedBox(height: 16);
+                                    }
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 12),
+                                      child: Wrap(
+                                        alignment: WrapAlignment.center,
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          for (final tpl in chips)
+                                            ActionChip(
+                                              label: Text(tpl.name),
+                                              onPressed: _saving
+                                                  ? null
+                                                  : () => _useTemplate(tpl),
+                                              backgroundColor: AppColors
+                                                  .surfaceLight
+                                                  .withValues(alpha: 0.6),
+                                              side: BorderSide.none,
+                                            ),
+                                        ],
+                                      ),
+                                    );
+                                  },
                                 ),
                                 const SizedBox(height: 16),
                               ],
@@ -757,7 +822,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     );
 
     if (selected == null || !mounted) return;
-    _applyTemplate(selected);
+    _useTemplate(selected);
+  }
+
+  void _useTemplate(TransactionTemplatesTableData template) {
+    ref.read(transactionTemplateRepositoryProvider).markUsed(template.id);
+    _applyTemplate(template);
   }
 
   void _applyTemplate(TransactionTemplatesTableData template) {

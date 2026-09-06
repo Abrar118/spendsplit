@@ -90,6 +90,9 @@ class ManageTemplatesScreen extends ConsumerWidget {
                     categoryName: t.categoryId != null
                         ? catMap[t.categoryId]?.name
                         : null,
+                    onToggleMonthly: (value) => ref
+                        .read(transactionTemplateRepositoryProvider)
+                        .setMonthly(t.id, value),
                     onDelete: () => _confirmDelete(context, ref, t),
                   ),
             ],
@@ -338,11 +341,13 @@ class _TemplateTile extends StatelessWidget {
   const _TemplateTile({
     required this.template,
     required this.categoryName,
+    required this.onToggleMonthly,
     required this.onDelete,
   });
 
   final TransactionTemplatesTableData template;
   final String? categoryName;
+  final ValueChanged<bool> onToggleMonthly;
   final VoidCallback onDelete;
 
   @override
@@ -354,51 +359,73 @@ class _TemplateTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
         decoration: BoxDecoration(
           color: AppColors.surfaceLight.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 4,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    template.name,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(999),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    [
-                      _readableType(type),
-                      if (categoryName != null) categoryName,
-                      if (template.amount != null)
-                        '৳${template.amount!.toStringAsFixed(0)}',
-                    ].join(' • '),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        template.name,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        [
+                          _readableType(type),
+                          if (categoryName != null) categoryName,
+                          if (template.amount != null)
+                            '৳${template.amount!.toStringAsFixed(0)}',
+                        ].join(' • '),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                IconButton(
+                  onPressed: onDelete,
+                  icon: const Icon(LucideIcons.trash2, size: 18),
+                  color: AppColors.coral,
+                ),
+              ],
             ),
-            IconButton(
-              onPressed: onDelete,
-              icon: const Icon(LucideIcons.trash2, size: 18),
-              color: AppColors.coral,
+            Row(
+              children: [
+                const SizedBox(width: 18),
+                Text(
+                  'Expected monthly',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const Spacer(),
+                Switch(
+                  value: template.isMonthly,
+                  onChanged: onToggleMonthly,
+                  activeThumbColor: AppColors.teal,
+                ),
+              ],
             ),
           ],
         ),

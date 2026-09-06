@@ -22,4 +22,18 @@ class TransactionTemplateDao extends DatabaseAccessor<AppDatabase>
       (delete(transactionTemplatesTable)
             ..where((t) => t.id.equals(id)))
           .go();
+
+  Future<void> markUsed(int id) async {
+    await customUpdate(
+      'UPDATE transaction_templates_table SET use_count = use_count + 1 '
+      'WHERE id = ?',
+      variables: [Variable<int>(id)],
+      updates: {transactionTemplatesTable},
+    );
+  }
+
+  Future<void> setMonthly(int id, bool value) async {
+    await (update(transactionTemplatesTable)..where((t) => t.id.equals(id)))
+        .write(TransactionTemplatesTableCompanion(isMonthly: Value(value)));
+  }
 }

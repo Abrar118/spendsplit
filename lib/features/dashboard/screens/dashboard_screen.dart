@@ -14,6 +14,7 @@ import '../widgets/active_goal_card.dart';
 import '../widgets/balance_card.dart';
 import '../widgets/balance_trend_chart.dart';
 import '../widgets/dollar_summary_card.dart';
+import '../widgets/expected_this_month_card.dart';
 import '../widgets/monthly_snapshot_row.dart';
 import '../widgets/spending_chart.dart';
 
@@ -105,6 +106,7 @@ class DashboardScreen extends ConsumerWidget {
                 loading: () => const _DashboardSkeleton(),
               ),
               const SizedBox(height: AppSpacing.section),
+              const _ExpectedThisMonthSlot(),
               currentMonthSummary.when(
                 data: (summary) => MonthlySnapshotRow(summary: summary),
                 error: (error, stackTrace) => const _SectionError(),
@@ -334,6 +336,22 @@ class _CardSkeleton extends StatelessWidget {
       child: GlassCard(
         child: Container(color: Colors.white.withValues(alpha: 0.04)),
       ),
+    );
+  }
+}
+
+class _ExpectedThisMonthSlot extends ConsumerWidget {
+  const _ExpectedThisMonthSlot();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final expected = ref.watch(expectedThisMonthProvider);
+    if (expected.isEmpty) return const SizedBox.shrink();
+    return const Column(
+      children: [
+        ExpectedThisMonthCard(),
+        SizedBox(height: AppSpacing.section),
+      ],
     );
   }
 }

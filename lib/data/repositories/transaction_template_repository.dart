@@ -13,4 +13,8 @@ class TransactionTemplateRepository {
       _dao.insertTemplate(entry);
 
   Future<int> deleteTemplateById(int id) => _dao.deleteTemplateById(id);
+
+  Future<void> markUsed(int id) => _dao.markUsed(id);
+
+  Future<void> setMonthly(int id, bool value) => _dao.setMonthly(id, value);
 }
