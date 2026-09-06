@@ -96,6 +96,49 @@ void main() {
     });
   });
 
+  group('balanceTrend', () {
+    test('reconstructs month-end totals and carries empty months forward', () {
+      final points = FinanceCalculators.balanceTrend(
+        transactions: [
+          _income(amount: 500, date: DateTime(2026, 6, 10)),
+          _savingsDeposit(amount: 300, date: DateTime(2026, 7, 5)),
+          _expense(amount: 200, date: DateTime(2026, 8, 20)),
+        ],
+        initialBalance: 1000,
+        months: 4,
+        asOf: DateTime(2026, 9, 15),
+      );
+      expect(points, hasLength(4));
+      expect(points[0].month, DateTime(2026, 6));
+      expect(points[0].total, 1500);
+      expect(points[0].savings, 0);
+      expect(points[0].available, 1500);
+      expect(points[1].total, 1500);
+      expect(points[1].savings, 300);
+      expect(points[1].available, 1200);
+      expect(points[2].total, 1300);
+      expect(points[2].available, 1000);
+      expect(points[3].month, DateTime(2026, 9));
+      expect(points[3].total, 1300);
+      expect(points[3].savings, 300);
+      expect(points[3].available, 1000);
+    });
+
+    test('history before the window folds into the first point', () {
+      final points = FinanceCalculators.balanceTrend(
+        transactions: [
+          _income(amount: 9000, date: DateTime(2025, 1, 1)),
+          _expense(amount: 1000, date: DateTime(2025, 2, 1)),
+        ],
+        initialBalance: 0,
+        months: 3,
+        asOf: DateTime(2026, 9, 15),
+      );
+      expect(points.first.total, 8000);
+      expect(points.last.total, 8000);
+    });
+  });
+
   group('monthlyAnalytics budgets', () {
     final month = DateTime(2026, 9);
 

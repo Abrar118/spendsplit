@@ -121,6 +121,20 @@ class SpendingRunway {
   final int windowDays;
 }
 
+class BalancePoint {
+  const BalancePoint({
+    required this.month,
+    required this.total,
+    required this.savings,
+    required this.available,
+  });
+
+  final DateTime month;
+  final double total;
+  final double savings;
+  final double available;
+}
+
 abstract final class FinanceCalculators {
   static const double _epsilon = 1e-9;
 
@@ -229,6 +243,54 @@ abstract final class FinanceCalculators {
       daysRemaining: days,
       windowDays: windowDays,
     );
+  }
+
+  /// End-of-month Available / Savings / Total for the trailing [months]
+  /// window. Transactions before the window fold into the first point;
+  /// months with no activity carry the previous value forward.
+  static List<BalancePoint> balanceTrend({
+    required Iterable<TransactionsTableData> transactions,
+    required double initialBalance,
+    int months = 6,
+    DateTime? asOf,
+  }) {
+    final now = asOf ?? DateTime.now();
+    final firstMonth = DateTime(now.year, now.month - (months - 1));
+    final sorted = transactions.toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+
+    var total = initialBalance;
+    var savings = 0.0;
+    var index = 0;
+    final points = <BalancePoint>[];
+
+    for (var i = 0; i < months; i++) {
+      final monthStart = DateTime(firstMonth.year, firstMonth.month + i);
+      final nextMonth = DateTime(firstMonth.year, firstMonth.month + i + 1);
+      while (index < sorted.length && sorted[index].date.isBefore(nextMonth)) {
+        final entry = sorted[index];
+        switch (entry.type) {
+          case 'income':
+            total += entry.amount;
+          case 'expense':
+            total -= entry.amount;
+          case 'savings_deposit':
+            savings += entry.amount;
+          case 'savings_withdrawal':
+            savings -= entry.amount;
+        }
+        index++;
+      }
+      points.add(
+        BalancePoint(
+          month: monthStart,
+          total: total,
+          savings: savings,
+          available: total - savings,
+        ),
+      );
+    }
+    return points;
   }
 
   static SavingsInsights savingsInsights({

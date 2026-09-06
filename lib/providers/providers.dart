@@ -155,6 +155,18 @@ final spendingRunwayProvider = Provider<AsyncValue<SpendingRunway>>((ref) {
   );
 });
 
+final balanceTrendProvider = Provider<AsyncValue<List<BalancePoint>>>((ref) {
+  final transactions = ref.watch(transactionsProvider);
+  final settings = ref.watch(appSettingsProvider);
+
+  return transactions.whenData(
+    (entries) => FinanceCalculators.balanceTrend(
+      transactions: entries,
+      initialBalance: settings.initialBalance,
+    ),
+  );
+});
+
 final currentMonthSummaryProvider = Provider<AsyncValue<MonthlyFinanceSummary>>(
   (ref) {
     final transactions = ref.watch(transactionsProvider);
