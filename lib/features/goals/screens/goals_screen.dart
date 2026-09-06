@@ -87,7 +87,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                     AppSpacing.md,
                     AppSpacing.md,
                     AppSpacing.md,
-                    132,
+                    AppSpacing.navClearance,
                   ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
@@ -197,9 +197,6 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.03),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.06),
-                            ),
                           ),
                           child: Row(
                             children: [

@@ -6,6 +6,7 @@ import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/shimmer_skeleton.dart';
@@ -81,7 +82,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 132),
+        padding: const EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          AppSpacing.navClearance,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

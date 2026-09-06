@@ -27,7 +27,7 @@ void main() {
       ),
     );
     expect(find.byType(BackdropFilter), findsOneWidget);
-    await tester.tap(find.text('MONTHLY'));
+    await tester.tap(find.text('Monthly'));
     expect(selected, 3);
     await tester.tap(find.bySemanticsLabel('Add transaction'));
     expect(added, isTrue);

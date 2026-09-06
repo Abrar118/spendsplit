@@ -81,7 +81,6 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
           decoration: BoxDecoration(
             color: AppColors.surfaceLight,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
@@ -175,9 +174,6 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.04),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.08),
-                          ),
                         ),
                         child: Row(
                           children: [

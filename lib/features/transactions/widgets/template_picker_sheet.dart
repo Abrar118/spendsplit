@@ -101,9 +101,6 @@ class _TemplatePickerBody extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: AppColors.surfaceContainer,
                           borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.06),
-                          ),
                         ),
                         child: Row(
                           children: [

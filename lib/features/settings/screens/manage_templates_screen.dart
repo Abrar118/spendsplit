@@ -359,7 +359,6 @@ class _TemplateTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surfaceLight.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
         ),
         child: Row(
           children: [

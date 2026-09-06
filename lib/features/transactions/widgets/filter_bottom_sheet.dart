@@ -105,7 +105,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
         decoration: BoxDecoration(
           color: AppColors.surfaceLight,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: SafeArea(
           top: false,
@@ -343,7 +342,6 @@ class _DateFilterRow extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Row(
           children: [

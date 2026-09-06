@@ -253,7 +253,6 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
               decoration: BoxDecoration(
                 color: AppColors.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -167,9 +167,6 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(40),
                     ),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.08),
-                    ),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x80000000),
@@ -973,7 +970,6 @@ class _TypeSelector extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.background.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Row(
         children: [
@@ -1317,7 +1313,6 @@ class _CustomCategoryChip extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: const Icon(LucideIcons.plus, color: AppColors.teal),
           ),
@@ -1425,7 +1420,6 @@ class _InfoRow extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Row(
           children: [
@@ -1484,7 +1478,6 @@ class _NoteField extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

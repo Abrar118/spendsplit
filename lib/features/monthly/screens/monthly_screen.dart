@@ -78,7 +78,7 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
                       AppSpacing.md,
                       AppSpacing.md,
                       AppSpacing.md,
-                      132,
+                      AppSpacing.navClearance,
                     ),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
@@ -616,7 +616,6 @@ class _CategoryDonutCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surfaceContainer,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
             boxShadow: [
               BoxShadow(
                 color: AppColors.background.withValues(alpha: 0.42),
@@ -696,7 +695,6 @@ class _CategoryDonutCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surfaceDim,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
@@ -775,7 +773,6 @@ class _CategoryDetailTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceDim,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         boxShadow: [
           BoxShadow(
             color: AppColors.background.withValues(alpha: 0.3),

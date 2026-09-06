@@ -33,7 +33,6 @@ class TotalSavingsBanner extends StatelessWidget {
           stops: [0.0, 0.58, 1.0],
         ),
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.22),

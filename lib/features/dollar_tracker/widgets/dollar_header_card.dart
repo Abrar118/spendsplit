@@ -31,7 +31,6 @@ class DollarHeaderCard extends StatelessWidget {
             colors: [const Color(0xFF25175A), const Color(0xFF0E223E)],
           ),
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(22),

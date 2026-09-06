@@ -258,6 +258,8 @@ class _NoiseBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ColoredBox(color: AppColors.background);
+    return const DecoratedBox(
+      decoration: BoxDecoration(gradient: AppColors.appBackdropGradient),
+    );
   }
 }

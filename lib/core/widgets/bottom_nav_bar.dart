@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../theme/app_colors.dart';
@@ -20,22 +21,27 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, 12 + bottomInset),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: AppDecorations.glassBlur(),
-          child: DecoratedBox(
-            decoration: AppDecorations.navBar(),
-            child: SizedBox(
-              height: 60 + MediaQuery.textScalerOf(context).scale(12),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 10 + bottomInset),
+      child: DecoratedBox(
+        // Shadow on an outer box so it isn't clipped by the blur below.
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(28)),
+          boxShadow: AppDecorations.navShadow,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: AppDecorations.navFrost(),
+            child: Container(
+              height: 62 + MediaQuery.textScalerOf(context).scale(10),
+              decoration: const BoxDecoration(gradient: AppDecorations.navSheen),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   Expanded(
                     child: _NavItem(
                       icon: LucideIcons.home,
-                      label: 'HOME',
+                      label: 'Home',
                       active: currentIndex == 0,
                       onTap: () => onDestinationSelected(0),
                     ),
@@ -43,7 +49,7 @@ class BottomNavBar extends StatelessWidget {
                   Expanded(
                     child: _NavItem(
                       icon: LucideIcons.receipt,
-                      label: 'HISTORY',
+                      label: 'History',
                       active: currentIndex == 1,
                       onTap: () => onDestinationSelected(1),
                     ),
@@ -52,7 +58,7 @@ class BottomNavBar extends StatelessWidget {
                   Expanded(
                     child: _NavItem(
                       icon: LucideIcons.calendarDays,
-                      label: 'MONTHLY',
+                      label: 'Monthly',
                       active: currentIndex == 3,
                       onTap: () => onDestinationSelected(3),
                     ),
@@ -60,7 +66,7 @@ class BottomNavBar extends StatelessWidget {
                   Expanded(
                     child: _NavItem(
                       icon: LucideIcons.flag,
-                      label: 'GOALS',
+                      label: 'Goals',
                       active: currentIndex == 4,
                       onTap: () => onDestinationSelected(4),
                     ),
@@ -95,38 +101,39 @@ class _NavItem extends StatelessWidget {
     return Semantics(
       selected: active,
       button: true,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+      label: label,
+      child: GestureDetector(
+        onTap: () {
+          if (active) return;
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: active
+                  ? AppColors.teal.withValues(alpha: 0.14)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, color: foreground, size: 22),
-                const SizedBox(height: 4),
+                Icon(icon, color: foreground, size: 21),
+                const SizedBox(height: 3),
                 Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: foreground,
-                    fontSize: 10,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                AnimatedOpacity(
-                  duration: const Duration(milliseconds: 180),
-                  opacity: active ? 1 : 0,
-                  child: Container(
-                    width: 5,
-                    height: 5,
-                    decoration: const BoxDecoration(
-                      color: AppColors.teal,
-                      shape: BoxShape.circle,
-                    ),
+                    fontSize: 10.5,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                    letterSpacing: 0.1,
                   ),
                 ),
               ],
@@ -145,33 +152,32 @@ class _AddNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppColors.primaryActionGradient,
-                ),
-                child: const Icon(
-                  LucideIcons.plus,
-                  semanticLabel: 'Add transaction',
-                  color: AppColors.onPrimary,
-                  size: 24,
-                ),
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Center(
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: AppColors.primaryActionGradient,
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x59ECBB7E),
+                blurRadius: 16,
+                spreadRadius: -2,
               ),
-              const SizedBox(height: 2),
             ],
+          ),
+          child: const Icon(
+            LucideIcons.plus,
+            semanticLabel: 'Add transaction',
+            color: AppColors.onPrimary,
+            size: 24,
           ),
         ),
       ),

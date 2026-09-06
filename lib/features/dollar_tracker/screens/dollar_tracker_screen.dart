@@ -75,7 +75,7 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
               AppSpacing.md,
               AppSpacing.md,
               AppSpacing.md,
-              120,
+              AppSpacing.navClearance,
             ),
             children: [
               _TopBar(year: settings.dollarLimitYear),
@@ -354,7 +354,6 @@ class _TopBar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
               ),
               child: Text(
                 year.toString(),

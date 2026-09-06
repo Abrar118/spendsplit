@@ -58,7 +58,7 @@ class DashboardScreen extends ConsumerWidget {
             AppSpacing.md,
             AppSpacing.md,
             AppSpacing.md,
-            132,
+            AppSpacing.navClearance,
           ),
           children: [
             // --- Top bar ---
