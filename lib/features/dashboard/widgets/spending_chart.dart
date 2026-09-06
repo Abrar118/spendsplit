@@ -41,9 +41,11 @@ class _SpendingChartState extends State<SpendingChart> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final maxValue = _monthSeries
-        .map((item) => item.amount)
-        .fold<double>(0, (cur, v) => v > cur ? v : cur);
+    final maxValue = _monthSeries.fold<double>(
+      0,
+      (cur, item) =>
+          [cur, item.amount, item.income].reduce((a, b) => a > b ? a : b),
+    );
     final normalizedMax = maxValue <= 0 ? 1.0 : maxValue;
 
     return GlassCard(
@@ -67,7 +69,7 @@ class _SpendingChartState extends State<SpendingChart> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Volume vs. trajectory',
+                      'Last 12 months · spend vs. income',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppColors.textSecondary,
                       ),
@@ -124,7 +126,7 @@ class _SpendingChartState extends State<SpendingChart> {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 28,
+                      reservedSize: 38,
                       getTitlesWidget: (value, meta) {
                         final index = value.toInt();
                         if (index < 0 || index >= _monthSeries.length) {
@@ -132,16 +134,29 @@ class _SpendingChartState extends State<SpendingChart> {
                         }
                         final month = _monthSeries[index];
                         return Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: Text(
-                            month.label,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: month.isCurrent
-                                  ? AppColors.teal
-                                  : AppColors.textSecondary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 9,
-                            ),
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                month.label,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: month.isCurrent
+                                      ? AppColors.teal
+                                      : AppColors.textSecondary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 9,
+                                ),
+                              ),
+                              if (month.showYear)
+                                Text(
+                                  "'${(_seriesYearFor(index) % 100).toString().padLeft(2, '0')}",
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: AppColors.textTertiary,
+                                    fontSize: 8,
+                                  ),
+                                ),
+                            ],
                           ),
                         );
                       },
@@ -158,15 +173,17 @@ class _SpendingChartState extends State<SpendingChart> {
                       vertical: 6,
                     ),
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      final actualAmount =
+                      final month =
                           (groupIndex >= 0 && groupIndex < _monthSeries.length)
-                              ? _monthSeries[groupIndex].amount
-                              : 0.0;
+                          ? _monthSeries[groupIndex]
+                          : null;
+                      if (month == null) return null;
                       return BarTooltipItem(
-                        formatBdtAmount(actualAmount, fractionDigits: 0),
+                        'Spent ${formatBdtAmount(month.amount, fractionDigits: 0)}'
+                        '\nEarned ${formatBdtAmount(month.income, fractionDigits: 0)}',
                         const TextStyle(
                           color: AppColors.onPrimary,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           fontSize: 11,
                         ),
                       );
@@ -189,91 +206,72 @@ class _SpendingChartState extends State<SpendingChart> {
 
   BarChartGroupData _buildBarGroup(int i, double normalizedMax) {
     final month = _monthSeries[i];
-    final now = DateTime.now();
-    final currentMonthIndex = now.month - 1;
-    final isFuture = i > currentMonthIndex;
+    final expenseColor = month.isCurrent
+        ? AppColors.teal
+        : month.amount <= 0
+        ? Colors.white.withValues(alpha: 0.05)
+        : AppColors.teal.withValues(alpha: 0.4);
 
-    if (month.amount <= 0) {
-      // Empty month: translucent white stub (past) or nothing (future)
-      return BarChartGroupData(
-        x: i,
-        barRods: [
-          BarChartRodData(
-            toY: normalizedMax * 0.08,
-            width: 16,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(6),
-            ),
-            color: isFuture
-                ? Colors.transparent
-                : Colors.white.withValues(alpha: 0.05),
-            borderSide: isFuture
-                ? BorderSide(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    width: 1,
-                    strokeAlign: BorderSide.strokeAlignInside,
-                  )
-                : BorderSide.none,
-          ),
-        ],
-      );
-    }
-
-    if (month.isCurrent) {
-      // Current month: solid accent
-      return BarChartGroupData(
-        x: i,
-        barRods: [
-          BarChartRodData(
-            toY: month.amount,
-            width: 20,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(8),
-            ),
-            color: AppColors.teal,
-          ),
-        ],
-      );
-    }
-
-    // Past months with data: dimmed accent
     return BarChartGroupData(
       x: i,
+      barsSpace: 3,
       barRods: [
         BarChartRodData(
-          toY: month.amount,
-          width: 16,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(6),
-          ),
-          color: AppColors.teal.withValues(alpha: 0.4),
+          toY: month.amount <= 0 ? normalizedMax * 0.06 : month.amount,
+          width: month.isCurrent ? 14 : 11,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
+          color: expenseColor,
         ),
+        if (month.income > 0)
+          BarChartRodData(
+            toY: month.income,
+            width: 4,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
+            color: AppColors.green,
+          ),
       ],
     );
+  }
+
+  int _seriesYearFor(int index) {
+    final now = DateTime.now();
+    final anchor = DateTime(now.year, now.month);
+    return DateTime(anchor.year, anchor.month - 11 + index).year;
   }
 
   static List<_MonthSpend> _buildMonthSeries(
     List<TransactionsTableData> transactions,
   ) {
     final now = DateTime.now();
-    final currentYear = now.year;
+    final anchor = DateTime(now.year, now.month);
 
-    return List.generate(12, (index) {
-      final month = index + 1;
-      final total = transactions
-          .where(
-            (entry) =>
-                TransactionType.fromDbValue(entry.type) ==
-                    TransactionType.expense &&
-                entry.date.year == currentYear &&
-                entry.date.month == month,
-          )
-          .fold<double>(0, (sum, entry) => sum + entry.amount);
-
+    return List.generate(12, (i) {
+      final monthStart = DateTime(anchor.year, anchor.month - 11 + i);
+      final nextMonth = DateTime(monthStart.year, monthStart.month + 1);
+      var expense = 0.0;
+      var income = 0.0;
+      for (final entry in transactions) {
+        if (entry.date.isBefore(monthStart) ||
+            !entry.date.isBefore(nextMonth)) {
+          continue;
+        }
+        switch (TransactionType.fromDbValue(entry.type)) {
+          case TransactionType.expense:
+            expense += entry.amount;
+          case TransactionType.income:
+            income += entry.amount;
+          case TransactionType.savingsDeposit:
+          case TransactionType.savingsWithdrawal:
+            break;
+        }
+      }
       return _MonthSpend(
-        label: _monthLabels[index],
-        amount: total,
-        isCurrent: month == now.month,
+        label: _monthLabels[monthStart.month - 1],
+        amount: expense,
+        income: income,
+        isCurrent:
+            monthStart.year == now.year && monthStart.month == now.month,
+        showYear: monthStart.month == 1,
       );
     });
   }
@@ -288,10 +286,14 @@ class _MonthSpend {
   const _MonthSpend({
     required this.label,
     required this.amount,
+    required this.income,
     required this.isCurrent,
+    required this.showYear,
   });
 
   final String label;
   final double amount;
+  final double income;
   final bool isCurrent;
+  final bool showYear;
 }

@@ -3,8 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spendsplit/core/widgets/bottom_nav_bar.dart';
+import 'package:spendsplit/data/database/app_database.dart';
 import 'package:spendsplit/data/models/financial_summaries.dart';
 import 'package:spendsplit/features/dashboard/widgets/monthly_snapshot_row.dart';
+import 'package:spendsplit/features/dashboard/widgets/spending_chart.dart';
 import 'package:spendsplit/features/monthly/widgets/monthly_budget_card.dart';
 import 'package:spendsplit/providers/providers.dart';
 
@@ -72,6 +74,45 @@ void main() {
     expect(tester.getBottomRight(find.text('SAVED')).dx, lessThanOrEqualTo(320));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'SpendingChart shows 12 rolling month labels ending at the current month',
+    (tester) async {
+      final now = DateTime.now();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: SpendingChart(
+                transactions: [
+                  TransactionsTableData(
+                    id: 1,
+                    type: 'expense',
+                    amount: 1200,
+                    date: DateTime(now.year, now.month, 3),
+                    createdAt: now,
+                  ),
+                  TransactionsTableData(
+                    id: 2,
+                    type: 'income',
+                    amount: 5000,
+                    date: DateTime(now.year, now.month, 4),
+                    createdAt: now,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      final currentLabel = [
+        'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+        'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+      ][now.month - 1];
+      expect(find.text(currentLabel), findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('budget reports overspending and persists an edit', (
     tester,
