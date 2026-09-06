@@ -111,8 +111,6 @@ class DashboardScreen extends ConsumerWidget {
                 loading: () => const _SnapshotSkeleton(),
               ),
               const SizedBox(height: AppSpacing.section),
-              const BalanceTrendChart(),
-              const SizedBox(height: AppSpacing.section),
               transactions.when(
                 data: (entries) => SpendingChart(
                   transactions: entries,
@@ -121,6 +119,8 @@ class DashboardScreen extends ConsumerWidget {
                 error: (error, stackTrace) => const _SectionError(),
                 loading: () => const _CardSkeleton(height: 280),
               ),
+              const SizedBox(height: AppSpacing.section),
+              const BalanceTrendChart(),
               const SizedBox(height: AppSpacing.section),
               goals.when(
                 data: (goalsList) => ActiveGoalCard(goals: goalsList),
