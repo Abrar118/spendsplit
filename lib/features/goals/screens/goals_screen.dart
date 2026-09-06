@@ -4,8 +4,10 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
+import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -14,6 +16,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/shimmer_skeleton.dart';
 import '../../../data/database/app_database.dart';
 import '../../../providers/providers.dart';
+import 'goal_detail_screen.dart';
 import '../widgets/create_goal_sheet.dart';
 import '../widgets/goal_card.dart';
 import '../widgets/overall_progress_card.dart';
@@ -146,6 +149,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                         for (var i = 0; i < activeGoals.length; i++) ...[
                           GoalCard(
                                 goal: activeGoals[i],
+                                onTap: () => context.push(
+                                  goalDetailPath(activeGoals[i].id),
+                                ),
                                 onMenuSelected: (action) =>
                                     _handleGoalAction(activeGoals[i], action),
                               )
@@ -252,6 +258,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                           GoalCard(
                             goal: completedGoals[i],
                             completed: true,
+                            onTap: () => context.push(
+                              goalDetailPath(completedGoals[i].id),
+                            ),
                             onMenuSelected: (action) =>
                                 _handleGoalAction(completedGoals[i], action),
                           ),
@@ -277,6 +286,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
     final repository = ref.read(savingsRepositoryProvider);
 
     switch (action) {
+      case GoalMenuAction.contribute:
+        await _addContribution(goal);
+        break;
       case GoalMenuAction.edit:
         await showCreateGoalSheet(context, existingGoal: goal);
         break;
@@ -326,6 +338,110 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
           ).showSnackBar(const SnackBar(content: Text('Goal deleted')));
         }
         break;
+    }
+  }
+
+  Future<void> _addContribution(SavingsGoalsTableData goal) async {
+    final controller = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
+    final amount = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceLight,
+        title: Text('Contribute to "${goal.name}"'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Amount (৳)',
+            prefixText: '৳ ',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final v = double.tryParse(
+                controller.text.replaceAll(',', '').trim(),
+              );
+              if (v == null || !v.isFinite || v <= 0) return;
+              Navigator.of(ctx).pop(v);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+    if (amount == null) return;
+
+    final db = ref.read(appDatabaseProvider);
+    final repository = ref.read(savingsRepositoryProvider);
+    final target = goal.targetAmount;
+    final applied = (goal.currentAmount + amount) > target
+        ? (target - goal.currentAmount).clamp(0.0, amount)
+        : amount;
+
+    try {
+      await db.transaction(() async {
+        await db.transactionDao.insertTransaction(
+          TransactionsTableCompanion.insert(
+            type: TransactionType.savingsDeposit.dbValue,
+            amount: amount,
+            date: DateTime.now(),
+            savingsGoalId: Value(goal.id),
+            note: const Value('Goal contribution'),
+          ),
+        );
+        final ok = await repository.adjustGoalAmountBy(goal.id, applied);
+        if (!ok) throw StateError('Could not update the goal.');
+      });
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Failed: $e')));
+      return;
+    }
+
+    if (!mounted) return;
+    final reachedTarget = goal.currentAmount + applied >= target - 1e-9;
+    if (reachedTarget) {
+      final complete = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surfaceLight,
+          title: const Text('Goal reached! 🎉'),
+          content: Text('"${goal.name}" is fully funded. Mark it complete?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Not yet'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Mark Complete'),
+            ),
+          ],
+        ),
+      );
+      if (complete == true) {
+        await repository.updateGoal(
+          goal.copyWith(
+            isCompleted: true,
+            completedAt: Value(DateTime.now()),
+            currentAmount: target,
+          ),
+        );
+      }
+    } else if (mounted) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Added ${formatBdtAmount(applied, fractionDigits: 0)} to "${goal.name}"',
+          ),
+        ),
+      );
     }
   }
 

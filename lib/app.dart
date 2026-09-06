@@ -11,6 +11,7 @@ import 'features/auth/screens/lock_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/dollar_tracker/screens/dollar_tracker_screen.dart';
 import 'features/export/screens/export_data_screen.dart';
+import 'features/goals/screens/goal_detail_screen.dart';
 import 'features/goals/screens/goals_screen.dart';
 import 'features/monthly/screens/monthly_screen.dart';
 import 'features/settings/screens/manage_categories_screen.dart';
@@ -99,6 +100,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         path: AppRoute.dollarTracker.path,
         builder: (context, state) => const DollarTrackerScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '${AppRoute.goalDetail.path}/:id',
+        builder: (context, state) => GoalDetailScreen(
+          goalId: int.tryParse(state.pathParameters['id'] ?? '') ?? -1,
+        ),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,

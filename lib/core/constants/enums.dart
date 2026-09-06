@@ -31,6 +31,7 @@ enum AppRoute {
   monthly('/monthly'),
   goals('/goals'),
   dollarTracker('/dollar-tracker'),
+  goalDetail('/goal'),
   settings('/settings'),
   exportData('/export'),
   manageCategories('/manage-categories'),

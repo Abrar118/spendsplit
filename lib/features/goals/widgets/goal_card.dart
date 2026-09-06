@@ -15,11 +15,13 @@ class GoalCard extends StatelessWidget {
     super.key,
     this.completed = false,
     this.onMenuSelected,
+    this.onTap,
   });
 
   final SavingsGoalsTableData goal;
   final bool completed;
   final ValueChanged<GoalMenuAction>? onMenuSelected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +36,9 @@ class GoalCard extends StatelessWidget {
 
     return Opacity(
       opacity: completed ? 0.72 : 1,
-      child: ClipRRect(
+      child: GestureDetector(
+        onTap: onTap,
+        child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
@@ -108,6 +112,11 @@ class GoalCard extends StatelessWidget {
                         PopupMenuButton<GoalMenuAction>(
                           onSelected: onMenuSelected,
                           itemBuilder: (context) => [
+                            if (!completed)
+                              const PopupMenuItem(
+                                value: GoalMenuAction.contribute,
+                                child: Text('Add Contribution'),
+                              ),
                             const PopupMenuItem(
                               value: GoalMenuAction.edit,
                               child: Text('Edit'),
@@ -237,6 +246,7 @@ class GoalCard extends StatelessWidget {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -258,4 +268,4 @@ class GoalCard extends StatelessWidget {
   }
 }
 
-enum GoalMenuAction { edit, complete, delete }
+enum GoalMenuAction { contribute, edit, complete, delete }
