@@ -69,7 +69,56 @@ abstract final class DefaultDollarCategories {
   ];
 }
 
+class CategoryIconOption {
+  const CategoryIconOption({required this.key, required this.icon});
+
+  final String key;
+  final IconData icon;
+}
+
+/// The icons offered in the category editor. Keys are stored in
+/// `categories_table.icon`. Legacy seed keys still resolve via
+/// [iconForCategoryKey].
+abstract final class CategoryIcons {
+  static const all = [
+    CategoryIconOption(key: 'food', icon: LucideIcons.utensils),
+    CategoryIconOption(key: 'transport', icon: LucideIcons.car),
+    CategoryIconOption(key: 'bills', icon: LucideIcons.zap),
+    CategoryIconOption(key: 'health', icon: LucideIcons.heartPulse),
+    CategoryIconOption(key: 'shopping', icon: LucideIcons.shoppingBag),
+    CategoryIconOption(key: 'entertainment', icon: LucideIcons.gamepad2),
+    CategoryIconOption(key: 'travel', icon: LucideIcons.plane),
+    CategoryIconOption(key: 'home', icon: LucideIcons.home),
+    CategoryIconOption(key: 'education', icon: LucideIcons.graduationCap),
+    CategoryIconOption(key: 'work', icon: LucideIcons.briefcase),
+    CategoryIconOption(key: 'subscription', icon: LucideIcons.repeat),
+    CategoryIconOption(key: 'tech', icon: LucideIcons.cpu),
+    CategoryIconOption(key: 'media', icon: LucideIcons.monitor),
+    CategoryIconOption(key: 'reading', icon: LucideIcons.bookOpen),
+    CategoryIconOption(key: 'savings', icon: LucideIcons.piggyBank),
+    CategoryIconOption(key: 'misc', icon: LucideIcons.tag),
+  ];
+}
+
+/// Accent swatches offered in the category editor. Stored as ARGB ints in
+/// `categories_table.color`.
+abstract final class CategoryColors {
+  static const swatches = <int>[
+    0xFFF26D3D, // coral
+    0xFF34D89C, // green
+    0xFF9B8BFF, // purple
+    0xFF7A46E0, // deep violet
+    0xFFECB877, // amber
+    0xFFECBB7E, // gold
+    0xFFF472B6, // pink
+    0xFFA6A0B8, // neutral
+  ];
+}
+
 IconData iconForCategoryKey(String iconName) {
+  for (final option in CategoryIcons.all) {
+    if (option.key == iconName) return option.icon;
+  }
   switch (iconName) {
     case 'restaurant':
       return LucideIcons.utensils;
