@@ -733,7 +733,7 @@ class _RailSegment extends StatelessWidget {
     return Container(
       width: 2,
       height: height,
-      color: visible ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
+      color: visible ? Colors.white.withValues(alpha: 0.22) : Colors.transparent,
     );
   }
 }
