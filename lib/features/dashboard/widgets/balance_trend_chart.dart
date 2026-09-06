@@ -37,21 +37,22 @@ class BalanceTrendChart extends ConsumerWidget {
               color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _LegendDot(color: AppColors.teal, label: 'Available'),
+              const SizedBox(width: 16),
+              _LegendDot(color: AppColors.purple, label: 'Savings'),
+            ],
+          ),
+          const SizedBox(height: 16),
           SizedBox(
             height: 180,
             child: trend.maybeWhen(
               orElse: () => const SizedBox.shrink(),
-              data: (points) => points.length < 2
-                  ? Center(
-                      child: Text(
-                        'Not enough history yet',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    )
-                  : _TrendLineChart(points: points),
+              data: (points) => points.isEmpty
+                  ? const SizedBox.shrink()
+                  : _TrendBarChart(points: points),
             ),
           ),
         ],
@@ -60,33 +61,52 @@ class BalanceTrendChart extends ConsumerWidget {
   }
 }
 
-class _TrendLineChart extends StatelessWidget {
-  const _TrendLineChart({required this.points});
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TrendBarChart extends StatelessWidget {
+  const _TrendBarChart({required this.points});
 
   final List<BalancePoint> points;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final maxY = points
+    final maxTotal = points
         .map((p) => p.total)
         .fold<double>(0, (cur, v) => v > cur ? v : cur);
-    final minAvailable = points
-        .map((p) => p.available)
-        .fold<double>(0, (cur, v) => v < cur ? v : cur);
-    final normalizedMax = maxY <= 0 ? 1.0 : maxY * 1.12;
+    final normalizedMax = maxTotal <= 0 ? 1.0 : maxTotal * 1.15;
 
-    List<FlSpot> spots(double Function(BalancePoint) pick) => [
-      for (var i = 0; i < points.length; i++)
-        FlSpot(i.toDouble(), pick(points[i])),
-    ];
-
-    return LineChart(
-      LineChartData(
-        minX: 0,
-        maxX: (points.length - 1).toDouble(),
-        minY: minAvailable < 0 ? minAvailable * 1.1 : 0,
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceBetween,
         maxY: normalizedMax,
+        minY: 0,
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
@@ -110,14 +130,13 @@ class _TrendLineChart extends StatelessWidget {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 24,
-              interval: 1,
+              reservedSize: 26,
               getTitlesWidget: (value, meta) {
                 final i = value.toInt();
                 if (i < 0 || i >= points.length) return const SizedBox.shrink();
                 final isLast = i == points.length - 1;
                 return Padding(
-                  padding: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.only(top: 10),
                   child: Text(
                     DateFormat('MMM').format(points[i].month).toUpperCase(),
                     style: theme.textTheme.labelSmall?.copyWith(
@@ -133,53 +152,92 @@ class _TrendLineChart extends StatelessWidget {
             ),
           ),
         ),
-        lineTouchData: LineTouchData(
-          touchTooltipData: LineTouchTooltipData(
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (_) => AppColors.surfaceLight,
-            getTooltipItems: (touched) => touched.map((t) {
-              final p = points[t.spotIndex];
-              final label = t.barIndex == 0 ? 'Total' : 'Available';
-              final value = t.barIndex == 0 ? p.total : p.available;
-              return LineTooltipItem(
-                '$label ${formatBdtAmount(value)}',
+            tooltipRoundedRadius: 10,
+            fitInsideHorizontally: true,
+            fitInsideVertically: true,
+            tooltipPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
+            ),
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              if (groupIndex < 0 || groupIndex >= points.length) return null;
+              final p = points[groupIndex];
+              final available = p.available.abs() < 0.5 ? 0.0 : p.available;
+              final savings = p.savings.abs() < 0.5 ? 0.0 : p.savings;
+              return BarTooltipItem(
+                '${DateFormat('MMM yyyy').format(p.month)}\n',
                 const TextStyle(
                   color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   fontSize: 11,
                 ),
+                children: [
+                  TextSpan(
+                    text: 'Available ${formatBdtAmount(available)}',
+                    style: const TextStyle(
+                      color: AppColors.teal,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const TextSpan(
+                    text: '   ',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  TextSpan(
+                    text: 'Savings ${formatBdtAmount(savings)}',
+                    style: const TextStyle(
+                      color: AppColors.purple,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
               );
-            }).toList(),
+            },
           ),
         ),
-        lineBarsData: [
-          // Total (top line) — drawn first so the Available fill sits on top.
-          LineChartBarData(
-            spots: spots((p) => p.total),
-            isCurved: true,
-            barWidth: 2,
-            color: AppColors.purple,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              color: AppColors.purple.withValues(alpha: 0.16),
-            ),
-          ),
-          // Available (bottom band) — gold.
-          LineChartBarData(
-            spots: spots((p) => p.available),
-            isCurved: true,
-            barWidth: 2,
-            color: AppColors.teal,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              color: AppColors.teal.withValues(alpha: 0.22),
-            ),
-          ),
+        barGroups: [
+          for (var i = 0; i < points.length; i++)
+            _barGroup(i, points[i], i == points.length - 1),
         ],
       ),
-      duration: const Duration(milliseconds: 700),
-      curve: Curves.easeOutCubic,
+      swapAnimationDuration: const Duration(milliseconds: 700),
+      swapAnimationCurve: Curves.easeOutCubic,
+    );
+  }
+
+  BarChartGroupData _barGroup(int x, BalancePoint p, bool isCurrent) {
+    final available = p.available < 0 ? 0.0 : p.available;
+    final savings = p.savings < 0 ? 0.0 : p.savings;
+    final top = available + savings;
+    final dim = isCurrent ? 1.0 : 0.82;
+
+    return BarChartGroupData(
+      x: x,
+      barRods: [
+        BarChartRodData(
+          toY: top <= 0 ? 0.0001 : top,
+          width: isCurrent ? 30 : 26,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
+          rodStackItems: [
+            BarChartRodStackItem(
+              0,
+              available,
+              AppColors.teal.withValues(alpha: dim),
+            ),
+            BarChartRodStackItem(
+              available,
+              top,
+              AppColors.purple.withValues(alpha: dim),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
