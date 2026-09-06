@@ -12,6 +12,7 @@ import '../../../core/widgets/glass_card.dart';
 import '../../../providers/providers.dart';
 import '../widgets/active_goal_card.dart';
 import '../widgets/balance_card.dart';
+import '../widgets/balance_trend_chart.dart';
 import '../widgets/dollar_summary_card.dart';
 import '../widgets/monthly_snapshot_row.dart';
 import '../widgets/spending_chart.dart';
@@ -109,6 +110,8 @@ class DashboardScreen extends ConsumerWidget {
                 error: (error, stackTrace) => const _SectionError(),
                 loading: () => const _SnapshotSkeleton(),
               ),
+              const SizedBox(height: AppSpacing.section),
+              const BalanceTrendChart(),
               const SizedBox(height: AppSpacing.section),
               transactions.when(
                 data: (entries) => SpendingChart(
