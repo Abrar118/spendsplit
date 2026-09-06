@@ -91,6 +91,11 @@ class SettingsController extends Notifier<AppSettings> {
     state = state.copyWith(monthlyExpenseBudget: value);
   }
 
+  Future<void> dismissRecapForMonth(String monthKey) async {
+    await ref.read(settingsRepositoryProvider).setRecapDismissedMonth(monthKey);
+    state = state.copyWith(recapDismissedMonth: monthKey);
+  }
+
   Future<void> setCardNumber(String value) async {
     await ref.read(secureStorageProvider).setCardNumber(value);
     state = state.copyWith(cardNumber: value);
@@ -318,6 +323,31 @@ final expectedThisMonthProvider =
 
       return monthly.where((t) => !logged(t)).toList();
     });
+
+/// Month-end recap for the **previous** calendar month.
+final monthRecapProvider = Provider<AsyncValue<MonthRecap>>((ref) {
+  final transactions = ref.watch(transactionsProvider);
+  final categories = ref.watch(categoriesProvider);
+  final settings = ref.watch(appSettingsProvider);
+  final budgets =
+      ref.watch(categoryBudgetsProvider).valueOrNull ??
+      const <int, double>{};
+
+  if (!transactions.hasValue || !categories.hasValue) {
+    return const AsyncLoading();
+  }
+
+  final now = DateTime.now();
+  return AsyncData(
+    FinanceCalculators.monthRecap(
+      month: DateTime(now.year, now.month - 1),
+      transactions: transactions.value!,
+      categories: categories.value!,
+      categoryBudgets: budgets,
+      monthlyExpenseBudget: settings.monthlyExpenseBudget,
+    ),
+  );
+});
 
 /// Up to three templates with the highest use count (used at least once),
 /// surfaced as quick-apply chips in the add-transaction sheet.

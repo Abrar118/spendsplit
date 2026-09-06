@@ -15,6 +15,7 @@ import '../widgets/balance_card.dart';
 import '../widgets/balance_trend_chart.dart';
 import '../widgets/dollar_summary_card.dart';
 import '../widgets/expected_this_month_card.dart';
+import '../widgets/month_recap_card.dart';
 import '../widgets/monthly_snapshot_row.dart';
 import '../widgets/spending_chart.dart';
 
@@ -95,6 +96,7 @@ class DashboardScreen extends ConsumerWidget {
             if (loading)
               const _DashboardSkeleton()
             else ...[
+              const _MonthRecapSlot(),
               balanceSummary.when(
                 data: (summary) => BalanceCard(
                   summary: summary,
@@ -350,6 +352,21 @@ class _ExpectedThisMonthSlot extends ConsumerWidget {
     return const Column(
       children: [
         ExpectedThisMonthCard(),
+        SizedBox(height: AppSpacing.section),
+      ],
+    );
+  }
+}
+
+class _MonthRecapSlot extends ConsumerWidget {
+  const _MonthRecapSlot();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(monthRecapVisibleProvider)) return const SizedBox.shrink();
+    return const Column(
+      children: [
+        MonthRecapCard(),
         SizedBox(height: AppSpacing.section),
       ],
     );

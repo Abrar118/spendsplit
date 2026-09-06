@@ -5,6 +5,7 @@ class AppSettings {
     required this.dollarLimitYear,
     required this.initialBalance,
     this.monthlyExpenseBudget = 0,
+    this.recapDismissedMonth,
     String? cardNumber,
   }) : cardNumber = _normalizeCardNumber(cardNumber);
 
@@ -13,6 +14,9 @@ class AppSettings {
   final int dollarLimitYear;
   final double initialBalance;
   final double monthlyExpenseBudget;
+
+  /// Month key (`YYYY-MM`) of the last month-end recap the user dismissed.
+  final String? recapDismissedMonth;
   final String cardNumber;
 
   bool get needsDollarLimitRefresh => dollarLimitYear != DateTime.now().year;
@@ -23,6 +27,7 @@ class AppSettings {
     int? dollarLimitYear,
     double? initialBalance,
     double? monthlyExpenseBudget,
+    String? recapDismissedMonth,
     String? cardNumber,
   }) {
     return AppSettings(
@@ -31,6 +36,7 @@ class AppSettings {
       dollarLimitYear: dollarLimitYear ?? this.dollarLimitYear,
       initialBalance: initialBalance ?? this.initialBalance,
       monthlyExpenseBudget: monthlyExpenseBudget ?? this.monthlyExpenseBudget,
+      recapDismissedMonth: recapDismissedMonth ?? this.recapDismissedMonth,
       cardNumber: cardNumber ?? this.cardNumber,
     );
   }

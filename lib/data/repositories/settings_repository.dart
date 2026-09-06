@@ -22,10 +22,15 @@ class SettingsRepository {
           DateTime.now().year,
       initialBalance:
           _preferences.getDouble(AppSettingsKey.initialBalance.value) ?? 0.0,
+      recapDismissedMonth: _preferences.getString('recap_dismissed_month'),
       cardNumber:
           _preferences.getString(AppSettingsKey.cardNumber.value) ??
           '4532756028418291',
     );
+  }
+
+  Future<void> setRecapDismissedMonth(String monthKey) {
+    return _preferences.setString('recap_dismissed_month', monthKey);
   }
 
   Future<void> setBiometricEnabled(bool value) {
