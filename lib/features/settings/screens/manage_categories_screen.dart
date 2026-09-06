@@ -38,7 +38,7 @@ class ManageCategoriesScreen extends ConsumerWidget {
                 Text('Manage Categories', style: theme.textTheme.titleLarge),
                 const Spacer(),
                 IconButton(
-                  onPressed: () => _addCategory(context, ref, isDollar: false),
+                  onPressed: () => _openEditor(context, isDollar: false),
                   icon: const Icon(LucideIcons.plus, color: AppColors.teal),
                 ),
               ],
@@ -56,6 +56,9 @@ class ManageCategoriesScreen extends ConsumerWidget {
             for (final cat in mainCategories)
               _CategoryTile(
                 category: cat,
+                onTap: cat.isPredefined
+                    ? null
+                    : () => _openEditor(context, existing: cat, isDollar: false),
                 onDelete: cat.isPredefined
                     ? null
                     : () => _confirmDelete(context, ref, cat),
@@ -73,8 +76,12 @@ class ManageCategoriesScreen extends ConsumerWidget {
                 ),
                 const Spacer(),
                 IconButton(
-                  onPressed: () => _addCategory(context, ref, isDollar: true),
-                  icon: const Icon(LucideIcons.plus, color: AppColors.teal, size: 20),
+                  onPressed: () => _openEditor(context, isDollar: true),
+                  icon: const Icon(
+                    LucideIcons.plus,
+                    color: AppColors.teal,
+                    size: 20,
+                  ),
                 ),
               ],
             ),
@@ -83,6 +90,10 @@ class ManageCategoriesScreen extends ConsumerWidget {
               for (final cat in dollarCategories)
                 _CategoryTile(
                   category: cat,
+                  onTap: cat.isPredefined
+                      ? null
+                      : () =>
+                            _openEditor(context, existing: cat, isDollar: true),
                   onDelete: cat.isPredefined
                       ? null
                       : () => _confirmDelete(context, ref, cat),
@@ -94,60 +105,18 @@ class ManageCategoriesScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _addCategory(
-    BuildContext context,
-    WidgetRef ref, {
+  Future<void> _openEditor(
+    BuildContext context, {
+    CategoriesTableData? existing,
     required bool isDollar,
-  }) async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
+  }) {
+    return showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceLight,
-        title: Text('New ${isDollar ? 'Dollar' : 'Expense'} Category'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(hintText: 'Category name'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      builder: (_) =>
+          _CategoryEditorSheet(existing: existing, isDollar: isDollar),
     );
-    if (name == null || name.isEmpty) return;
-    final enteredName = name;
-
-    try {
-      await ref.read(appDatabaseProvider).categoryDao.insertCategory(
-        CategoriesTableCompanion.insert(
-          name: enteredName,
-          icon: 'category',
-          color: isDollar ? AppColors.teal.toARGB32() : AppColors.blue.toARGB32(),
-          isPredefined: const Value(false),
-          isDollarCategory: Value(isDollar),
-        ),
-      );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('"$enteredName" created')),
-        );
-      }
-    } on Exception {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Category already exists')),
-        );
-      }
-    }
   }
 
   Future<void> _confirmDelete(
@@ -179,10 +148,9 @@ class ManageCategoriesScreen extends ConsumerWidget {
 
     if (confirmed != true) return;
 
-    await ref
-        .read(appDatabaseProvider)
-        .categoryDao
-        .deleteCategory(category.id);
+    final db = ref.read(appDatabaseProvider);
+    await db.categoryDao.deleteCategory(category.id);
+    await db.categoryBudgetDao.clearBudget(category.id);
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -193,9 +161,10 @@ class ManageCategoriesScreen extends ConsumerWidget {
 }
 
 class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({required this.category, this.onDelete});
+  const _CategoryTile({required this.category, this.onTap, this.onDelete});
 
   final CategoriesTableData category;
+  final VoidCallback? onTap;
   final VoidCallback? onDelete;
 
   @override
@@ -204,13 +173,18 @@ class _CategoryTile extends StatelessWidget {
     final color = Color(category.color);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceLight.withValues(alpha: 0.6),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceLight.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
           children: [
             Container(
               width: 36,
@@ -253,8 +227,184 @@ class _CategoryTile extends StatelessWidget {
                 size: 16,
                 color: Colors.white.withValues(alpha: 0.2),
               ),
-          ],
+            ],
+          ),
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _CategoryEditorSheet extends ConsumerStatefulWidget {
+  const _CategoryEditorSheet({this.existing, required this.isDollar});
+
+  /// Null = create mode.
+  final CategoriesTableData? existing;
+  final bool isDollar;
+
+  @override
+  ConsumerState<_CategoryEditorSheet> createState() =>
+      _CategoryEditorSheetState();
+}
+
+class _CategoryEditorSheetState extends ConsumerState<_CategoryEditorSheet> {
+  late final TextEditingController _name = TextEditingController(
+    text: widget.existing?.name ?? '',
+  );
+  late String _iconKey = widget.existing?.icon ?? CategoryIcons.all.first.key;
+  late int _color = widget.existing?.color ?? CategoryColors.swatches.first;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = 'Enter a name.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    final dao = ref.read(appDatabaseProvider).categoryDao;
+    try {
+      if (widget.existing == null) {
+        await dao.insertCategory(
+          CategoriesTableCompanion.insert(
+            name: name,
+            icon: _iconKey,
+            color: _color,
+            isPredefined: const Value(false),
+            isDollarCategory: Value(widget.isDollar),
+          ),
+        );
+      } else {
+        await dao.updateCategory(
+          id: widget.existing!.id,
+          name: name,
+          icon: _iconKey,
+          color: _color,
+        );
+      }
+      if (mounted) Navigator.of(context).pop();
+    } on Exception {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = 'A category with that name already exists.';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.existing == null ? 'New category' : 'Edit category',
+            style: theme.textTheme.titleLarge,
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _name,
+            autofocus: widget.existing == null,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(labelText: 'Name', errorText: _error),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'ICON',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppColors.textTertiary,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final option in CategoryIcons.all)
+                GestureDetector(
+                  onTap: () => setState(() => _iconKey = option.key),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: _iconKey == option.key
+                          ? Color(_color).withValues(alpha: 0.22)
+                          : AppColors.surfaceLight,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      option.icon,
+                      size: 20,
+                      color: _iconKey == option.key
+                          ? Color(_color)
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'COLOUR',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppColors.textTertiary,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              for (final swatch in CategoryColors.swatches)
+                GestureDetector(
+                  onTap: () => setState(() => _color = swatch),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: Color(swatch),
+                      shape: BoxShape.circle,
+                      border: _color == swatch
+                          ? Border.all(color: Colors.white, width: 2)
+                          : null,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _saving ? null : _save,
+              child: Text(_saving ? 'Saving…' : 'Save'),
+            ),
+          ),
+        ],
       ),
     );
   }
