@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
@@ -38,6 +39,8 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
   DateTime? _customEnd;
   bool _exporting = false;
   bool _importing = false;
+  bool _backingUp = false;
+  bool _restoring = false;
 
   @override
   Widget build(BuildContext context) {
@@ -154,6 +157,85 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                           )
                         : const Icon(LucideIcons.upload, size: 18),
                     label: Text(_importing ? 'IMPORTING...' : 'IMPORT CSV'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 36),
+
+            Text(
+              'FULL BACKUP',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppColors.textTertiary,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 16),
+            GlassCard(
+              radius: 24,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'A single .json file with every transaction, goal, category, '
+                    'template, budget, and your settings. Restoring replaces '
+                    'everything currently in the app.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _handleJsonExport,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.purple,
+                      side: BorderSide(
+                        color: AppColors.purple.withValues(alpha: 0.35),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    icon: _backingUp
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.purple,
+                            ),
+                          )
+                        : const Icon(LucideIcons.download, size: 18),
+                    label: Text(
+                      _backingUp ? 'EXPORTING...' : 'EXPORT BACKUP (.JSON)',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton.icon(
+                    onPressed: _busy ? null : _handleJsonRestore,
+                    icon: _restoring
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.coral,
+                            ),
+                          )
+                        : const Icon(LucideIcons.upload, size: 18),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.coral,
+                    ),
+                    label: Text(
+                      _restoring ? 'RESTORING...' : 'RESTORE BACKUP',
+                    ),
                   ),
                 ],
               ),
@@ -500,6 +582,140 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
       if (mounted && _importing) {
         setState(() => _importing = false);
       }
+    }
+  }
+
+  bool get _busy => _exporting || _importing || _backingUp || _restoring;
+
+  Future<void> _handleJsonExport() async {
+    setState(() => _backingUp = true);
+    File? file;
+    try {
+      final settings = ref.read(appSettingsProvider);
+      final payload = <String, dynamic>{
+        'version': 1,
+        'app': 'spendsplit',
+        'exportedAt': DateTime.now().toIso8601String(),
+        'settings': {
+          'biometricEnabled': settings.biometricEnabled,
+          'dollarAnnualLimit': settings.dollarAnnualLimit,
+          'dollarLimitYear': settings.dollarLimitYear,
+          'initialBalance': settings.initialBalance,
+          'monthlyExpenseBudget': settings.monthlyExpenseBudget,
+          'cardNumber': settings.cardNumber,
+        },
+        ...await ref.read(snapshotServiceProvider).exportTables(),
+      };
+      final dir = await getTemporaryDirectory();
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      file = File(p.join(dir.path, 'spendsplit_backup_$timestamp.json'));
+      await file.writeAsString(
+        const JsonEncoder.withIndent('  ').convert(payload),
+      );
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], subject: 'SpendSplit Backup — $timestamp');
+    } on Exception catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Backup failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _backingUp = false);
+      final f = file;
+      if (f != null) {
+        try {
+          if (await f.exists()) await f.delete();
+        } on Exception {
+          // best-effort
+        }
+      }
+    }
+  }
+
+  Future<void> _handleJsonRestore() async {
+    final picked = await fs.openFile(
+      acceptedTypeGroups: const [
+        fs.XTypeGroup(
+          label: 'JSON',
+          extensions: ['json'],
+          mimeTypes: ['application/json', 'text/plain'],
+        ),
+      ],
+      confirmButtonText: 'Restore',
+    );
+    if (picked == null || !mounted) return;
+
+    Map<String, dynamic> parsed;
+    try {
+      parsed = jsonDecode(await picked.readAsString()) as Map<String, dynamic>;
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('That is not a valid backup file.')),
+        );
+      }
+      return;
+    }
+    if (parsed['app'] != 'spendsplit' || parsed['version'] != 1) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unrecognised backup format or version.'),
+          ),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => const _HoldToConfirmDialog(),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _restoring = true);
+    try {
+      final counts = await ref
+          .read(snapshotServiceProvider)
+          .importTables(parsed);
+
+      final settings = parsed['settings'] as Map<String, dynamic>?;
+      if (settings != null) {
+        final ctrl = ref.read(appSettingsProvider.notifier);
+        await ctrl.setBiometricEnabled(settings['biometricEnabled'] == true);
+        await ctrl.setDollarAnnualLimit(
+          (settings['dollarAnnualLimit'] as num?)?.toDouble() ?? 12000,
+        );
+        await ctrl.setDollarLimitYear(
+          (settings['dollarLimitYear'] as num?)?.toInt() ?? DateTime.now().year,
+        );
+        await ctrl.setInitialBalance(
+          (settings['initialBalance'] as num?)?.toDouble() ?? 0,
+        );
+        await ctrl.setMonthlyExpenseBudget(
+          (settings['monthlyExpenseBudget'] as num?)?.toDouble() ?? 0,
+        );
+        final card = settings['cardNumber'];
+        if (card is String && card.isNotEmpty) {
+          await ctrl.setCardNumber(card);
+        }
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Restored ${counts.total} records.')),
+      );
+    } on Exception catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Restore failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _restoring = false);
     }
   }
 
@@ -1097,4 +1313,93 @@ class _ParsedCsvTransaction {
   final String? displayCategoryName;
   final String? source;
   final String? note;
+}
+
+class _HoldToConfirmDialog extends StatefulWidget {
+  const _HoldToConfirmDialog();
+
+  @override
+  State<_HoldToConfirmDialog> createState() => _HoldToConfirmDialogState();
+}
+
+class _HoldToConfirmDialogState extends State<_HoldToConfirmDialog>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1500),
+  )..addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        Navigator.of(context).pop(true);
+      }
+    });
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      backgroundColor: AppColors.surfaceLight,
+      title: const Text('Replace everything?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'This wipes all current data and replaces it with the backup. '
+            'It cannot be undone.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 20),
+          GestureDetector(
+            onTapDown: (_) => _controller.forward(),
+            onTapUp: (_) => _controller.reverse(),
+            onTapCancel: () => _controller.reverse(),
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) => ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      height: 48,
+                      width: double.infinity,
+                      color: AppColors.coral.withValues(alpha: 0.18),
+                    ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: _controller.value,
+                        child: Container(height: 48, color: AppColors.coral),
+                      ),
+                    ),
+                    Text(
+                      'Hold to replace everything',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
+  }
 }

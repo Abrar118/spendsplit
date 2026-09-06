@@ -10,6 +10,7 @@ import '../data/repositories/dollar_tracker_repository.dart';
 import '../data/repositories/savings_repository.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/secure_storage_repository.dart';
+import '../data/repositories/snapshot_service.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../data/repositories/transaction_template_repository.dart';
 
@@ -274,6 +275,10 @@ final savingsInsightsProvider = Provider<AsyncValue<SavingsInsights>>((ref) {
       referenceMonth: DateTime.now(),
     ),
   );
+});
+
+final snapshotServiceProvider = Provider<SnapshotService>((ref) {
+  return SnapshotService(ref.watch(appDatabaseProvider));
 });
 
 final transactionTemplateRepositoryProvider =
