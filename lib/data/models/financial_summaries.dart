@@ -89,6 +89,21 @@ class SavingsInsights {
   final double monthOverMonthDelta;
 }
 
+class SpendingRunway {
+  const SpendingRunway({
+    required this.avgDailyBurn,
+    required this.daysRemaining,
+    required this.windowDays,
+  });
+
+  final double avgDailyBurn;
+
+  /// Whole days of Available left at [avgDailyBurn]. Null when there is no
+  /// recent spending to project from.
+  final int? daysRemaining;
+  final int windowDays;
+}
+
 abstract final class FinanceCalculators {
   static const double _epsilon = 1e-9;
 
@@ -145,6 +160,44 @@ abstract final class FinanceCalculators {
       annualLimit: annualLimit,
       spentYtd: spentYtd,
       remaining: annualLimit - spentYtd,
+    );
+  }
+
+  /// How many days Available lasts at the trailing-[windowDays] expense rate.
+  /// Only `expense` transactions count as burn — savings deposits move money to
+  /// Savings rather than out through spending.
+  static SpendingRunway spendingRunway({
+    required Iterable<TransactionsTableData> transactions,
+    required double availableBalance,
+    DateTime? asOf,
+    int windowDays = 30,
+  }) {
+    final now = asOf ?? DateTime.now();
+    final windowStart = now.subtract(Duration(days: windowDays));
+    final recentExpense = transactions
+        .where(
+          (t) =>
+              t.type == 'expense' &&
+              t.date.isAfter(windowStart) &&
+              !t.date.isAfter(now),
+        )
+        .fold<double>(0, (sum, t) => sum + t.amount);
+
+    final avgDailyBurn = recentExpense / windowDays;
+    if (avgDailyBurn <= _epsilon) {
+      return SpendingRunway(
+        avgDailyBurn: 0,
+        daysRemaining: null,
+        windowDays: windowDays,
+      );
+    }
+    final days = availableBalance <= 0
+        ? 0
+        : (availableBalance / avgDailyBurn).floor();
+    return SpendingRunway(
+      avgDailyBurn: avgDailyBurn,
+      daysRemaining: days,
+      windowDays: windowDays,
     );
   }
 
