@@ -24,6 +24,7 @@ class SettingsRepository {
           _preferences.getDouble(AppSettingsKey.initialBalance.value) ?? 0.0,
       recapDismissedMonth: _preferences.getString('recap_dismissed_month'),
       smsImportSince: _preferences.getInt(_smsImportSinceKey),
+      smsSeenRefs: _preferences.getStringList(_smsSeenRefsKey) ?? const [],
       bankBalance: _preferences.getDouble(_bankBalanceKey),
       bankBalanceAt: DateTime.tryParse(
         _preferences.getString(_bankBalanceAtKey) ?? '',
@@ -70,6 +71,7 @@ class SettingsRepository {
   }
 
   static const _smsImportSinceKey = 'sms_import_since';
+  static const _smsSeenRefsKey = 'sms_seen_refs';
   static const _bankBalanceKey = 'bank_balance';
   static const _bankBalanceAtKey = 'bank_balance_at';
 
@@ -79,6 +81,10 @@ class SettingsRepository {
     } else {
       await _preferences.setInt(_smsImportSinceKey, millis);
     }
+  }
+
+  Future<void> setSmsSeenRefs(List<String> refs) async {
+    await _preferences.setStringList(_smsSeenRefsKey, refs);
   }
 
   Future<void> setBankBalance(double? balance, DateTime? at) async {

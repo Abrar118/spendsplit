@@ -155,7 +155,7 @@ Six tables (`schemaVersion` 8): `transactions_table`, `categories_table`,
 `needs_review`. The v6 → v7 and v7 → v8 migrations are additive only.
 Settings via SharedPreferences: `biometric_enabled`, `dollar_annual_limit`,
 `dollar_limit_year`, `monthly_expense_budget`, `recap_dismissed_month`,
-`sms_import_since`, `bank_balance`, `bank_balance_at`.
+`sms_import_since`, `sms_seen_refs`, `bank_balance`, `bank_balance_at`.
 `initial_balance` and `card_number` live in the platform keystore
 (`SecureStorageRepository`), not SharedPreferences.
 
@@ -206,9 +206,12 @@ Settings via SharedPreferences: `biometric_enabled`, `dollar_annual_limit`,
   Debits become expenses in Other, credits become income (source other),
   flagged `needs_review` until saved from the edit sheet. Runs on app
   open/resume and, via `SmsReceiver` + headless `smsBackgroundMain`, in the
-  background. Dedupe: unique `sms_ref` + `sms_import_since` watermark
-  (strictly newer). Dashboard shows a review card and a bank-balance
-  reconciliation card (`bankReconciliationProvider`).
+  background. Dedupe: unique `sms_ref`; the `sms_import_since` watermark
+  trails the newest SMS by 10 min (late inbox writes) and `sms_seen_refs`
+  skips already-processed SMS in that window, so deleted entries stay
+  deleted. Backup restore runs under `SmsImportRunner.whilePaused`.
+  Dashboard shows a review card and a bank-balance reconciliation card
+  (`bankReconciliationProvider`).
 
 ---
 

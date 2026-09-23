@@ -47,9 +47,10 @@ void main() {
   test('recordSmsImport only moves the watermark forward', () async {
     final (c, prefs) = await setup({'sms_import_since': 5000});
     final ctrl = c.read(appSettingsProvider.notifier);
-    await ctrl.recordSmsImport(newestReceivedMillis: 6000);
+    await ctrl.recordSmsImport(watermark: 6000, seenRefs: ['6100|a']);
     expect(prefs.getInt('sms_import_since'), 6000);
-    await ctrl.recordSmsImport(newestReceivedMillis: 5500);
+    expect(prefs.getStringList('sms_seen_refs'), ['6100|a']);
+    await ctrl.recordSmsImport(watermark: 5500, seenRefs: const []);
     expect(prefs.getInt('sms_import_since'), 6000);
   });
 
@@ -58,11 +59,13 @@ void main() {
     await c
         .read(appSettingsProvider.notifier)
         .recordSmsImport(
-          newestReceivedMillis: 6000,
+          watermark: 6000,
+          seenRefs: ['6000|a'],
           balance: 10,
           balanceAt: DateTime(2026, 9, 21),
         );
     expect(prefs.containsKey('sms_import_since'), isFalse);
+    expect(prefs.containsKey('sms_seen_refs'), isFalse);
     expect(prefs.containsKey('bank_balance'), isFalse);
   });
 
@@ -70,12 +73,14 @@ void main() {
     final (c, _) = await setup({'sms_import_since': 1});
     final ctrl = c.read(appSettingsProvider.notifier);
     await ctrl.recordSmsImport(
-      newestReceivedMillis: 2,
+      watermark: 2,
+      seenRefs: const [],
       balance: 200,
       balanceAt: DateTime(2026, 9, 21),
     );
     await ctrl.recordSmsImport(
-      newestReceivedMillis: 3,
+      watermark: 3,
+      seenRefs: const [],
       balance: 100,
       balanceAt: DateTime(2026, 9, 20),
     );
@@ -85,6 +90,7 @@ void main() {
   test('restore keeps the backup watermark only with READ_SMS', () async {
     final (c, prefs) = await setup({
       'sms_import_since': 9000,
+      'sms_seen_refs': ['9100|a'],
       'bank_balance': 1.0,
       'bank_balance_at': '2026-09-21T00:00:00.000',
     });
@@ -92,6 +98,8 @@ void main() {
 
     await ctrl.restoreSmsImport(since: 4000, readGranted: true);
     expect(prefs.getInt('sms_import_since'), 4000);
+    // Restored rows carry their own sms_ref; the unique index dedupes.
+    expect(prefs.getStringList('sms_seen_refs'), isEmpty);
     expect(prefs.containsKey('bank_balance'), isFalse);
     expect(c.read(appSettingsProvider).bankBalanceAt, isNull);
 

@@ -30,7 +30,11 @@ void main() {
         appDatabaseProvider.overrideWithValue(db),
         smsGatewayProvider.overrideWithValue(gateway),
         smsImportRunnerProvider.overrideWith(
-          (ref) => SmsImportRunner(ref, retryDelay: Duration.zero),
+          (ref) => SmsImportRunner(
+            ref,
+            retryDelay: Duration.zero,
+            lookback: const Duration(milliseconds: 500),
+          ),
         ),
       ],
     );
@@ -64,7 +68,9 @@ void main() {
     ]);
     expect(await runner.run(), 1);
     expect((await db.select(db.transactionsTable).get()).single.amount, 70);
-    expect(prefs.getInt('sms_import_since'), 6000);
+    // Watermark trails the newest SMS by the 500 ms test lookback.
+    expect(prefs.getInt('sms_import_since'), 5500);
+    expect(prefs.getStringList('sms_seen_refs'), ['6000|${debit(70)}']);
     expect(prefs.getDouble('bank_balance'), 1000);
   });
 
@@ -75,7 +81,58 @@ void main() {
     await db.delete(db.transactionsTable).go();
     expect(await runner.run(), 0);
     expect(await db.select(db.transactionsTable).get(), isEmpty);
-    expect(gateway.sinceCalls.last, 6000);
+    expect(gateway.sinceCalls.last, 5500);
+  });
+
+  test('an SMS written to the inbox after a later-dated one is imported', () async {
+    final (runner, db, gateway, _) = await setup();
+    gateway.inbox.add(InboxSms(body: debit(70), receivedMillis: 7000));
+    await runner.run();
+    // Earlier-dated SMS lands in the inbox only now.
+    gateway.inbox.add(InboxSms(body: debit(223), receivedMillis: 6800));
+    expect(await runner.run(), 1);
+    expect(await db.select(db.transactionsTable).get(), hasLength(2));
+  });
+
+  test('seen refs are pruned once behind the watermark', () async {
+    final (runner, _, gateway, prefs) = await setup();
+    gateway.inbox.add(InboxSms(body: debit(70), receivedMillis: 6000));
+    await runner.run();
+    gateway.inbox.add(InboxSms(body: debit(223), receivedMillis: 7000));
+    await runner.run();
+    expect(prefs.getInt('sms_import_since'), 6500);
+    expect(prefs.getStringList('sms_seen_refs'), ['7000|${debit(223)}']);
+  });
+
+  test('waitForNew keeps polling when only already-seen SMS are there', () async {
+    final (runner, _, gateway, _) = await setup();
+    gateway.inbox.add(InboxSms(body: debit(70), receivedMillis: 6000));
+    await runner.run();
+    gateway.sinceCalls.clear();
+    gateway.onRead = (n) {
+      if (n == 2) {
+        gateway.inbox.add(InboxSms(body: debit(5), receivedMillis: 6100));
+      }
+    };
+    expect(await runner.run(waitForNew: true), 1);
+    expect(gateway.sinceCalls, hasLength(2));
+  });
+
+  test('whilePaused waits for an in-flight import and blocks new ones', () async {
+    final (runner, _, gateway, _) = await setup();
+    gateway.inbox.add(InboxSms(body: debit(70), receivedMillis: 6000));
+    final events = <String>[];
+    final first = runner.run().then((_) => events.add('import 1'));
+    final paused = runner.whilePaused(() async {
+      events.add('restore start');
+      await Future<void>.delayed(Duration.zero);
+      events.add('restore end');
+      return 7;
+    });
+    final second = runner.run().then((_) => events.add('import 2'));
+    expect(await paused, 7);
+    await Future.wait([first, second]);
+    expect(events, ['import 1', 'restore start', 'restore end', 'import 2']);
   });
 
   test('a failed read leaves the watermark alone', () async {
@@ -106,6 +163,6 @@ void main() {
     final (runner, _, gateway, _) = await setup();
     gateway.inbox.add(InboxSms(body: debit(70), receivedMillis: 6000));
     expect(await Future.wait([runner.run(), runner.run()]), [1, 0]);
-    expect(gateway.sinceCalls, [5000, 6000]);
+    expect(gateway.sinceCalls, [5000, 5500]);
   });
 }

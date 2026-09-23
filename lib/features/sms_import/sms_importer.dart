@@ -13,7 +13,13 @@ class InboxSms {
 
   /// The provider's `date` column: when the phone received the SMS.
   final int receivedMillis;
+
+  /// Stored in `sms_ref`; also how already-processed SMS are recognised.
+  String get ref => '$receivedMillis|$body';
 }
+
+int receivedMillisOfRef(String ref) =>
+    int.parse(ref.substring(0, ref.indexOf('|')));
 
 class SmsImportResult {
   const SmsImportResult({
@@ -74,7 +80,7 @@ Future<SmsImportResult> importSmsMessages(
               ),
               note: Value(parsed.label),
               date: parsed.dateTime,
-              smsRef: Value('${sms.receivedMillis}|${sms.body}'),
+              smsRef: Value(sms.ref),
               needsReview: const Value(true),
             ),
             mode: InsertMode.insertOrIgnore,

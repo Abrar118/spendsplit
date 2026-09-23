@@ -115,6 +115,15 @@ Income uses `source`, not categories — matching `add_transaction_sheet.dart`.
   sharing the boundary millisecond is reread and dropped by the unique index
   rather than skipped.
 
+**Rev 4 (post-implementation review):** the inbox query is strictly newer
+(`date > since`), and the watermark trails the newest SMS by a 10-minute
+lookback (never moving backwards). This catches an SMS written to the inbox
+after a later-dated one. `sms_seen_refs` (SharedPreferences string list)
+holds the refs already processed inside that window. They are skipped on
+re-read, so deleted entries stay deleted. Backup restore runs under
+`SmsImportRunner.whilePaused`, so no import can overlap the table swap, and
+it clears `sms_seen_refs`.
+
 ### Backup / restore
 
 - **Old backups:** `SnapshotService.importTables` fills absent transaction fields

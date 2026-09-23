@@ -7,6 +7,7 @@ class AppSettings {
     this.monthlyExpenseBudget = 0,
     this.recapDismissedMonth,
     this.smsImportSince,
+    this.smsSeenRefs = const [],
     this.bankBalance,
     this.bankBalanceAt,
     String? cardNumber,
@@ -24,6 +25,10 @@ class AppSettings {
 
   /// SMS provider receive-time watermark (ms). Null = SMS import off.
   final int? smsImportSince;
+
+  /// `sms_ref`s of SMS already processed that are still newer than
+  /// [smsImportSince], so re-reading the lookback window skips them.
+  final List<String> smsSeenRefs;
 
   /// Balance from the Trust Bank SMS with the latest transaction time, and
   /// that transaction's time.
@@ -43,6 +48,7 @@ class AppSettings {
     String? recapDismissedMonth,
     String? cardNumber,
     int? Function()? smsImportSince,
+    List<String>? smsSeenRefs,
     double? Function()? bankBalance,
     DateTime? Function()? bankBalanceAt,
   }) {
@@ -57,6 +63,7 @@ class AppSettings {
       smsImportSince: smsImportSince != null
           ? smsImportSince()
           : this.smsImportSince,
+      smsSeenRefs: smsSeenRefs ?? this.smsSeenRefs,
       bankBalance: bankBalance != null ? bankBalance() : this.bankBalance,
       bankBalanceAt: bankBalanceAt != null
           ? bankBalanceAt()

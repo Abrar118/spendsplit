@@ -112,20 +112,24 @@ class SettingsController extends Notifier<AppSettings> {
     state = state.copyWith(smsImportSince: () => null);
   }
 
-  /// Advances the watermark and bank balance after an import. No-op when
-  /// import was switched off while it ran, so it can't re-enable itself.
+  /// Advances the watermark, seen refs and bank balance after an import.
+  /// No-op when import was switched off while it ran, so it can't re-enable
+  /// itself.
   Future<void> recordSmsImport({
-    required int newestReceivedMillis,
+    required int watermark,
+    required List<String> seenRefs,
     double? balance,
     DateTime? balanceAt,
   }) async {
     final since = state.smsImportSince;
     if (since == null) return;
     final repo = ref.read(settingsRepositoryProvider);
-    if (newestReceivedMillis > since) {
-      await repo.setSmsImportSince(newestReceivedMillis);
-      state = state.copyWith(smsImportSince: () => newestReceivedMillis);
+    if (watermark > since) {
+      await repo.setSmsImportSince(watermark);
+      state = state.copyWith(smsImportSince: () => watermark);
     }
+    await repo.setSmsSeenRefs(seenRefs);
+    state = state.copyWith(smsSeenRefs: seenRefs);
     final currentAt = state.bankBalanceAt;
     if (balance != null &&
         balanceAt != null &&
@@ -150,9 +154,11 @@ class SettingsController extends Notifier<AppSettings> {
     final next = readGranted ? since : null;
     final repo = ref.read(settingsRepositoryProvider);
     await repo.setSmsImportSince(next);
+    await repo.setSmsSeenRefs(const []);
     await repo.setBankBalance(null, null);
     state = state.copyWith(
       smsImportSince: () => next,
+      smsSeenRefs: const [],
       bankBalance: () => null,
       bankBalanceAt: () => null,
     );
