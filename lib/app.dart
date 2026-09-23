@@ -85,6 +85,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 initialCategoryId: int.tryParse(
                   state.uri.queryParameters['categoryId'] ?? '',
                 ),
+                initialReviewOnly: state.uri.queryParameters['review'] == '1',
               ),
             ),
           ),
