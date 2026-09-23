@@ -3,7 +3,6 @@ import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spendsplit/data/database/app_database.dart';
-import 'package:sqlite3/sqlite3.dart' show SqliteException;
 
 /// Rebuilds transactions_table with its exact v7 definition (no sms_ref,
 /// needs_review or unique index) so the file matches a pre-v8 database.
