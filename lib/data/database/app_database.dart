@@ -43,7 +43,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? executor}) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -147,6 +147,12 @@ class AppDatabase extends _$AppDatabase {
           transactionTemplatesTable,
           transactionTemplatesTable.isMonthly,
         );
+      }
+      if (from < 8) {
+        // Additive only: existing rows get sms_ref NULL, needs_review false.
+        await m.addColumn(transactionsTable, transactionsTable.smsRef);
+        await m.addColumn(transactionsTable, transactionsTable.needsReview);
+        await m.createIndex(transactionsSmsRef);
       }
     },
     beforeOpen: (_) async {

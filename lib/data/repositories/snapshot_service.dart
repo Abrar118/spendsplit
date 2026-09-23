@@ -90,7 +90,13 @@ class SnapshotService {
         await _db
             .into(_db.transactionsTable)
             .insert(
-              TransactionsTableData.fromJson(j),
+              // Pre-v8 backups lack these keys; Drift's fromJson<bool> throws
+              // on a missing non-null field before the DB default applies.
+              TransactionsTableData.fromJson({
+                'smsRef': null,
+                'needsReview': false,
+                ...j,
+              }),
               mode: InsertMode.insertOrReplace,
             );
         counts.transactions++;

@@ -91,6 +91,7 @@ void main() {
                     amount: 1200,
                     date: DateTime(now.year, now.month, 3),
                     createdAt: now,
+                    needsReview: false,
                   ),
                   TransactionsTableData(
                     id: 2,
@@ -98,6 +99,7 @@ void main() {
                     amount: 5000,
                     date: DateTime(now.year, now.month, 4),
                     createdAt: now,
+                    needsReview: false,
                   ),
                 ],
               ),

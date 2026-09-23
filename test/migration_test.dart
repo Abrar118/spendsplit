@@ -3,6 +3,21 @@ import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spendsplit/data/database/app_database.dart';
+import 'package:sqlite3/sqlite3.dart' show SqliteException;
+
+/// Rebuilds transactions_table with its exact v7 definition (no sms_ref,
+/// needs_review or unique index) so the file matches a pre-v8 database.
+Future<void> _stripV8(AppDatabase db) async {
+  await db.customStatement('DROP TABLE transactions_table');
+  await db.customStatement(
+    'CREATE TABLE transactions_table ('
+    'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+    'type TEXT NOT NULL, amount REAL NOT NULL, category_id INTEGER, '
+    'savings_goal_id INTEGER, source TEXT, note TEXT, '
+    'date INTEGER NOT NULL, '
+    "created_at INTEGER NOT NULL DEFAULT (CAST(strftime('%s', CURRENT_TIMESTAMP) AS INTEGER)))",
+  );
+}
 
 void main() {
   test(
@@ -15,6 +30,7 @@ void main() {
       var db = AppDatabase(executor: NativeDatabase(file));
       try {
         await db.customSelect('SELECT 1').get();
+        await _stripV8(db);
         // Exact v5 category definition: global, case-sensitive name uniqueness.
         await db.customStatement('DROP TABLE categories_table');
         await db.customStatement(
@@ -65,7 +81,7 @@ void main() {
           (await db.customSelect('PRAGMA user_version').getSingle()).read<int>(
             'user_version',
           ),
-          7,
+          8,
         );
       } finally {
         await db.close();
@@ -86,6 +102,7 @@ void main() {
         // Build everything at the current schema, then strip the v7 additions
         // so the file looks like a v6 database.
         await db.customSelect('SELECT 1').get();
+        await _stripV8(db);
         await db.customStatement('DROP TABLE category_budgets_table');
         await db.customStatement('DROP TABLE transaction_templates_table');
         await db.customStatement(
@@ -138,7 +155,7 @@ void main() {
           (await db.customSelect('PRAGMA user_version').getSingle()).read<int>(
             'user_version',
           ),
-          7,
+          8,
         );
       } finally {
         await db.close();
@@ -146,4 +163,80 @@ void main() {
       }
     },
   );
+
+  test('v7 -> v8 keeps every existing transaction unchanged', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'spendsplit_migration_v8',
+    );
+    final file = File('${directory.path}/legacy_v7.sqlite');
+    var db = AppDatabase(executor: NativeDatabase(file));
+    try {
+      await db.customSelect('SELECT 1').get();
+      await _stripV8(db);
+      await db.customStatement(
+        'INSERT INTO transactions_table '
+        '(id, type, amount, category_id, savings_goal_id, source, note, date, created_at) VALUES '
+        "(1, 'expense', 70.5, 3, NULL, NULL, 'Lunch', 1758450000, 1758450001), "
+        "(2, 'income', 14500, NULL, NULL, 'salary', NULL, 1758460000, 1758460001), "
+        "(3, 'savings_deposit', 1000, NULL, 1, NULL, 'Trip', 1758470000, 1758470001)",
+      );
+      await db.customStatement('PRAGMA user_version = 7');
+      await db.close();
+
+      db = AppDatabase(executor: NativeDatabase(file));
+      final rows = await (db.select(
+        db.transactionsTable,
+      )..orderBy([(t) => OrderingTerm.asc(t.id)])).get();
+      int secs(DateTime d) => d.millisecondsSinceEpoch ~/ 1000;
+      expect(
+        rows
+            .map(
+              (r) => (
+                r.id,
+                r.type,
+                r.amount,
+                r.categoryId,
+                r.savingsGoalId,
+                r.source,
+                r.note,
+                secs(r.date),
+                secs(r.createdAt),
+              ),
+            )
+            .toList(),
+        [
+          (1, 'expense', 70.5, 3, null, null, 'Lunch', 1758450000, 1758450001),
+          (2, 'income', 14500.0, null, null, 'salary', null, 1758460000, 1758460001),
+          (3, 'savings_deposit', 1000.0, null, 1, null, 'Trip', 1758470000, 1758470001),
+        ],
+      );
+      expect(rows.every((r) => r.smsRef == null && !r.needsReview), isTrue);
+
+      // Any number of NULL refs coexist; a repeated non-null ref is rejected.
+      Future<int> insertRef(String? ref) => db
+          .into(db.transactionsTable)
+          .insert(
+            TransactionsTableCompanion.insert(
+              type: 'expense',
+              amount: 1,
+              date: DateTime(2026),
+              smsRef: Value(ref),
+            ),
+          );
+      await insertRef(null);
+      await insertRef(null);
+      await insertRef('1|a');
+      await expectLater(insertRef('1|a'), throwsA(isA<SqliteException>()));
+
+      expect(
+        (await db.customSelect('PRAGMA user_version').getSingle()).read<int>(
+          'user_version',
+        ),
+        8,
+      );
+    } finally {
+      await db.close();
+      await directory.delete(recursive: true);
+    }
+  });
 }

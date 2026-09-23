@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spendsplit/data/database/app_database.dart';
@@ -143,5 +143,29 @@ void main() {
     expect((await db.savingsGoalDao.getGoalById(id))!.currentAmount, 100);
     expect(await db.savingsGoalDao.adjustCurrentAmountBy(id, -101), isFalse);
     expect((await db.savingsGoalDao.getGoalById(id))!.currentAmount, 100);
+  });
+
+  test('restores a pre-v8 backup that has no sms fields', () async {
+    final service = SnapshotService(db);
+    final tables = await service.exportTables();
+    final date = DateTime(2026, 9, 1).millisecondsSinceEpoch;
+    tables['transactions'] = [
+      {
+        'id': 1,
+        'type': 'expense',
+        'amount': 70.0,
+        'categoryId': null,
+        'savingsGoalId': null,
+        'source': null,
+        'note': 'old',
+        'date': date,
+        'createdAt': date,
+      },
+    ];
+    await service.importTables(tables);
+    final row = (await db.select(db.transactionsTable).get()).single;
+    expect(row.note, 'old');
+    expect(row.smsRef, isNull);
+    expect(row.needsReview, isFalse);
   });
 }
