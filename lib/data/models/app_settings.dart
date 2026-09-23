@@ -6,6 +6,9 @@ class AppSettings {
     required this.initialBalance,
     this.monthlyExpenseBudget = 0,
     this.recapDismissedMonth,
+    this.smsImportSince,
+    this.bankBalance,
+    this.bankBalanceAt,
     String? cardNumber,
   }) : cardNumber = _normalizeCardNumber(cardNumber);
 
@@ -19,6 +22,16 @@ class AppSettings {
   final String? recapDismissedMonth;
   final String cardNumber;
 
+  /// SMS provider receive-time watermark (ms). Null = SMS import off.
+  final int? smsImportSince;
+
+  /// Balance from the Trust Bank SMS with the latest transaction time, and
+  /// that transaction's time.
+  final double? bankBalance;
+  final DateTime? bankBalanceAt;
+
+  bool get smsImportEnabled => smsImportSince != null;
+
   bool get needsDollarLimitRefresh => dollarLimitYear != DateTime.now().year;
 
   AppSettings copyWith({
@@ -29,6 +42,9 @@ class AppSettings {
     double? monthlyExpenseBudget,
     String? recapDismissedMonth,
     String? cardNumber,
+    int? Function()? smsImportSince,
+    double? Function()? bankBalance,
+    DateTime? Function()? bankBalanceAt,
   }) {
     return AppSettings(
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
@@ -38,6 +54,13 @@ class AppSettings {
       monthlyExpenseBudget: monthlyExpenseBudget ?? this.monthlyExpenseBudget,
       recapDismissedMonth: recapDismissedMonth ?? this.recapDismissedMonth,
       cardNumber: cardNumber ?? this.cardNumber,
+      smsImportSince: smsImportSince != null
+          ? smsImportSince()
+          : this.smsImportSince,
+      bankBalance: bankBalance != null ? bankBalance() : this.bankBalance,
+      bankBalanceAt: bankBalanceAt != null
+          ? bankBalanceAt()
+          : this.bankBalanceAt,
     );
   }
 

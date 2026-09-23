@@ -23,6 +23,11 @@ class SettingsRepository {
       initialBalance:
           _preferences.getDouble(AppSettingsKey.initialBalance.value) ?? 0.0,
       recapDismissedMonth: _preferences.getString('recap_dismissed_month'),
+      smsImportSince: _preferences.getInt(_smsImportSinceKey),
+      bankBalance: _preferences.getDouble(_bankBalanceKey),
+      bankBalanceAt: DateTime.tryParse(
+        _preferences.getString(_bankBalanceAtKey) ?? '',
+      ),
       cardNumber:
           _preferences.getString(AppSettingsKey.cardNumber.value) ??
           '4532756028418291',
@@ -62,5 +67,27 @@ class SettingsRepository {
 
   Future<void> setCardNumber(String value) {
     return _preferences.setString(AppSettingsKey.cardNumber.value, value);
+  }
+
+  static const _smsImportSinceKey = 'sms_import_since';
+  static const _bankBalanceKey = 'bank_balance';
+  static const _bankBalanceAtKey = 'bank_balance_at';
+
+  Future<void> setSmsImportSince(int? millis) async {
+    if (millis == null) {
+      await _preferences.remove(_smsImportSinceKey);
+    } else {
+      await _preferences.setInt(_smsImportSinceKey, millis);
+    }
+  }
+
+  Future<void> setBankBalance(double? balance, DateTime? at) async {
+    if (balance == null || at == null) {
+      await _preferences.remove(_bankBalanceKey);
+      await _preferences.remove(_bankBalanceAtKey);
+      return;
+    }
+    await _preferences.setDouble(_bankBalanceKey, balance);
+    await _preferences.setString(_bankBalanceAtKey, at.toIso8601String());
   }
 }
