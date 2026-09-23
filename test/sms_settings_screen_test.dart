@@ -52,7 +52,7 @@ void main() {
 
     expect(prefs.getInt('sms_import_since'), greaterThanOrEqualTo(before));
     expect(
-      find.text('New bank SMS are imported when you open the app'),
+      find.text('Imported automatically, even in the background'),
       findsOneWidget,
     );
   });
@@ -87,5 +87,39 @@ void main() {
       {'sms_import_since': 5000},
     );
     expect(find.text('SMS permission is off — tap to allow'), findsOneWidget);
+  });
+
+  testWidgets('missing RECEIVE_SMS keeps import on with a tap-to-allow hint', (
+    tester,
+  ) async {
+    final gateway = FakeSmsGateway(
+      permissions: const SmsPermissions(read: true, receive: false),
+    );
+    final prefs = await pumpSettings(tester, gateway, {
+      'sms_import_since': 5000,
+    });
+    expect(find.text('Background capture off — tap to allow'), findsOneWidget);
+    expect(prefs.getInt('sms_import_since'), 5000);
+
+    await tester.tap(find.text('Background capture off — tap to allow'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Imported automatically, even in the background'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('switch turns on with READ_SMS even if RECEIVE_SMS is denied', (
+    tester,
+  ) async {
+    final gateway = FakeSmsGateway(permissions: SmsPermissions.none)
+      ..grantOnRequest = const SmsPermissions(read: true, receive: false);
+    final prefs = await pumpSettings(tester, gateway);
+
+    await tester.tap(smsSwitch());
+    await tester.pumpAndSettle();
+
+    expect(prefs.getInt('sms_import_since'), isNotNull);
+    expect(find.text('Background capture off — tap to allow'), findsOneWidget);
   });
 }

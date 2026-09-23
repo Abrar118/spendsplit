@@ -12,7 +12,10 @@ import io.flutter.plugin.common.MethodChannel
 object SmsBridge {
     const val CHANNEL = "spendsplit/sms"
     const val SENDER = "TrustBank"
-    val REQUESTED_PERMISSIONS = arrayOf(Manifest.permission.READ_SMS)
+    val REQUESTED_PERMISSIONS = arrayOf(
+        Manifest.permission.READ_SMS,
+        Manifest.permission.RECEIVE_SMS,
+    )
 
     fun handle(context: Context, call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {

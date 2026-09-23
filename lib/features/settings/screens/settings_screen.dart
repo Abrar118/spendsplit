@@ -581,6 +581,7 @@ class _SmsImportRow extends ConsumerWidget {
     );
     final perms = ref.watch(smsPermissionsProvider).valueOrNull;
     final missingRead = enabled && perms != null && !perms.read;
+    final missingReceive = enabled && perms != null && !perms.receive;
 
     return _SwitchRow(
       icon: LucideIcons.messageSquare,
@@ -589,9 +590,13 @@ class _SmsImportRow extends ConsumerWidget {
           ? 'Log card debits and credits from bank SMS automatically'
           : missingRead
           ? 'SMS permission is off — tap to allow'
-          : 'New bank SMS are imported when you open the app',
+          : missingReceive
+          ? 'Background capture off — tap to allow'
+          : 'Imported automatically, even in the background',
       value: enabled,
-      onTap: missingRead ? () => _request(context, ref) : null,
+      onTap: missingRead || missingReceive
+          ? () => _request(context, ref)
+          : null,
       onChanged: (value) async {
         final controller = ref.read(appSettingsProvider.notifier);
         if (!value) {

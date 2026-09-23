@@ -2,6 +2,7 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
     <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
 
     <application
         android:label="SpendSplit"
@@ -48,6 +49,17 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_spendsplit_info" />
+        </receiver>
+
+        <!-- Wakes the SMS importer when a Trust Bank SMS arrives. Only the
+             system (BROADCAST_SMS holder) can send this. -->
+        <receiver
+            android:name=".SmsReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
         </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
