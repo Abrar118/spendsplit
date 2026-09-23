@@ -20,9 +20,7 @@ void main() {
 
   Future<(SmsImportRunner, AppDatabase, FakeSmsGateway, SharedPreferences)>
   setup({int? since = 5000}) async {
-    SharedPreferences.setMockInitialValues({
-      if (since != null) 'sms_import_since': since,
-    });
+    SharedPreferences.setMockInitialValues({'sms_import_since': ?since});
     final prefs = await SharedPreferences.getInstance();
     final db = AppDatabase(executor: NativeDatabase.memory());
     final gateway = FakeSmsGateway();

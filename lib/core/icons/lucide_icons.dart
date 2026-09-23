@@ -178,6 +178,11 @@ abstract final class LucideIcons {
     fontFamily: 'Lucide',
     fontPackage: 'lucide_icons',
   );
+  static const messageSquare = IconData(
+    0xf3ce,
+    fontFamily: 'Lucide',
+    fontPackage: 'lucide_icons',
+  );
   static const monitor = IconData(
     0xf3df,
     fontFamily: 'Lucide',

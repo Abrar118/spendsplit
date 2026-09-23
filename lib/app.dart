@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,6 +18,8 @@ import 'features/monthly/screens/monthly_screen.dart';
 import 'features/settings/screens/manage_categories_screen.dart';
 import 'features/settings/screens/manage_templates_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
+import 'features/sms_import/sms_gateway.dart';
+import 'features/sms_import/sms_import_runner.dart';
 import 'features/transactions/screens/transactions_screen.dart';
 import 'features/transactions/widgets/add_transaction_sheet.dart';
 import 'features/widget/widget_data_service.dart';
@@ -24,6 +27,7 @@ import 'providers/providers.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
+final rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 /// A [ChangeNotifier] that listens to auth-related Riverpod providers and
 /// calls [notifyListeners] to trigger GoRouter's [redirect] re-evaluation
@@ -150,16 +154,27 @@ class _SpendSplitAppState extends ConsumerState<SpendSplitApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // SmsReceiver calls this while the app's engine is alive.
+    SmsGateway.channel.setMethodCallHandler((call) async {
+      if (call.method != 'import') throw MissingPluginException();
+      final args = call.arguments as Map<Object?, Object?>?;
+      return _importSms(waitForNew: args?['waitForNew'] == true);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _importSms());
   }
 
   @override
   void dispose() {
+    SmsGateway.channel.setMethodCallHandler(null);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _importSms();
+    }
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       // Re-lock when the app is backgrounded
@@ -170,22 +185,36 @@ class _SpendSplitAppState extends ConsumerState<SpendSplitApp>
     }
   }
 
+  Future<int> _importSms({bool waitForNew = false}) async {
+    final count = await ref
+        .read(smsImportRunnerProvider)
+        .run(waitForNew: waitForNew);
+    final locked =
+        ref.read(appSettingsProvider).biometricEnabled &&
+        !ref.read(appSessionUnlockedProvider);
+    if (count > 0 && !locked) {
+      rootScaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Imported $count transaction${count == 1 ? '' : 's'} from SMS',
+          ),
+        ),
+      );
+    }
+    return count;
+  }
+
   @override
   Widget build(BuildContext context) {
-    ref.listen(
-      balanceSummaryProvider,
-      (previous, next) => _syncHomeWidget(),
-    );
-    ref.listen(
-      savingsInsightsProvider,
-      (previous, next) => _syncHomeWidget(),
-    );
+    ref.listen(balanceSummaryProvider, (previous, next) => _syncHomeWidget());
+    ref.listen(savingsInsightsProvider, (previous, next) => _syncHomeWidget());
     _syncHomeWidget();
 
     final router = ref.read(routerProvider);
     return MaterialApp.router(
       title: 'SpendSplit',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       theme: AppTheme.dark(),
       routerConfig: router,
     );

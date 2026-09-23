@@ -20,6 +20,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../data/database/app_database.dart';
 import '../../../providers/providers.dart';
+import '../../sms_import/providers/sms_providers.dart';
 
 enum _ExportFormat { csv, pdf }
 
@@ -233,9 +234,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.coral,
                     ),
-                    label: Text(
-                      _restoring ? 'RESTORING...' : 'RESTORE BACKUP',
-                    ),
+                    label: Text(_restoring ? 'RESTORING...' : 'RESTORE BACKUP'),
                   ),
                 ],
               ),
@@ -603,6 +602,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
           'initialBalance': settings.initialBalance,
           'monthlyExpenseBudget': settings.monthlyExpenseBudget,
           'cardNumber': settings.cardNumber,
+          'smsImportSince': settings.smsImportSince,
         },
         ...await ref.read(snapshotServiceProvider).exportTables(),
       };
@@ -703,6 +703,16 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
           await ctrl.setCardNumber(card);
         }
       }
+
+      // Permissions aren't in a backup: keep its SMS watermark only when
+      // this phone already allows READ_SMS, otherwise import goes off.
+      final smsPermissions = await ref.read(smsGatewayProvider).hasPermission();
+      await ref
+          .read(appSettingsProvider.notifier)
+          .restoreSmsImport(
+            since: (settings?['smsImportSince'] as num?)?.toInt(),
+            readGranted: smsPermissions.read,
+          );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1324,14 +1334,15 @@ class _HoldToConfirmDialog extends StatefulWidget {
 
 class _HoldToConfirmDialogState extends State<_HoldToConfirmDialog>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1500),
-  )..addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        Navigator.of(context).pop(true);
-      }
-    });
+  late final AnimationController _controller =
+      AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1500),
+      )..addStatusListener((status) {
+        if (status == AnimationStatus.completed && mounted) {
+          Navigator.of(context).pop(true);
+        }
+      });
 
   @override
   void dispose() {
