@@ -707,7 +707,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
       // Permissions aren't in a backup: keep its SMS watermark only when
       // this phone already allows READ_SMS, otherwise import goes off.
       final smsPermissions = await ref.read(smsGatewayProvider).hasPermission();
-      await ref
+      final smsTurnedOff = await ref
           .read(appSettingsProvider.notifier)
           .restoreSmsImport(
             since: (settings?['smsImportSince'] as num?)?.toInt(),
@@ -716,7 +716,12 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Restored ${counts.total} records.')),
+        SnackBar(
+          content: Text(
+            'Restored ${counts.total} records.'
+            '${smsTurnedOff ? ' SMS import is off — turn it on in Settings.' : ''}',
+          ),
+        ),
       );
     } on Exception catch (e) {
       if (mounted) {

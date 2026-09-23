@@ -141,11 +141,12 @@ class SettingsController extends Notifier<AppSettings> {
   /// Backup restore. Permissions aren't in a backup, so the backup's
   /// watermark is kept only when this phone already grants READ_SMS;
   /// otherwise import goes off. The bank balance is always cleared and the
-  /// next import repopulates it.
-  Future<void> restoreSmsImport({
+  /// next import repopulates it. Returns true when this switched import off.
+  Future<bool> restoreSmsImport({
     required int? since,
     required bool readGranted,
   }) async {
+    final wasEnabled = state.smsImportEnabled;
     final next = readGranted ? since : null;
     final repo = ref.read(settingsRepositoryProvider);
     await repo.setSmsImportSince(next);
@@ -155,6 +156,7 @@ class SettingsController extends Notifier<AppSettings> {
       bankBalance: () => null,
       bankBalanceAt: () => null,
     );
+    return wasEnabled && next == null;
   }
 }
 

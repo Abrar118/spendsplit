@@ -101,4 +101,13 @@ void main() {
     await ctrl.restoreSmsImport(since: null, readGranted: true);
     expect(c.read(appSettingsProvider).smsImportEnabled, isFalse);
   });
+
+  test('restore reports when it switched SMS import off', () async {
+    final (c, _) = await setup({'sms_import_since': 9000});
+    final ctrl = c.read(appSettingsProvider.notifier);
+    expect(await ctrl.restoreSmsImport(since: 4000, readGranted: true), false);
+    expect(await ctrl.restoreSmsImport(since: null, readGranted: true), true);
+    // Already off: nothing was switched off by this restore.
+    expect(await ctrl.restoreSmsImport(since: null, readGranted: true), false);
+  });
 }

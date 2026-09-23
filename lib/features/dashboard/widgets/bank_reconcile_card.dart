@@ -49,11 +49,21 @@ class BankReconcileCard extends ConsumerWidget {
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () {
-                final settings = ref.read(appSettingsProvider);
-                ref
-                    .read(appSettingsProvider.notifier)
-                    .setInitialBalance(settings.initialBalance + r.diff);
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final controller = ref.read(appSettingsProvider.notifier);
+                final previous = ref.read(appSettingsProvider).initialBalance;
+                await controller.setInitialBalance(previous + r.diff);
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: const Text('Start balance adjusted'),
+                    duration: const Duration(seconds: 3),
+                    action: SnackBarAction(
+                      label: 'Undo',
+                      onPressed: () => controller.setInitialBalance(previous),
+                    ),
+                  ),
+                );
               },
               child: const Text('Adjust start balance'),
             ),
