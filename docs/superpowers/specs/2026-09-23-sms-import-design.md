@@ -1,7 +1,7 @@
 # Trust Bank SMS Import — Design
 
 **Date:** 2026-09-23
-**Status:** Approved in chat; revised after review (rev 2)
+**Status:** Approved in chat; revised after review (rev 3)
 
 ## Goal
 
@@ -122,8 +122,10 @@ Income uses `source`, not categories — matching `add_transaction_sheet.dart`.
   because Drift's generated `fromJson<bool>` throws on a missing non-null field
   before the DB default applies.
 - **Watermark travels with the backup:** `smsImportSince` is added to the
-  `settings` block on export. On restore it is written back; if absent (backup
-  predates the feature), importing is turned **off**. Otherwise restoring an
+  `settings` block on export. On restore it is written back **only if the
+  backup has it and `READ_SMS` is currently granted** (`hasPermission`);
+  otherwise importing is turned **off**. Permissions aren't part of a backup, so
+  restoring on another device must not show the switch on without them. Otherwise restoring an
   older backup would leave a newer watermark and permanently skip the SMS whose
   rows the restore just removed. With the backup's watermark restored, those SMS
   are reread and the unique index drops any already present.
@@ -193,21 +195,33 @@ The card is a new widget; `balance_card.dart` / `financial_summaries.dart`
 ## 4. Background capture
 
 - Manifest adds `RECEIVE_SMS` and `SmsReceiver`
-  (`android.provider.Telephony.SMS_RECEIVED`). `requestPermission` now requests
-  `READ_SMS` + `RECEIVE_SMS`; users who enabled the switch in phase 1 are asked
-  for `RECEIVE_SMS` on the next app open while the switch is on. Without it,
-  on-open import still works.
+  (`android.provider.Telephony.SMS_RECEIVED`).
+- **Permissions are independent.** `hasPermission` / `requestPermission` now
+  return `{read: bool, receive: bool}`; `requestPermission` asks for both.
+  - The switch turns on whenever `read` is granted, regardless of `receive`.
+  - If `receive` is denied, on-open import works as in phase 1 and the switch's
+    subtitle reads "Background capture off — tap to allow"; tapping re-requests
+    `RECEIVE_SMS`. No automatic re-prompting on app open.
+  - Users who enabled the switch in phase 1 see the same subtitle until they
+    grant `RECEIVE_SMS`.
+  - The receiver only fires when `RECEIVE_SMS` is granted, so no extra gating is
+    needed in it.
 - **Engine registration:** `MainActivity` stores its `spendsplit/sms`
   `MethodChannel` in a companion-object field in `configureFlutterEngine` and
   nulls it in `cleanUpFlutterEngine`. That field is the "running engine" handle.
-- `SmsReceiver.onReceive` (main thread) does not parse. It only triggers the same
-  `runSmsImport`:
+- `SmsReceiver.onReceive` (main thread) does not parse. It calls `goAsync()`
+  **first, in both branches**, then only triggers the same `runSmsImport`:
   - Channel field non-null (app process and engine alive, foreground or not) →
-    `invokeMethod("import")`. One DB connection, and Drift streams refresh the UI.
-  - Otherwise → `goAsync()`, start a headless `FlutterEngine` running Dart
-    entrypoint `@pragma('vm:entry-point') smsBackgroundMain()`, which runs the
-    import, syncs the home-screen widget, then calls back so the receiver
-    destroys the engine and finishes the pending result.
+    `invokeMethod("import", result)`; the `MethodChannel.Result` callback
+    (success, error, or notImplemented) calls `pendingResult.finish()`. One DB
+    connection, and Drift streams refresh the UI.
+  - Otherwise → start a headless `FlutterEngine` running Dart entrypoint
+    `@pragma('vm:entry-point') smsBackgroundMain()`, which runs the import,
+    syncs the home-screen widget, then calls back so the receiver destroys the
+    engine and calls `pendingResult.finish()`.
+  - Safety timeout: a main-thread `Handler.postDelayed` of 9 s finishes the
+    pending result (and destroys a headless engine) if no callback arrived, to
+    stay under the broadcast time limit. `finish()` is guarded to run once.
 - Home-widget sync is extracted from `app.dart` into a shared function used by
   both the app and `smsBackgroundMain`.
 - On-open import remains the safety net (OEM autostart restrictions can kill
@@ -221,8 +235,9 @@ The card is a new widget; `balance_card.dart` / `financial_summaries.dart`
 ## Testing
 
 - `test/sms_parser_test.dart`: the 5 provided samples (POS/TRUST MONEY debits,
-  TRUST MONEY/BRANCH TRANSFER credits) parse to exact values; an OTP/promo body
-  returns `null`.
+  TRUST MONEY/BRANCH TRANSFER credits) parse to exact values; a
+  thousands-separated body (`TK 1,000.00 DEBIT`, `Balance TK 480,578.45`)
+  parses to `1000.0` / `480578.45`; an OTP/promo body returns `null`.
 - `test/sms_import_test.dart` (in-memory Drift, fake inbox):
   - same SMS imported twice → one row
   - two SMS with identical bodies but different receive millis → two rows
@@ -234,7 +249,8 @@ The card is a new widget; `balance_card.dart` / `financial_summaries.dart`
   with every row's values unchanged, `sms_ref` null, `needs_review` false
   (follows the existing v5 fixture pattern).
 - Snapshot: restoring a backup JSON without `needsReview` / `smsRef` /
-  `smsImportSince` succeeds and turns import off.
+  `smsImportSince` succeeds and turns import off; restoring one *with*
+  `smsImportSince` while `READ_SMS` is not granted also turns import off.
 - Reconciliation diff: a unit test for the "transactions up to
   `bank_balance_at`" total.
 - Background capture and permissions verified manually on device.
