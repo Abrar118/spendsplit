@@ -13,10 +13,14 @@ TransactionsTableData _mkTx(String type, double amount, DateTime date) =>
       needsReview: false,
     );
 
-TransactionsTableData _expense({required double amount, required DateTime date}) =>
-    _mkTx('expense', amount, date);
-TransactionsTableData _income({required double amount, required DateTime date}) =>
-    _mkTx('income', amount, date);
+TransactionsTableData _expense({
+  required double amount,
+  required DateTime date,
+}) => _mkTx('expense', amount, date);
+TransactionsTableData _income({
+  required double amount,
+  required DateTime date,
+}) => _mkTx('income', amount, date);
 TransactionsTableData _savingsDeposit({
   required double amount,
   required DateTime date,
@@ -97,15 +101,15 @@ void main() {
         availableBalance: 20000,
         asOf: asOf,
       );
-      expect(runway.avgDailyBurn, 0);
+      expect(runway.dailyPace, 0);
       expect(runway.daysRemaining, isNull);
     });
 
-    test('computes burn and days from trailing 30 days of expenses only', () {
+    test('computes steady pace from expenses only', () {
       final runway = FinanceCalculators.spendingRunway(
         transactions: [
-          _expense(amount: 3000, date: DateTime(2026, 9, 5)),
-          _expense(amount: 3000, date: DateTime(2026, 9, 20)),
+          for (var day = 1; day <= 30; day++)
+            _expense(amount: 200, date: DateTime(2026, 9, day)),
           _income(amount: 50000, date: DateTime(2026, 9, 15)),
           _savingsDeposit(amount: 10000, date: DateTime(2026, 9, 15)),
         ],
@@ -113,7 +117,7 @@ void main() {
         asOf: asOf,
         windowDays: 30,
       );
-      expect(runway.avgDailyBurn, closeTo(200, 1e-6));
+      expect(runway.dailyPace, closeTo(200, 1e-6));
       expect(runway.daysRemaining, 150);
     });
 
@@ -125,6 +129,87 @@ void main() {
       );
       expect(runway.daysRemaining, 0);
     });
+
+    test('short history uses observed days instead of assuming 30 days', () {
+      final transactions = [
+        for (var day = 26; day <= 30; day++)
+          _expense(amount: 500, date: DateTime(2026, 9, day)),
+      ];
+
+      final runway = FinanceCalculators.spendingRunway(
+        transactions: transactions,
+        availableBalance: 30000,
+        asOf: asOf,
+      );
+
+      expect(runway.dailyPace, closeTo(500, 1e-6));
+      expect(runway.daysRemaining, 60);
+    });
+
+    test('accelerating spending gives the latest seven days more weight', () {
+      final transactions = [
+        for (var day = 1; day <= 23; day++)
+          _expense(amount: 50, date: DateTime(2026, 9, day)),
+        for (var day = 24; day <= 30; day++)
+          _expense(amount: 500, date: DateTime(2026, 9, day)),
+      ];
+
+      final runway = FinanceCalculators.spendingRunway(
+        transactions: transactions,
+        availableBalance: 30000,
+        asOf: asOf,
+      );
+
+      // 65% of the recent 500/day pace + 35% of the 155/day baseline.
+      expect(runway.dailyPace, closeTo(379.25, 1e-6));
+      expect(runway.daysRemaining, 79);
+    });
+
+    test('slowing spending retains some longer-term baseline', () {
+      final transactions = [
+        for (var day = 1; day <= 23; day++)
+          _expense(amount: 500, date: DateTime(2026, 9, day)),
+        for (var day = 24; day <= 30; day++)
+          _expense(amount: 50, date: DateTime(2026, 9, day)),
+      ];
+
+      final runway = FinanceCalculators.spendingRunway(
+        transactions: transactions,
+        availableBalance: 30000,
+        asOf: asOf,
+      );
+
+      // 65% of the recent 50/day pace + 35% of the 395/day baseline.
+      expect(runway.dailyPace, closeTo(170.75, 1e-6));
+      expect(runway.daysRemaining, 175);
+    });
+
+    test('rejects a non-positive averaging window', () {
+      expect(
+        () => FinanceCalculators.spendingRunway(
+          transactions: const [],
+          availableBalance: 30000,
+          asOf: asOf,
+          windowDays: 0,
+        ),
+        throwsArgumentError,
+      );
+    });
+  });
+
+  test('balance summary excludes future-dated transactions', () {
+    final summary = FinanceCalculators.balanceSummary(
+      transactions: [
+        _expense(amount: 100, date: DateTime(2026, 9, 29)),
+        _income(amount: 5000, date: DateTime(2026, 10, 1)),
+        _expense(amount: 200, date: DateTime(2026, 10, 2)),
+      ],
+      initialBalance: 1000,
+      asOf: DateTime(2026, 9, 30, 23, 59),
+    );
+
+    expect(summary.totalBalance, 900);
+    expect(summary.availableBalance, 900);
   });
 
   group('goalProjection', () {

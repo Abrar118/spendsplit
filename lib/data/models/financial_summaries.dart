@@ -108,14 +108,15 @@ class SavingsInsights {
 
 class SpendingRunway {
   const SpendingRunway({
-    required this.avgDailyBurn,
+    required this.dailyPace,
     required this.daysRemaining,
     required this.windowDays,
   });
 
-  final double avgDailyBurn;
+  /// Trend-adjusted daily expense rate used for the runway estimate.
+  final double dailyPace;
 
-  /// Whole days of Available left at [avgDailyBurn]. Null when there is no
+  /// Whole days of Available left at [dailyPace]. Null when there is no
   /// recent spending to project from.
   final int? daysRemaining;
   final int windowDays;
@@ -187,13 +188,14 @@ abstract final class FinanceCalculators {
   static BalanceSummary balanceSummary({
     required Iterable<TransactionsTableData> transactions,
     required double initialBalance,
+    DateTime? asOf,
   }) {
-    final income = _sumByType(transactions, const {'income'});
-    final expenses = _sumByType(transactions, const {'expense'});
-    final savingsDeposits = _sumByType(transactions, const {'savings_deposit'});
-    final savingsWithdrawals = _sumByType(transactions, const {
-      'savings_withdrawal',
-    });
+    final cutoff = asOf ?? DateTime.now();
+    final posted = transactions.where((entry) => !entry.date.isAfter(cutoff));
+    final income = _sumByType(posted, const {'income'});
+    final expenses = _sumByType(posted, const {'expense'});
+    final savingsDeposits = _sumByType(posted, const {'savings_deposit'});
+    final savingsWithdrawals = _sumByType(posted, const {'savings_withdrawal'});
 
     final totalBalance = initialBalance + income - expenses;
     final savingsBalance = savingsDeposits - savingsWithdrawals;
@@ -253,39 +255,76 @@ abstract final class FinanceCalculators {
     );
   }
 
-  /// How many days Available lasts at the trailing-[windowDays] expense rate.
-  /// Only `expense` transactions count as burn — savings deposits move money to
-  /// Savings rather than out through spending.
+  /// How many days Available lasts at a trend-adjusted expense rate.
+  ///
+  /// The estimate blends 65% of the latest seven-day pace with 35% of the
+  /// trailing [windowDays] baseline. For histories shorter than [windowDays],
+  /// both rates use the number of calendar days actually observed. Only
+  /// `expense` transactions count as burn; future entries are ignored.
   static SpendingRunway spendingRunway({
     required Iterable<TransactionsTableData> transactions,
     required double availableBalance,
     DateTime? asOf,
     int windowDays = 30,
   }) {
-    final now = asOf ?? DateTime.now();
-    final windowStart = now.subtract(Duration(days: windowDays));
-    final recentExpense = transactions
-        .where(
-          (t) =>
-              t.type == 'expense' &&
-              t.date.isAfter(windowStart) &&
-              !t.date.isAfter(now),
-        )
-        .fold<double>(0, (sum, t) => sum + t.amount);
+    if (windowDays <= 0) {
+      throw ArgumentError.value(windowDays, 'windowDays', 'Must be positive');
+    }
 
-    final avgDailyBurn = recentExpense / windowDays;
-    if (avgDailyBurn <= _epsilon) {
+    final now = asOf ?? DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final windowStart = today.subtract(Duration(days: windowDays - 1));
+    final observed = transactions.where((transaction) {
+      final date = transaction.date;
+      return !date.isBefore(windowStart) && !date.isAfter(now);
+    }).toList();
+
+    if (observed.isEmpty) {
       return SpendingRunway(
-        avgDailyBurn: 0,
+        dailyPace: 0,
+        daysRemaining: null,
+        windowDays: windowDays,
+      );
+    }
+
+    final firstObservedDay = observed
+        .map((transaction) {
+          final date = transaction.date;
+          return DateTime(date.year, date.month, date.day);
+        })
+        .reduce((first, date) => date.isBefore(first) ? date : first);
+    final observedDays = today.difference(firstObservedDay).inDays + 1;
+    final baselineExpense = observed
+        .where((transaction) => transaction.type == 'expense')
+        .fold<double>(0, (sum, transaction) => sum + transaction.amount);
+    final baselineRate = baselineExpense / observedDays;
+
+    final recentDays = observedDays < 7 ? observedDays : 7;
+    final recentStart = today.subtract(Duration(days: recentDays - 1));
+    final recentExpense = observed
+        .where(
+          (transaction) =>
+              transaction.type == 'expense' &&
+              !transaction.date.isBefore(recentStart),
+        )
+        .fold<double>(0, (sum, transaction) => sum + transaction.amount);
+    final recentRate = recentExpense / recentDays;
+    final dailyPace = observedDays <= 7
+        ? baselineRate
+        : (recentRate * 0.65) + (baselineRate * 0.35);
+
+    if (dailyPace <= _epsilon) {
+      return SpendingRunway(
+        dailyPace: 0,
         daysRemaining: null,
         windowDays: windowDays,
       );
     }
     final days = availableBalance <= 0
         ? 0
-        : (availableBalance / avgDailyBurn).floor();
+        : (availableBalance / dailyPace).floor();
     return SpendingRunway(
-      avgDailyBurn: avgDailyBurn,
+      dailyPace: dailyPace,
       daysRemaining: days,
       windowDays: windowDays,
     );

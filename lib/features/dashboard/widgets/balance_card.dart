@@ -264,7 +264,7 @@ class _RunwayLine extends StatelessWidget {
         }
         final tight = r.daysRemaining! < 14;
         return Text(
-          '~${r.daysRemaining} days left · ${formatCompactBdt(r.avgDailyBurn)}/day',
+          '~${r.daysRemaining} days left · ${formatCompactBdt(r.dailyPace)}/day pace',
           style: style?.copyWith(
             color: tight ? AppColors.coral : AppColors.textSecondary,
           ),
