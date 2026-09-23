@@ -46,3 +46,6 @@ app.*.map.json
 
 # Codex tooling
 .codex/
+
+# Claude Code worktrees
+.claude/worktrees/
