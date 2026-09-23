@@ -147,12 +147,15 @@ Center "+" tab (index 2) triggers `showModalBottomSheet` for AddTransactionSheet
 
 ## Database Schema (Drift)
 
-Six tables (`schemaVersion` 7): `transactions_table`, `categories_table`,
+Six tables (`schemaVersion` 8): `transactions_table`, `categories_table`,
 `savings_goals_table`, `dollar_expenses_table`, `transaction_templates_table`
 (carries `use_count` + `is_monthly`), `category_budgets_table` (one
-`monthly_limit` per `category_id`). The v6 → v7 migration is additive only.
+`monthly_limit` per `category_id`). `transactions_table` carries `sms_ref`
+(unique; `<receive millis>|<SMS body>`, null for manual rows) and
+`needs_review`. The v6 → v7 and v7 → v8 migrations are additive only.
 Settings via SharedPreferences: `biometric_enabled`, `dollar_annual_limit`,
-`dollar_limit_year`, `monthly_expense_budget`, `recap_dismissed_month`.
+`dollar_limit_year`, `monthly_expense_budget`, `recap_dismissed_month`,
+`sms_import_since`, `sms_seen_refs`, `bank_balance`, `bank_balance_at`.
 `initial_balance` and `card_number` live in the platform keystore
 (`SecureStorageRepository`), not SharedPreferences.
 
@@ -199,6 +202,16 @@ Settings via SharedPreferences: `biometric_enabled`, `dollar_annual_limit`,
   Templates that haven't been logged yet this month surface on the dashboard.
 - **JSON snapshot backup** — full export/restore of all six tables plus settings
   (`SnapshotService`), restore behind a hold-to-confirm (Export screen).
+- **Trust Bank SMS import** (Android) — Settings → "Import Trust Bank SMS".
+  Debits become expenses in Other, credits become income (source other),
+  flagged `needs_review` until saved from the edit sheet. Runs on app
+  open/resume and, via `SmsReceiver` + headless `smsBackgroundMain`, in the
+  background. Dedupe: unique `sms_ref`; the `sms_import_since` watermark
+  trails the newest SMS by 10 min (late inbox writes) and `sms_seen_refs`
+  skips already-processed SMS in that window, so deleted entries stay
+  deleted. Backup restore runs under `SmsImportRunner.whilePaused`.
+  Dashboard shows a review card and a bank-balance reconciliation card
+  (`bankReconciliationProvider`).
 
 ---
 

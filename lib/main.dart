@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
-import 'data/repositories/secure_storage_repository.dart';
+import 'bootstrap.dart';
+import 'features/sms_import/sms_gateway.dart';
+import 'features/sms_import/sms_import_runner.dart';
+import 'features/widget/home_widget_sync.dart';
 import 'features/widget/widget_data_service.dart';
 import 'providers/providers.dart';
 
@@ -14,29 +15,30 @@ Future<void> main() async {
   GoogleFonts.config.allowRuntimeFetching = false;
   await WidgetDataService.initialize();
 
-  final sharedPreferences = await SharedPreferences.getInstance();
-  const secureStorage = FlutterSecureStorage();
-  final secureRepo = SecureStorageRepository(secureStorage);
-
-  // One-time migration: move sensitive data from SharedPreferences to keystore
-  await secureRepo.migrateFromSharedPreferences(
-    oldCardNumber: sharedPreferences.getString('card_number'),
-    oldInitialBalance: sharedPreferences.getDouble('initial_balance'),
-  );
-
-  // Pre-load secure values so providers can access them synchronously
-  final secureCardNumber = await secureRepo.getCardNumber();
-  final secureInitialBalance = await secureRepo.getInitialBalance();
-
   runApp(
     ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-        secureStorageProvider.overrideWithValue(secureRepo),
-        secureCardNumberProvider.overrideWithValue(secureCardNumber),
-        secureInitialBalanceProvider.overrideWithValue(secureInitialBalance),
-      ],
+      overrides: await bootstrapOverrides(),
       child: const SpendSplitApp(),
     ),
   );
+}
+
+/// Entrypoint for SmsReceiver's headless engine when the app isn't running.
+@pragma('vm:entry-point')
+Future<void> smsBackgroundMain() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await WidgetDataService.initialize();
+  final container = ProviderContainer(overrides: await bootstrapOverrides());
+  try {
+    final inserted = await container
+        .read(smsImportRunnerProvider)
+        .run(waitForNew: true);
+    if (inserted > 0) {
+      await container.read(transactionsProvider.future);
+      await syncHomeWidget(container.read);
+    }
+  } finally {
+    container.dispose();
+    await const SmsGateway().backgroundDone();
+  }
 }

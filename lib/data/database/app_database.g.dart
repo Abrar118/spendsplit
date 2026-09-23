@@ -101,6 +101,30 @@ class $TransactionsTableTable extends TransactionsTable
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _smsRefMeta = const VerificationMeta('smsRef');
+  @override
+  late final GeneratedColumn<String> smsRef = GeneratedColumn<String>(
+    'sms_ref',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _needsReviewMeta = const VerificationMeta(
+    'needsReview',
+  );
+  @override
+  late final GeneratedColumn<bool> needsReview = GeneratedColumn<bool>(
+    'needs_review',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("needs_review" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -112,6 +136,8 @@ class $TransactionsTableTable extends TransactionsTable
     note,
     date,
     createdAt,
+    smsRef,
+    needsReview,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -185,6 +211,21 @@ class $TransactionsTableTable extends TransactionsTable
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('sms_ref')) {
+      context.handle(
+        _smsRefMeta,
+        smsRef.isAcceptableOrUnknown(data['sms_ref']!, _smsRefMeta),
+      );
+    }
+    if (data.containsKey('needs_review')) {
+      context.handle(
+        _needsReviewMeta,
+        needsReview.isAcceptableOrUnknown(
+          data['needs_review']!,
+          _needsReviewMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -230,6 +271,14 @@ class $TransactionsTableTable extends TransactionsTable
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      smsRef: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sms_ref'],
+      ),
+      needsReview: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}needs_review'],
+      )!,
     );
   }
 
@@ -250,6 +299,11 @@ class TransactionsTableData extends DataClass
   final String? note;
   final DateTime date;
   final DateTime createdAt;
+
+  /// `<provider receive millis>|<full SMS body>` for SMS-imported rows, null
+  /// for anything entered by hand. The unique index blocks double imports.
+  final String? smsRef;
+  final bool needsReview;
   const TransactionsTableData({
     required this.id,
     required this.type,
@@ -260,6 +314,8 @@ class TransactionsTableData extends DataClass
     this.note,
     required this.date,
     required this.createdAt,
+    this.smsRef,
+    required this.needsReview,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -281,6 +337,10 @@ class TransactionsTableData extends DataClass
     }
     map['date'] = Variable<DateTime>(date);
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || smsRef != null) {
+      map['sms_ref'] = Variable<String>(smsRef);
+    }
+    map['needs_review'] = Variable<bool>(needsReview);
     return map;
   }
 
@@ -301,6 +361,10 @@ class TransactionsTableData extends DataClass
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       date: Value(date),
       createdAt: Value(createdAt),
+      smsRef: smsRef == null && nullToAbsent
+          ? const Value.absent()
+          : Value(smsRef),
+      needsReview: Value(needsReview),
     );
   }
 
@@ -319,6 +383,8 @@ class TransactionsTableData extends DataClass
       note: serializer.fromJson<String?>(json['note']),
       date: serializer.fromJson<DateTime>(json['date']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      smsRef: serializer.fromJson<String?>(json['smsRef']),
+      needsReview: serializer.fromJson<bool>(json['needsReview']),
     );
   }
   @override
@@ -334,6 +400,8 @@ class TransactionsTableData extends DataClass
       'note': serializer.toJson<String?>(note),
       'date': serializer.toJson<DateTime>(date),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'smsRef': serializer.toJson<String?>(smsRef),
+      'needsReview': serializer.toJson<bool>(needsReview),
     };
   }
 
@@ -347,6 +415,8 @@ class TransactionsTableData extends DataClass
     Value<String?> note = const Value.absent(),
     DateTime? date,
     DateTime? createdAt,
+    Value<String?> smsRef = const Value.absent(),
+    bool? needsReview,
   }) => TransactionsTableData(
     id: id ?? this.id,
     type: type ?? this.type,
@@ -359,6 +429,8 @@ class TransactionsTableData extends DataClass
     note: note.present ? note.value : this.note,
     date: date ?? this.date,
     createdAt: createdAt ?? this.createdAt,
+    smsRef: smsRef.present ? smsRef.value : this.smsRef,
+    needsReview: needsReview ?? this.needsReview,
   );
   TransactionsTableData copyWithCompanion(TransactionsTableCompanion data) {
     return TransactionsTableData(
@@ -375,6 +447,10 @@ class TransactionsTableData extends DataClass
       note: data.note.present ? data.note.value : this.note,
       date: data.date.present ? data.date.value : this.date,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      smsRef: data.smsRef.present ? data.smsRef.value : this.smsRef,
+      needsReview: data.needsReview.present
+          ? data.needsReview.value
+          : this.needsReview,
     );
   }
 
@@ -389,7 +465,9 @@ class TransactionsTableData extends DataClass
           ..write('source: $source, ')
           ..write('note: $note, ')
           ..write('date: $date, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('smsRef: $smsRef, ')
+          ..write('needsReview: $needsReview')
           ..write(')'))
         .toString();
   }
@@ -405,6 +483,8 @@ class TransactionsTableData extends DataClass
     note,
     date,
     createdAt,
+    smsRef,
+    needsReview,
   );
   @override
   bool operator ==(Object other) =>
@@ -418,7 +498,9 @@ class TransactionsTableData extends DataClass
           other.source == this.source &&
           other.note == this.note &&
           other.date == this.date &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.smsRef == this.smsRef &&
+          other.needsReview == this.needsReview);
 }
 
 class TransactionsTableCompanion
@@ -432,6 +514,8 @@ class TransactionsTableCompanion
   final Value<String?> note;
   final Value<DateTime> date;
   final Value<DateTime> createdAt;
+  final Value<String?> smsRef;
+  final Value<bool> needsReview;
   const TransactionsTableCompanion({
     this.id = const Value.absent(),
     this.type = const Value.absent(),
@@ -442,6 +526,8 @@ class TransactionsTableCompanion
     this.note = const Value.absent(),
     this.date = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.smsRef = const Value.absent(),
+    this.needsReview = const Value.absent(),
   });
   TransactionsTableCompanion.insert({
     this.id = const Value.absent(),
@@ -453,6 +539,8 @@ class TransactionsTableCompanion
     this.note = const Value.absent(),
     required DateTime date,
     this.createdAt = const Value.absent(),
+    this.smsRef = const Value.absent(),
+    this.needsReview = const Value.absent(),
   }) : type = Value(type),
        amount = Value(amount),
        date = Value(date);
@@ -466,6 +554,8 @@ class TransactionsTableCompanion
     Expression<String>? note,
     Expression<DateTime>? date,
     Expression<DateTime>? createdAt,
+    Expression<String>? smsRef,
+    Expression<bool>? needsReview,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -477,6 +567,8 @@ class TransactionsTableCompanion
       if (note != null) 'note': note,
       if (date != null) 'date': date,
       if (createdAt != null) 'created_at': createdAt,
+      if (smsRef != null) 'sms_ref': smsRef,
+      if (needsReview != null) 'needs_review': needsReview,
     });
   }
 
@@ -490,6 +582,8 @@ class TransactionsTableCompanion
     Value<String?>? note,
     Value<DateTime>? date,
     Value<DateTime>? createdAt,
+    Value<String?>? smsRef,
+    Value<bool>? needsReview,
   }) {
     return TransactionsTableCompanion(
       id: id ?? this.id,
@@ -501,6 +595,8 @@ class TransactionsTableCompanion
       note: note ?? this.note,
       date: date ?? this.date,
       createdAt: createdAt ?? this.createdAt,
+      smsRef: smsRef ?? this.smsRef,
+      needsReview: needsReview ?? this.needsReview,
     );
   }
 
@@ -534,6 +630,12 @@ class TransactionsTableCompanion
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (smsRef.present) {
+      map['sms_ref'] = Variable<String>(smsRef.value);
+    }
+    if (needsReview.present) {
+      map['needs_review'] = Variable<bool>(needsReview.value);
+    }
     return map;
   }
 
@@ -548,7 +650,9 @@ class TransactionsTableCompanion
           ..write('source: $source, ')
           ..write('note: $note, ')
           ..write('date: $date, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('smsRef: $smsRef, ')
+          ..write('needsReview: $needsReview')
           ..write(')'))
         .toString();
   }
@@ -2821,6 +2925,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $TransactionTemplatesTableTable(this);
   late final $CategoryBudgetsTableTable categoryBudgetsTable =
       $CategoryBudgetsTableTable(this);
+  late final Index transactionsSmsRef = Index(
+    'transactions_sms_ref',
+    'CREATE UNIQUE INDEX transactions_sms_ref ON transactions_table (sms_ref)',
+  );
   late final TransactionDao transactionDao = TransactionDao(
     this as AppDatabase,
   );
@@ -2847,6 +2955,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     dollarExpensesTable,
     transactionTemplatesTable,
     categoryBudgetsTable,
+    transactionsSmsRef,
   ];
 }
 
@@ -2861,6 +2970,8 @@ typedef $$TransactionsTableTableCreateCompanionBuilder =
       Value<String?> note,
       required DateTime date,
       Value<DateTime> createdAt,
+      Value<String?> smsRef,
+      Value<bool> needsReview,
     });
 typedef $$TransactionsTableTableUpdateCompanionBuilder =
     TransactionsTableCompanion Function({
@@ -2873,6 +2984,8 @@ typedef $$TransactionsTableTableUpdateCompanionBuilder =
       Value<String?> note,
       Value<DateTime> date,
       Value<DateTime> createdAt,
+      Value<String?> smsRef,
+      Value<bool> needsReview,
     });
 
 class $$TransactionsTableTableFilterComposer
@@ -2926,6 +3039,16 @@ class $$TransactionsTableTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get smsRef => $composableBuilder(
+    column: $table.smsRef,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get needsReview => $composableBuilder(
+    column: $table.needsReview,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2983,6 +3106,16 @@ class $$TransactionsTableTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get smsRef => $composableBuilder(
+    column: $table.smsRef,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get needsReview => $composableBuilder(
+    column: $table.needsReview,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TransactionsTableTableAnnotationComposer
@@ -3024,6 +3157,14 @@ class $$TransactionsTableTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get smsRef =>
+      $composableBuilder(column: $table.smsRef, builder: (column) => column);
+
+  GeneratedColumn<bool> get needsReview => $composableBuilder(
+    column: $table.needsReview,
+    builder: (column) => column,
+  );
 }
 
 class $$TransactionsTableTableTableManager
@@ -3075,6 +3216,8 @@ class $$TransactionsTableTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<DateTime> date = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> smsRef = const Value.absent(),
+                Value<bool> needsReview = const Value.absent(),
               }) => TransactionsTableCompanion(
                 id: id,
                 type: type,
@@ -3085,6 +3228,8 @@ class $$TransactionsTableTableTableManager
                 note: note,
                 date: date,
                 createdAt: createdAt,
+                smsRef: smsRef,
+                needsReview: needsReview,
               ),
           createCompanionCallback:
               ({
@@ -3097,6 +3242,8 @@ class $$TransactionsTableTableTableManager
                 Value<String?> note = const Value.absent(),
                 required DateTime date,
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> smsRef = const Value.absent(),
+                Value<bool> needsReview = const Value.absent(),
               }) => TransactionsTableCompanion.insert(
                 id: id,
                 type: type,
@@ -3107,6 +3254,8 @@ class $$TransactionsTableTableTableManager
                 note: note,
                 date: date,
                 createdAt: createdAt,
+                smsRef: smsRef,
+                needsReview: needsReview,
               ),
           withReferenceMapper: (p0) => p0
               .map(

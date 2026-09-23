@@ -178,6 +178,11 @@ abstract final class LucideIcons {
     fontFamily: 'Lucide',
     fontPackage: 'lucide_icons',
   );
+  static const messageSquare = IconData(
+    0xf3ce,
+    fontFamily: 'Lucide',
+    fontPackage: 'lucide_icons',
+  );
   static const monitor = IconData(
     0xf3df,
     fontFamily: 'Lucide',
@@ -225,6 +230,11 @@ abstract final class LucideIcons {
   );
   static const repeat = IconData(
     0xf485,
+    fontFamily: 'Lucide',
+    fontPackage: 'lucide_icons',
+  );
+  static const scale = IconData(
+    0xf49f,
     fontFamily: 'Lucide',
     fontPackage: 'lucide_icons',
   );

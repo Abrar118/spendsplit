@@ -11,6 +11,7 @@ import '../../../core/utils/input_formatters.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../providers/providers.dart';
+import '../../sms_import/providers/sms_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -101,6 +102,24 @@ class SettingsScreen extends ConsumerWidget {
                       }
                     },
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.section),
+            GlassCard(
+              glowColor: AppColors.amber,
+              radius: 24,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'BANK SMS',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const _SmsImportRow(),
                 ],
               ),
             ),
@@ -260,6 +279,7 @@ class _SwitchRow extends StatelessWidget {
     required this.subtitle,
     required this.value,
     required this.onChanged,
+    this.onTap,
   });
 
   final IconData icon;
@@ -267,37 +287,42 @@ class _SwitchRow extends StatelessWidget {
   final String subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: AppColors.background.withValues(alpha: 0.42),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          _LeadingIcon(icon: icon),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: theme.textTheme.titleMedium),
-                const SizedBox(height: 2),
-                Text(subtitle, style: theme.textTheme.bodySmall),
-              ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.background.withValues(alpha: 0.42),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            _LeadingIcon(icon: icon),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: theme.textTheme.bodySmall),
+                ],
+              ),
             ),
-          ),
-          Switch.adaptive(
-            value: value,
-            activeThumbColor: AppColors.teal,
-            activeTrackColor: AppColors.teal.withValues(alpha: 0.4),
-            onChanged: onChanged,
-          ),
-        ],
+            Switch.adaptive(
+              value: value,
+              activeThumbColor: AppColors.teal,
+              activeTrackColor: AppColors.teal.withValues(alpha: 0.4),
+              onChanged: onChanged,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -543,5 +568,64 @@ class _LeadingIcon extends StatelessWidget {
       ),
       child: Icon(icon, color: AppColors.teal, size: 20),
     );
+  }
+}
+
+class _SmsImportRow extends ConsumerWidget {
+  const _SmsImportRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref.watch(
+      appSettingsProvider.select((s) => s.smsImportEnabled),
+    );
+    final perms = ref.watch(smsPermissionsProvider).valueOrNull;
+    final missingRead = enabled && perms != null && !perms.read;
+    final missingReceive = enabled && perms != null && !perms.receive;
+
+    return _SwitchRow(
+      icon: LucideIcons.messageSquare,
+      title: 'Import Trust Bank SMS',
+      subtitle: !enabled
+          ? 'Log card debits and credits from bank SMS automatically'
+          : missingRead
+          ? 'SMS permission is off — tap to allow'
+          : missingReceive
+          ? 'Background capture off — tap to allow'
+          : 'Imported automatically, even in the background',
+      value: enabled,
+      onTap: missingRead || missingReceive
+          ? () => _request(context, ref)
+          : null,
+      onChanged: (value) async {
+        final controller = ref.read(appSettingsProvider.notifier);
+        if (!value) {
+          await controller.disableSmsImport();
+          return;
+        }
+        if (await _request(context, ref)) {
+          // Start from now: SMS already on the phone were entered by hand.
+          await controller.enableSmsImport(
+            DateTime.now().millisecondsSinceEpoch,
+          );
+        }
+      },
+    );
+  }
+
+  Future<bool> _request(BuildContext context, WidgetRef ref) async {
+    final perms = await ref.read(smsGatewayProvider).requestPermission();
+    ref.invalidate(smsPermissionsProvider);
+    if (!perms.read && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Allow SMS access to import bank messages. If Android stopped '
+            'asking, enable it in App info → Permissions.',
+          ),
+        ),
+      );
+    }
+    return perms.read;
   }
 }

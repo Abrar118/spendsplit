@@ -20,6 +20,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../data/database/app_database.dart';
 import '../../../providers/providers.dart';
+import '../../sms_import/providers/sms_providers.dart';
+import '../../sms_import/sms_import_runner.dart';
 
 enum _ExportFormat { csv, pdf }
 
@@ -233,9 +235,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.coral,
                     ),
-                    label: Text(
-                      _restoring ? 'RESTORING...' : 'RESTORE BACKUP',
-                    ),
+                    label: Text(_restoring ? 'RESTORING...' : 'RESTORE BACKUP'),
                   ),
                 ],
               ),
@@ -603,6 +603,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
           'initialBalance': settings.initialBalance,
           'monthlyExpenseBudget': settings.monthlyExpenseBudget,
           'cardNumber': settings.cardNumber,
+          'smsImportSince': settings.smsImportSince,
         },
         ...await ref.read(snapshotServiceProvider).exportTables(),
       };
@@ -678,35 +679,63 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
 
     setState(() => _restoring = true);
     try {
-      final counts = await ref
-          .read(snapshotServiceProvider)
-          .importTables(parsed);
+      // Paused so an SMS import can't insert rows the table swap then drops
+      // and advance the watermark past them.
+      final (counts, smsTurnedOff) = await ref
+          .read(smsImportRunnerProvider)
+          .whilePaused(() async {
+            final counts = await ref
+                .read(snapshotServiceProvider)
+                .importTables(parsed);
 
-      final settings = parsed['settings'] as Map<String, dynamic>?;
-      if (settings != null) {
-        final ctrl = ref.read(appSettingsProvider.notifier);
-        await ctrl.setBiometricEnabled(settings['biometricEnabled'] == true);
-        await ctrl.setDollarAnnualLimit(
-          (settings['dollarAnnualLimit'] as num?)?.toDouble() ?? 12000,
-        );
-        await ctrl.setDollarLimitYear(
-          (settings['dollarLimitYear'] as num?)?.toInt() ?? DateTime.now().year,
-        );
-        await ctrl.setInitialBalance(
-          (settings['initialBalance'] as num?)?.toDouble() ?? 0,
-        );
-        await ctrl.setMonthlyExpenseBudget(
-          (settings['monthlyExpenseBudget'] as num?)?.toDouble() ?? 0,
-        );
-        final card = settings['cardNumber'];
-        if (card is String && card.isNotEmpty) {
-          await ctrl.setCardNumber(card);
-        }
-      }
+            final settings = parsed['settings'] as Map<String, dynamic>?;
+            if (settings != null) {
+              final ctrl = ref.read(appSettingsProvider.notifier);
+              await ctrl.setBiometricEnabled(
+                settings['biometricEnabled'] == true,
+              );
+              await ctrl.setDollarAnnualLimit(
+                (settings['dollarAnnualLimit'] as num?)?.toDouble() ?? 12000,
+              );
+              await ctrl.setDollarLimitYear(
+                (settings['dollarLimitYear'] as num?)?.toInt() ??
+                    DateTime.now().year,
+              );
+              await ctrl.setInitialBalance(
+                (settings['initialBalance'] as num?)?.toDouble() ?? 0,
+              );
+              await ctrl.setMonthlyExpenseBudget(
+                (settings['monthlyExpenseBudget'] as num?)?.toDouble() ?? 0,
+              );
+              final card = settings['cardNumber'];
+              if (card is String && card.isNotEmpty) {
+                await ctrl.setCardNumber(card);
+              }
+            }
+
+            // Permissions aren't in a backup: keep its SMS watermark only
+            // when this phone already allows READ_SMS, otherwise import
+            // goes off.
+            final smsPermissions = await ref
+                .read(smsGatewayProvider)
+                .hasPermission();
+            final smsTurnedOff = await ref
+                .read(appSettingsProvider.notifier)
+                .restoreSmsImport(
+                  since: (settings?['smsImportSince'] as num?)?.toInt(),
+                  readGranted: smsPermissions.read,
+                );
+            return (counts, smsTurnedOff);
+          });
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Restored ${counts.total} records.')),
+        SnackBar(
+          content: Text(
+            'Restored ${counts.total} records.'
+            '${smsTurnedOff ? ' SMS import is off — turn it on in Settings.' : ''}',
+          ),
+        ),
       );
     } on Exception catch (e) {
       if (mounted) {
@@ -1324,14 +1353,15 @@ class _HoldToConfirmDialog extends StatefulWidget {
 
 class _HoldToConfirmDialogState extends State<_HoldToConfirmDialog>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1500),
-  )..addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        Navigator.of(context).pop(true);
-      }
-    });
+  late final AnimationController _controller =
+      AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1500),
+      )..addStatusListener((status) {
+        if (status == AnimationStatus.completed && mounted) {
+          Navigator.of(context).pop(true);
+        }
+      });
 
   @override
   void dispose() {

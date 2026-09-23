@@ -101,6 +101,69 @@ class SettingsController extends Notifier<AppSettings> {
     await ref.read(secureStorageProvider).setCardNumber(value);
     state = state.copyWith(cardNumber: value);
   }
+
+  Future<void> enableSmsImport(int nowMillis) async {
+    await ref.read(settingsRepositoryProvider).setSmsImportSince(nowMillis);
+    state = state.copyWith(smsImportSince: () => nowMillis);
+  }
+
+  Future<void> disableSmsImport() async {
+    await ref.read(settingsRepositoryProvider).setSmsImportSince(null);
+    state = state.copyWith(smsImportSince: () => null);
+  }
+
+  /// Advances the watermark, seen refs and bank balance after an import.
+  /// No-op when import was switched off while it ran, so it can't re-enable
+  /// itself.
+  Future<void> recordSmsImport({
+    required int watermark,
+    required List<String> seenRefs,
+    double? balance,
+    DateTime? balanceAt,
+  }) async {
+    final since = state.smsImportSince;
+    if (since == null) return;
+    final repo = ref.read(settingsRepositoryProvider);
+    if (watermark > since) {
+      await repo.setSmsImportSince(watermark);
+      state = state.copyWith(smsImportSince: () => watermark);
+    }
+    await repo.setSmsSeenRefs(seenRefs);
+    state = state.copyWith(smsSeenRefs: seenRefs);
+    final currentAt = state.bankBalanceAt;
+    if (balance != null &&
+        balanceAt != null &&
+        (currentAt == null || !balanceAt.isBefore(currentAt))) {
+      await repo.setBankBalance(balance, balanceAt);
+      state = state.copyWith(
+        bankBalance: () => balance,
+        bankBalanceAt: () => balanceAt,
+      );
+    }
+  }
+
+  /// Backup restore. Permissions aren't in a backup, so the backup's
+  /// watermark is kept only when this phone already grants READ_SMS;
+  /// otherwise import goes off. The bank balance is always cleared and the
+  /// next import repopulates it. Returns true when this switched import off.
+  Future<bool> restoreSmsImport({
+    required int? since,
+    required bool readGranted,
+  }) async {
+    final wasEnabled = state.smsImportEnabled;
+    final next = readGranted ? since : null;
+    final repo = ref.read(settingsRepositoryProvider);
+    await repo.setSmsImportSince(next);
+    await repo.setSmsSeenRefs(const []);
+    await repo.setBankBalance(null, null);
+    state = state.copyWith(
+      smsImportSince: () => next,
+      smsSeenRefs: const [],
+      bankBalance: () => null,
+      bankBalanceAt: () => null,
+    );
+    return wasEnabled && next == null;
+  }
 }
 
 final appSettingsProvider = NotifierProvider<SettingsController, AppSettings>(

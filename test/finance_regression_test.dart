@@ -10,6 +10,7 @@ TransactionsTableData _mkTx(String type, double amount, DateTime date) =>
       amount: amount,
       date: date,
       createdAt: date,
+      needsReview: false,
     );
 
 TransactionsTableData _expense({required double amount, required DateTime date}) =>
@@ -44,6 +45,7 @@ TransactionsTableData _linkedDeposit({
   date: date,
   createdAt: date,
   savingsGoalId: goalId,
+  needsReview: false,
 );
 
 SavingsGoalsTableData _goal({
@@ -72,6 +74,7 @@ void main() {
           amount: 500,
           date: month,
           createdAt: month,
+          needsReview: false,
         ),
       ],
       categories: [],

@@ -13,16 +13,23 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/shimmer_skeleton.dart';
 import '../../../data/database/app_database.dart';
 import '../../../providers/providers.dart';
+import '../../sms_import/providers/sms_providers.dart';
 import '../widgets/add_transaction_sheet.dart';
 import '../widgets/filter_bottom_sheet.dart';
 import '../widgets/filter_chips_row.dart';
 import '../widgets/transaction_tile.dart';
 
 class TransactionsScreen extends ConsumerStatefulWidget {
-  const TransactionsScreen({super.key, this.initialMonth, this.initialCategoryId});
+  const TransactionsScreen({
+    super.key,
+    this.initialMonth,
+    this.initialCategoryId,
+    this.initialReviewOnly = false,
+  });
 
   final DateTime? initialMonth;
   final int? initialCategoryId;
+  final bool initialReviewOnly;
 
   @override
   ConsumerState<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -43,6 +50,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       widget.initialMonth,
       categoryId: widget.initialCategoryId,
     );
+    if (widget.initialReviewOnly) _quickFilter = TransactionQuickFilter.review;
     _searchController.addListener(() {
       setState(() {
         _visibleCount = 40;
@@ -65,6 +73,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         newMonth,
         categoryId: widget.initialCategoryId,
       );
+    }
+    if (widget.initialReviewOnly && !oldWidget.initialReviewOnly) {
+      _quickFilter = TransactionQuickFilter.review;
     }
   }
 
@@ -122,6 +133,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             const SizedBox(height: 20),
             FilterChipsRow(
               selectedFilter: _quickFilter,
+              showReview:
+                  ref.watch(needsReviewCountProvider) > 0 ||
+                  _quickFilter == TransactionQuickFilter.review,
               onSelected: (value) {
                 setState(() {
                   _quickFilter = value;
@@ -315,6 +329,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         TransactionQuickFilter.savings =>
           type == TransactionType.savingsDeposit ||
               type == TransactionType.savingsWithdrawal,
+        TransactionQuickFilter.review => transaction.needsReview,
       };
 
       if (!matchesQuickFilter) return false;

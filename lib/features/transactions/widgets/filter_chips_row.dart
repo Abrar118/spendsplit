@@ -8,11 +8,13 @@ class FilterChipsRow extends StatelessWidget {
   const FilterChipsRow({
     required this.selectedFilter,
     required this.onSelected,
+    this.showReview = false,
     super.key,
   });
 
   final TransactionQuickFilter selectedFilter;
   final ValueChanged<TransactionQuickFilter> onSelected;
+  final bool showReview;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +48,15 @@ class FilterChipsRow extends StatelessWidget {
             color: AppColors.purple,
             onTap: () => onSelected(TransactionQuickFilter.savings),
           ),
+          if (showReview) ...[
+            const SizedBox(width: 10),
+            AccentChip(
+              label: 'Review',
+              selected: selectedFilter == TransactionQuickFilter.review,
+              color: AppColors.amber,
+              onTap: () => onSelected(TransactionQuickFilter.review),
+            ),
+          ],
         ],
       ),
     );

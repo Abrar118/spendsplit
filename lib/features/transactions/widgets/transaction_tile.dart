@@ -75,6 +75,7 @@ class TransactionTile extends StatelessWidget {
             animation: animation,
             builder: (context, _) => _TileBody(
               presentation: presentation,
+              needsReview: transaction.needsReview,
               iconColor: iconColor,
               frosted: animation.value.abs() > 0.001,
               onTap: onTap,
@@ -90,6 +91,7 @@ class TransactionTile extends StatelessWidget {
 class _TileBody extends StatelessWidget {
   const _TileBody({
     required this.presentation,
+    required this.needsReview,
     required this.iconColor,
     required this.frosted,
     required this.onTap,
@@ -97,6 +99,7 @@ class _TileBody extends StatelessWidget {
   });
 
   final _TransactionPresentation presentation;
+  final bool needsReview;
   final Color iconColor;
   final bool frosted;
   final VoidCallback onTap;
@@ -130,11 +133,21 @@ class _TileBody extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      presentation.title,
-                      style: theme.textTheme.titleMedium,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            presentation.title,
+                            style: theme.textTheme.titleMedium,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (needsReview) ...[
+                          const SizedBox(width: 6),
+                          const _ReviewChip(),
+                        ],
+                      ],
                     ),
                     if (presentation.subtitle != presentation.title) ...[
                       const SizedBox(height: 4),
@@ -196,6 +209,27 @@ class _TileBody extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ReviewChip extends StatelessWidget {
+  const _ReviewChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.amber.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        'Review',
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: AppColors.amber),
       ),
     );
   }

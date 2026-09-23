@@ -751,6 +751,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                     : _noteController.text.trim(),
               ),
               date: _selectedDate,
+              // Saving counts as reviewed, even with no changes.
+              needsReview: false,
             ),
           );
         } else {
