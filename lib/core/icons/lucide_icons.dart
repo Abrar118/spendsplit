@@ -233,6 +233,11 @@ abstract final class LucideIcons {
     fontFamily: 'Lucide',
     fontPackage: 'lucide_icons',
   );
+  static const scale = IconData(
+    0xf49f,
+    fontFamily: 'Lucide',
+    fontPackage: 'lucide_icons',
+  );
   static const search = IconData(
     0xf4ad,
     fontFamily: 'Lucide',

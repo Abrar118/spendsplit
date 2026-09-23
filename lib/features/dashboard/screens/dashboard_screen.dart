@@ -12,6 +12,7 @@ import '../../../core/widgets/glass_card.dart';
 import '../../../providers/providers.dart';
 import '../widgets/active_goal_card.dart';
 import '../widgets/balance_card.dart';
+import '../widgets/bank_reconcile_card.dart';
 import '../widgets/balance_trend_chart.dart';
 import '../widgets/dollar_summary_card.dart';
 import '../widgets/expected_this_month_card.dart';
@@ -100,6 +101,7 @@ class DashboardScreen extends ConsumerWidget {
             else ...[
               const _MonthRecapSlot(),
               const _SmsReviewSlot(),
+              const _BankReconcileSlot(),
               balanceSummary.when(
                 data: (summary) => BalanceCard(
                   summary: summary,
@@ -387,6 +389,23 @@ class _SmsReviewSlot extends ConsumerWidget {
     return const Column(
       children: [
         SmsReviewCard(),
+        SizedBox(height: AppSpacing.section),
+      ],
+    );
+  }
+}
+
+class _BankReconcileSlot extends ConsumerWidget {
+  const _BankReconcileSlot();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(bankReconciliationProvider) == null) {
+      return const SizedBox.shrink();
+    }
+    return const Column(
+      children: [
+        BankReconcileCard(),
         SizedBox(height: AppSpacing.section),
       ],
     );
