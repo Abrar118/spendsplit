@@ -22,7 +22,7 @@ import 'features/sms_import/sms_gateway.dart';
 import 'features/sms_import/sms_import_runner.dart';
 import 'features/transactions/screens/transactions_screen.dart';
 import 'features/transactions/widgets/add_transaction_sheet.dart';
-import 'features/widget/widget_data_service.dart';
+import 'features/widget/home_widget_sync.dart';
 import 'providers/providers.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -222,18 +222,7 @@ class _SpendSplitAppState extends ConsumerState<SpendSplitApp>
   }
 
   void _syncHomeWidget() {
-    final balance = ref.read(balanceSummaryProvider).valueOrNull;
-    if (balance == null) return;
-
-    final savingsPercent =
-        (ref.read(savingsInsightsProvider).valueOrNull?.monthOverMonthDelta ??
-            0) *
-        100;
-
-    WidgetDataService.updateBalance(
-      availableBalance: balance.availableBalance,
-      savingsPercent: savingsPercent,
-    );
+    syncHomeWidget(ref.read);
   }
 }
 
