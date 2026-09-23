@@ -125,10 +125,11 @@ Income uses `source`, not categories — matching `add_transaction_sheet.dart`.
   `settings` block on export. On restore it is written back **only if the
   backup has it and `READ_SMS` is currently granted** (`hasPermission`);
   otherwise importing is turned **off**. Permissions aren't part of a backup, so
-  restoring on another device must not show the switch on without them. Otherwise restoring an
-  older backup would leave a newer watermark and permanently skip the SMS whose
-  rows the restore just removed. With the backup's watermark restored, those SMS
-  are reread and the unique index drops any already present.
+  restoring on another device must not show the switch on without them.
+  Restoring the backup's watermark (never keeping the newer local one) matters:
+  a newer watermark would permanently skip the SMS whose rows the restore just
+  removed. With the backup's watermark, those SMS are reread and the unique
+  index drops any already present.
 - Restore clears `bank_balance` / `bank_balance_at` (§3); the next import
   repopulates them.
 
