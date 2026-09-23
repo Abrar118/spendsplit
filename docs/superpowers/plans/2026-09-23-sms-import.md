@@ -24,7 +24,7 @@
 - Reconciliation compares Total Balance (initial + income − expenses) for transactions dated `<= bank_balance_at`; card shows when `|diff| >= 1`.
 - Receiver: `goAsync()` in both branches, 9 s safety timeout, `finish()` exactly once.
 - Use `AppColors` / `AppSpacing` / `GlassCard`; no hand-rolled colours.
-- Do **not** modify or stage `lib/data/models/financial_summaries.dart`, `lib/features/dashboard/widgets/balance_card.dart`, `test/finance_regression_test.dart` (unrelated uncommitted work). Always `git add` explicit paths, never `-A` / `.`.
+- Execute in an isolated git worktree branched from `main`, so the three uncommitted files in the main checkout (`lib/data/models/financial_summaries.dart`, `lib/features/dashboard/widgets/balance_card.dart`, `test/finance_regression_test.dart`) stay untouched. Don't modify `financial_summaries.dart` or `balance_card.dart`. The only allowed edit to `test/finance_regression_test.dart` is the Task 1 `needsReview: false` fix. Always `git add` explicit paths, never `-A` / `.`.
 
 ## Spec Deviations (need approval with this plan)
 
@@ -250,15 +250,23 @@ In `lib/data/repositories/snapshot_service.dart`, replace the `TransactionsTable
 Run: `flutter test test/migration_test.dart test/database_regression_test.dart`
 Expected: all PASS.
 
-- [ ] **Step 8: Run the whole suite**
+- [ ] **Step 8: Fix direct data-class constructors**
+
+`needsReview` is now a required parameter of `TransactionsTableData(...)`. Add `needsReview: false,` to each existing direct call (HEAD versions of the files):
+- `test/finance_regression_test.dart` — three calls (lines ~7, ~40, ~69)
+- `test/widget_test.dart` — two calls (lines ~88, ~95)
+
+Run: `rg -n "TransactionsTableData\(" test lib -g '!*.g.dart'` and confirm every hit passes `needsReview`.
+
+- [ ] **Step 9: Run the whole suite**
 
 Run: `flutter test`
 Expected: all PASS.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-git add lib/data/database/tables/transactions_table.dart lib/data/database/app_database.dart lib/data/database/app_database.g.dart lib/data/database/daos/ lib/data/repositories/snapshot_service.dart test/migration_test.dart test/database_regression_test.dart
+git add lib/data/database/tables/transactions_table.dart lib/data/database/app_database.dart lib/data/database/app_database.g.dart lib/data/database/daos/ lib/data/repositories/snapshot_service.dart test/migration_test.dart test/database_regression_test.dart test/finance_regression_test.dart test/widget_test.dart
 git commit -m "feat(db): schema v8 — sms_ref unique index and needs_review
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
