@@ -40,7 +40,13 @@ class GoalDetailScreen extends ConsumerWidget {
       body: SafeArea(
         bottom: false,
         child: goal == null
-            ? const Center(child: Text('Goal not found'))
+            ? Center(
+                child: goalsAsync.hasError
+                    ? Text("Couldn't load goals: ${goalsAsync.error}")
+                    : goalsAsync.hasValue
+                    ? const Text('Goal not found')
+                    : const CircularProgressIndicator(color: AppColors.purple),
+              )
             : _Body(
                 goal: goal,
                 linked:

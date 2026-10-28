@@ -294,11 +294,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
         break;
       case GoalMenuAction.complete:
         await repository.updateGoal(
-          goal.copyWith(
-            isCompleted: true,
-            completedAt: Value(DateTime.now()),
-            currentAmount: goal.targetAmount,
-          ),
+          // The amount stays the sum of linked transactions; completing an
+          // underfunded goal doesn't invent savings.
+          goal.copyWith(isCompleted: true, completedAt: Value(DateTime.now())),
         );
         if (mounted) {
           ScaffoldMessenger.of(

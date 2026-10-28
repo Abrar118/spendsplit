@@ -420,8 +420,15 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    final name = nameController.text.trim();
-    if (name.isEmpty) return;
+    // The hint shows the note, so an empty field means "use the note".
+    final typed = nameController.text.trim();
+    final name = typed.isEmpty ? (transaction.note?.trim() ?? '') : typed;
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Give the template a name')));
+      return;
+    }
 
     await ref
         .read(transactionTemplateRepositoryProvider)
@@ -554,6 +561,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       return;
     }
 
+    HapticFeedback.mediumImpact();
     var undoFired = false;
 
     messenger.showSnackBar(

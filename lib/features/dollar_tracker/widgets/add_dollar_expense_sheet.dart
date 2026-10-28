@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 import '../../../core/constants/categories.dart';
@@ -74,7 +75,16 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
     return categoriesAsync.when(
       loading: () =>
           const Center(child: CircularProgressIndicator(color: AppColors.teal)),
-      error: (error, stackTrace) => const SizedBox.shrink(),
+      error: (error, stackTrace) => Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Text(
+          "Couldn't load dollar categories: $error",
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: AppColors.textSecondary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
       data: (categories) {
         _syncInitialCategory(categories);
         return SafeArea(
@@ -355,6 +365,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
         );
       }
 
+      HapticFeedback.mediumImpact();
       if (!mounted) return;
       setState(() {
         _saving = false;
