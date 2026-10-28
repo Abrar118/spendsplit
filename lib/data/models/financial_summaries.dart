@@ -174,6 +174,7 @@ class MonthRecap {
     required this.topCategories,
     required this.budgetDelta,
     required this.expenseVsPrevMonth,
+    this.categoryChanges = const [],
   });
 
   final DateTime month;
@@ -189,6 +190,26 @@ class MonthRecap {
 
   /// Proportional change in expenses vs. the previous month.
   final double expenseVsPrevMonth;
+
+  /// Categories well above or below their usual spend, biggest change
+  /// first (at most two).
+  final List<CategoryChange> categoryChanges;
+}
+
+class CategoryChange {
+  const CategoryChange({
+    required this.category,
+    required this.usual,
+    required this.change,
+  });
+
+  final MonthlyCategoryBreakdown category;
+
+  /// Average monthly spend over the three months before the recap month.
+  final double usual;
+
+  /// `(this month - usual) / usual`, e.g. 0.4 for +40%.
+  final double change;
 }
 
 class UpcomingSummary {
@@ -724,6 +745,35 @@ abstract final class FinanceCalculators {
     );
     final expenses = analytics.summary.expenses;
 
+    // "Usual" = average of the three months before, quiet months as zero.
+    final usualById = <int?, double>{};
+    for (var back = 1; back <= 3; back++) {
+      final earlier = DateTime(month.year, month.month - back);
+      for (final entry in transactions) {
+        if (entry.type != 'expense' || !_isSameMonth(entry.date, earlier)) {
+          continue;
+        }
+        usualById.update(
+          entry.categoryId,
+          (value) => value + entry.amount / 3,
+          ifAbsent: () => entry.amount / 3,
+        );
+      }
+    }
+    final changes =
+        <CategoryChange>[
+            for (final category in analytics.categories)
+              if ((usualById[category.categoryId] ?? 0) >= _minUsualForChange)
+                CategoryChange(
+                  category: category,
+                  usual: usualById[category.categoryId]!,
+                  change:
+                      (category.amount - usualById[category.categoryId]!) /
+                      usualById[category.categoryId]!,
+                ),
+          ].where((c) => c.change.abs() >= _minRecapChange).toList()
+          ..sort((a, b) => b.change.abs().compareTo(a.change.abs()));
+
     return MonthRecap(
       month: DateTime(month.year, month.month),
       income: analytics.summary.income,
@@ -735,8 +785,14 @@ abstract final class FinanceCalculators {
           ? monthlyExpenseBudget - expenses
           : null,
       expenseVsPrevMonth: analytics.expenseDelta,
+      categoryChanges: changes.take(2).toList(),
     );
   }
+
+  /// A category change is worth a line only past these: a 25% swing on a
+  /// usual spend of at least ৳500/month (smaller ones are noise).
+  static const _minRecapChange = 0.25;
+  static const _minUsualForChange = 500.0;
 
   static double _sumByType(
     Iterable<TransactionsTableData> transactions,

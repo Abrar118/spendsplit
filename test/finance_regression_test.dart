@@ -571,6 +571,40 @@ void main() {
       expect(safe.perDay, 100);
     });
 
+    test('recap flags categories well off their 3-month usual', () {
+      TransactionsTableData spend(int cat, double amount, DateTime date) =>
+          _expense(
+            amount: amount,
+            date: date,
+          ).copyWith(id: cat * 1000 + date.month, categoryId: Value(cat));
+      CategoriesTableData category(int id, String name) => CategoriesTableData(
+        id: id,
+        name: name,
+        icon: 'x',
+        color: 0,
+        isPredefined: false,
+        isDollarCategory: false,
+      );
+
+      final recap = FinanceCalculators.monthRecap(
+        month: DateTime(2026, 9),
+        transactions: [
+          for (final m in [6, 7, 8]) spend(1, 1000, DateTime(2026, m, 5)),
+          spend(1, 1400, DateTime(2026, 9, 5)), // Food +40%
+          for (final m in [6, 7, 8]) spend(2, 1000, DateTime(2026, m, 6)),
+          spend(2, 1100, DateTime(2026, 9, 6)), // Rent +10%: not notable
+          spend(3, 900, DateTime(2026, 9, 7)), // no history: skipped
+        ],
+        categories: [
+          category(1, 'Food'),
+          category(2, 'Rent'),
+          category(3, 'Gifts'),
+        ],
+      );
+      expect(recap.categoryChanges.map((c) => c.category.name), ['Food']);
+      expect(recap.categoryChanges.single.change, closeTo(0.4, 1e-9));
+    });
+
     test('budget pace is the share of the current month gone', () {
       final now = DateTime(2026, 10, 15, 9);
       expect(monthPaceFraction(DateTime(2026, 10), now: now), 15 / 31);
