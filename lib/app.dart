@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart' show TableUpdate;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -170,6 +171,9 @@ class _SpendSplitAppState extends ConsumerState<SpendSplitApp>
 
   Timer? _midnightTimer;
 
+  /// iOS only: the app isn't in front, so hide it from the switcher preview.
+  bool _obscured = false;
+
   void _scheduleMidnightTick() {
     _midnightTimer?.cancel();
     final now = DateTime.now();
@@ -192,6 +196,10 @@ class _SpendSplitAppState extends ConsumerState<SpendSplitApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final obscure =
+        defaultTargetPlatform == TargetPlatform.iOS &&
+        state != AppLifecycleState.resumed;
+    if (obscure != _obscured) setState(() => _obscured = obscure);
     if (state == AppLifecycleState.resumed) {
       // Timers don't fire while suspended, so catch up on the date here too.
       _tickClock();
@@ -244,11 +252,37 @@ class _SpendSplitAppState extends ConsumerState<SpendSplitApp>
       scaffoldMessengerKey: rootScaffoldMessengerKey,
       theme: AppTheme.dark(),
       routerConfig: router,
+      builder: (context, child) => Stack(
+        children: [
+          ?child,
+          // iOS snapshots the app for the switcher right after it goes
+          // inactive; cover balances first. Android uses the native
+          // recents flag in MainActivity instead.
+          if (_obscured) const Positioned.fill(child: _PrivacyCover()),
+        ],
+      ),
     );
   }
 
   void _syncHomeWidget() {
     syncHomeWidget(ref.read);
+  }
+}
+
+class _PrivacyCover extends StatelessWidget {
+  const _PrivacyCover();
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.background,
+      child: Center(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Image.asset('asset/app-icon.png', width: 88, height: 88),
+        ),
+      ),
+    );
   }
 }
 
