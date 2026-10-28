@@ -262,6 +262,18 @@ final balanceSummaryProvider = Provider<AsyncValue<BalanceSummary>>((ref) {
   );
 });
 
+/// Future-dated entries and Available after them; null while loading.
+final upcomingProvider = Provider<UpcomingSummary?>((ref) {
+  ref.watch(clockTickProvider);
+  final transactions = ref.watch(transactionsProvider).valueOrNull;
+  final balance = ref.watch(balanceSummaryProvider).valueOrNull;
+  if (transactions == null || balance == null) return null;
+  return FinanceCalculators.upcoming(
+    transactions: transactions,
+    availableNow: balance.availableBalance,
+  );
+});
+
 final spendingRunwayProvider = Provider<AsyncValue<SpendingRunway>>((ref) {
   final transactions = ref.watch(postedTransactionsProvider);
   final balance = ref.watch(balanceSummaryProvider);

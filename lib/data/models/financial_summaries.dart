@@ -191,6 +191,16 @@ class MonthRecap {
   final double expenseVsPrevMonth;
 }
 
+class UpcomingSummary {
+  const UpcomingSummary({required this.entries, required this.availableAfter});
+
+  /// Future-dated transactions, soonest first.
+  final List<TransactionsTableData> entries;
+
+  /// Available once every entry in [entries] has posted.
+  final double availableAfter;
+}
+
 abstract final class FinanceCalculators {
   static const double _epsilon = 1e-9;
 
@@ -214,6 +224,29 @@ abstract final class FinanceCalculators {
       savingsBalance: savingsBalance,
       availableBalance: totalBalance - savingsBalance,
     );
+  }
+
+  /// Future-dated entries and what Available becomes once they post. A
+  /// savings deposit lowers Available (the money moves to Savings), a
+  /// withdrawal raises it, matching [balanceSummary].
+  static UpcomingSummary upcoming({
+    required Iterable<TransactionsTableData> transactions,
+    required double availableNow,
+    DateTime? asOf,
+  }) {
+    final now = asOf ?? DateTime.now();
+    final entries =
+        transactions.where((entry) => entry.date.isAfter(now)).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+    var available = availableNow;
+    for (final entry in entries) {
+      available += switch (entry.type) {
+        'income' || 'savings_withdrawal' => entry.amount,
+        'expense' || 'savings_deposit' => -entry.amount,
+        _ => 0.0,
+      };
+    }
+    return UpcomingSummary(entries: entries, availableAfter: available);
   }
 
   static MonthlyFinanceSummary monthlySummary({

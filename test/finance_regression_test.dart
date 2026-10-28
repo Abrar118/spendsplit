@@ -526,6 +526,21 @@ void main() {
       );
     });
 
+    test('upcoming lists future entries and Available after them', () {
+      final summary = FinanceCalculators.upcoming(
+        transactions: [
+          _expense(amount: 15000, date: DateTime(2026, 11, 1)),
+          _income(amount: 50000, date: DateTime(2026, 10, 31)),
+          _savingsDeposit(amount: 5000, date: DateTime(2026, 11, 2)),
+          _expense(amount: 999, date: DateTime(2026, 10, 1)), // posted
+        ],
+        availableNow: 10000,
+        asOf: DateTime(2026, 10, 28),
+      );
+      expect(summary.entries.map((e) => e.amount), [50000, 15000, 5000]);
+      expect(summary.availableAfter, 10000 + 50000 - 15000 - 5000);
+    });
+
     test('budget pace is the share of the current month gone', () {
       final now = DateTime(2026, 10, 15, 9);
       expect(monthPaceFraction(DateTime(2026, 10), now: now), 15 / 31);
