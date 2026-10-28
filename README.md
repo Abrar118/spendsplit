@@ -4,8 +4,9 @@ A minimalist, **offline-only** mobile expense tracker built with Flutter. It spl
 single bank-account balance into **Available** (spendable) and **Savings**, wrapped in a
 pure-black glassmorphic UI, biometric lock, and an isolated USD spending tracker.
 
-> Android-first, iOS compatible. No cloud, no accounts, no sync — all data lives on the
-> device (SQLite) with sensitive settings in the platform keystore.
+> Runs on iOS and Android (bank SMS import and the home-screen widget are Android-only
+> for now). No cloud, no accounts, no sync — all data lives on the device (SQLite) with
+> sensitive settings in the platform keystore.
 
 ---
 
@@ -31,7 +32,8 @@ pure-black glassmorphic UI, biometric lock, and an isolated USD spending tracker
 
 - **Split balance** — one bank balance, tracked as Available + Savings; every figure
   (Total, Available, Savings, Dollar Remaining) is derived, never stored.
-- **Runway** — how many days Available lasts at the trailing-30-day burn rate.
+- **Runway** — how many days Available lasts at a trend-adjusted trailing-30-day burn
+  rate (future-dated entries don't count toward balances).
 - **Balance Trend** — 6-month reconstructed Available / Savings stacked-bar history.
 - **Spending Velocity** — rolling 12-month expense bars with an income overlay.
 - **Category budgets** — optional per-category monthly limits, edited inline on the
@@ -51,6 +53,9 @@ pure-black glassmorphic UI, biometric lock, and an isolated USD spending tracker
   month: net saved, savings rate, top categories, budget result.
 - **CSV / PDF export**, **CSV import**, **full JSON snapshot backup & restore**
   (hold-to-confirm), and an Android home-screen widget.
+- **Trust Bank SMS import** (Android) — debit/credit alerts become transactions flagged
+  for review, imported on open and in the background, with a bank-balance
+  reconciliation card.
 - **Biometric lock** with re-lock on background.
 
 ---
@@ -60,12 +65,14 @@ pure-black glassmorphic UI, biometric lock, and an isolated USD spending tracker
 | Concern | Choice |
 |---|---|
 | State | Riverpod |
-| Database | Drift (SQLite), schema v7, additive migrations |
+| Database | Drift (SQLite), schema v8, additive migrations |
 | Navigation | GoRouter (ShellRoute + pushed routes) |
 | Charts | fl_chart |
 | Typography | Google Fonts — Manrope |
 | Auth | local_auth |
-| Files | file_selector, share_plus, path_provider |
+| Secure storage | flutter_secure_storage |
+| Files | file_selector, share_plus, path_provider, pdf |
+| Widget | home_widget |
 | Design | "Luminous Depth" — OLED black `#000000`, frosted-glass nav pill, no card borders |
 
 Architecture is feature-first with MVVM: pure-Dart calculators in `FinanceCalculators`
@@ -75,7 +82,7 @@ Architecture is feature-first with MVVM: pure-Dart calculators in `FinanceCalcul
 lib/
 ├── core/        theme, constants, utils, shared widgets
 ├── data/        database (tables, daos), models, repositories
-├── features/    auth · dashboard · transactions · monthly · goals · dollar_tracker · export · settings
+├── features/    auth · dashboard · transactions · monthly · goals · dollar_tracker · export · settings · sms_import · widget
 └── providers/   global Riverpod providers
 ```
 
@@ -90,4 +97,6 @@ flutter run
 ```
 
 Tests: `flutter test` (calculator regressions, schema migrations, snapshot round-trip,
-widget layout guards).
+SMS parsing/import, widget layout guards).
+
+iOS builds need macOS with Xcode (`flutter run --release` with the iPhone connected).
