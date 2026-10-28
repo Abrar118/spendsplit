@@ -25,6 +25,8 @@ class SettingsRepository {
       recapDismissedMonth: _preferences.getString('recap_dismissed_month'),
       smsImportSince: _preferences.getInt(_smsImportSinceKey),
       smsSeenRefs: _preferences.getStringList(_smsSeenRefsKey) ?? const [],
+      smsUnparsedCount: _preferences.getInt(_smsUnparsedCountKey) ?? 0,
+      smsUnparsedLatest: _preferences.getString(_smsUnparsedLatestKey),
       bankBalance: _preferences.getDouble(_bankBalanceKey),
       bankBalanceAt: DateTime.tryParse(
         _preferences.getString(_bankBalanceAtKey) ?? '',
@@ -66,6 +68,18 @@ class SettingsRepository {
   static const _smsSeenRefsKey = 'sms_seen_refs';
   static const _bankBalanceKey = 'bank_balance';
   static const _bankBalanceAtKey = 'bank_balance_at';
+  static const _smsUnparsedCountKey = 'sms_unparsed_count';
+  static const _smsUnparsedLatestKey = 'sms_unparsed_latest';
+
+  Future<void> setSmsUnparsed(int count, String? latest) async {
+    if (count == 0 || latest == null) {
+      await _preferences.remove(_smsUnparsedCountKey);
+      await _preferences.remove(_smsUnparsedLatestKey);
+      return;
+    }
+    await _preferences.setInt(_smsUnparsedCountKey, count);
+    await _preferences.setString(_smsUnparsedLatestKey, latest);
+  }
 
   Future<void> setSmsImportSince(int? millis) async {
     if (millis == null) {

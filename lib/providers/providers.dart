@@ -157,6 +157,24 @@ class SettingsController extends Notifier<AppSettings> {
   }
 
   /// Backup restore. Permissions aren't in a backup, so the backup's
+  /// Adds SMS that looked like transactions but didn't parse.
+  Future<void> recordSmsUnparsed(List<String> bodies) async {
+    if (bodies.isEmpty) return;
+    final count = state.smsUnparsedCount + bodies.length;
+    await ref
+        .read(settingsRepositoryProvider)
+        .setSmsUnparsed(count, bodies.last);
+    state = state.copyWith(
+      smsUnparsedCount: count,
+      smsUnparsedLatest: () => bodies.last,
+    );
+  }
+
+  Future<void> clearSmsUnparsed() async {
+    await ref.read(settingsRepositoryProvider).setSmsUnparsed(0, null);
+    state = state.copyWith(smsUnparsedCount: 0, smsUnparsedLatest: () => null);
+  }
+
   /// watermark is kept only when this phone already grants READ_SMS;
   /// otherwise import goes off. The bank balance is always cleared and the
   /// next import repopulates it. Returns true when this switched import off.
