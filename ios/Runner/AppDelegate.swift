@@ -13,6 +13,45 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    // SMS Inbox files from Shortcuts are often rich text (RTFD); returns their
+    // plain text (see readInboxText in Dart).
+    FlutterMethodChannel(
+      name: "spendsplit/text",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    ).setMethodCallHandler { call, result in
+      guard call.method == "plainText", let path = call.arguments as? String else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      let url = URL(fileURLWithPath: path).standardizedFileURL
+      guard url.deletingLastPathComponent() == Self.smsInbox,
+        let data = try? Data(contentsOf: url)
+      else {
+        result(nil)
+        return
+      }
+      result(Self.plainText(data))
+    }
+  }
+
+  private static let smsInbox = FileManager.default
+    .urls(for: .documentDirectory, in: .userDomainMask)[0]
+    .appendingPathComponent("SMS Inbox", isDirectory: true)
+    .standardizedFileURL
+
+  /// Explicit types only: auto-detect would also accept HTML, which imports
+  /// through WebKit and can fetch remote resources. Anything else is read as
+  /// UTF-8 and left to the parser to reject.
+  private static func plainText(_ data: Data) -> String? {
+    for type in [NSAttributedString.DocumentType.rtfd, .rtf] {
+      if let text = try? NSAttributedString(
+        data: data, options: [.documentType: type], documentAttributes: nil
+      ).string {
+        return text
+      }
+    }
+    return String(data: data, encoding: .utf8)
   }
 
   private func excludeSensitiveContainersFromBackup() {
