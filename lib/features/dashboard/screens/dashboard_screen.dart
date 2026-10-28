@@ -344,6 +344,7 @@ class _CardSkeleton extends StatelessWidget {
     return SizedBox(
       height: height,
       child: GlassCard(
+        shadow: false,
         child: Container(color: Colors.white.withValues(alpha: 0.04)),
       ),
     );
@@ -439,6 +440,7 @@ class _SectionError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const GlassCard(
+      shadow: false,
       child: SizedBox(
         height: 120,
         child: Center(child: Text('Could not load this section')),

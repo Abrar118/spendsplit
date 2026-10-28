@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColors {
-  // --- Surfaces: pure black void with faintly purple-tinted charcoal panels ---
-  static const background = Color(0xFF000000);
+  // --- Surfaces: Adwaita-dark charcoal void with purple-tinted panels ---
+  static const background = Color(0xFF1D1D20);
+
+  /// Neutral panel that reads above [background]: Adwaita dark's card colour
+  /// (white at 8% over it).
+  static const surfaceRaised = Color(0xFF2F2F32);
   static const surface = Color(0xFF15131F);
   static const surfaceLight = Color(0xFF1E1A2C);
   static const navBar = Color(0xFF16121F);

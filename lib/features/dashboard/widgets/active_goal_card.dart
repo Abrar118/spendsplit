@@ -32,6 +32,7 @@ class _EmptyGoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
+      shadow: false,
       glowColor: AppColors.purple,
       radius: 24,
       opacity: 0.8,
@@ -92,6 +93,7 @@ class _ActiveGoalDisplay extends StatelessWidget {
     final daysRemaining = _daysRemaining(goal.deadline);
 
     return GlassCard(
+      shadow: false,
       glowColor: AppColors.purple,
       radius: 24,
       opacity: 0.8,

@@ -18,6 +18,7 @@ class ExpectedThisMonthCard extends ConsumerWidget {
     if (expected.isEmpty) return const SizedBox.shrink();
 
     return GlassCard(
+      shadow: false,
       glowColor: AppColors.amber,
       radius: 20,
       child: Column(

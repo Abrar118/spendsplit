@@ -36,6 +36,7 @@ class UpcomingCard extends ConsumerWidget {
     final more = upcoming.entries.length - shown.length;
 
     return GlassCard(
+      shadow: false,
       glowColor: AppColors.blue,
       radius: 20,
       child: Column(

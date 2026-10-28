@@ -20,6 +20,7 @@ class BankReconcileCard extends ConsumerWidget {
     String bdt(double v) => formatBdtAmount(v, fractionDigits: 0);
 
     return GlassCard(
+      shadow: false,
       glowColor: AppColors.coral,
       radius: 20,
       child: Column(

@@ -220,6 +220,7 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
                           const SizedBox(height: AppSpacing.md),
                           if (analytics.categories.isEmpty)
                             const GlassCard(
+                              shadow: false,
                               radius: 20,
                               child: Text(
                                 'No expense categories in this month.',
@@ -546,13 +547,6 @@ class _MonthlyMetricCard extends StatelessWidget {
         gradient: gradient,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: accentColor.withValues(alpha: 0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 16),
-          ),
-        ],
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
@@ -643,6 +637,7 @@ class _CategoryDonutCard extends StatelessWidget {
     final theme = Theme.of(context);
     if (analytics.categories.isEmpty) {
       return GlassCard(
+        shadow: false,
         radius: 24,
         glowColor: AppColors.blue,
         child: Column(
@@ -682,13 +677,6 @@ class _CategoryDonutCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surfaceContainer,
             borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.background.withValues(alpha: 0.42),
-                blurRadius: 26,
-                offset: const Offset(0, 18),
-              ),
-            ],
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(18, 22, 18, 20),
@@ -855,13 +843,6 @@ class _CategoryDetailTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surfaceDim,
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.background.withValues(alpha: 0.3),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(18, 14, 22, 14),
