@@ -17,7 +17,7 @@ import UIKit
 
   private func excludeSensitiveContainersFromBackup() {
     let fileManager = FileManager.default
-    let appGroupId = "group.com.example.spendsplit"
+    let appGroupId = "group.com.abrar.spendsplit"
 
     do {
       if let applicationSupport = fileManager.urls(

@@ -1,4 +1,4 @@
-package com.example.spendsplit
+package com.abrar.spendsplit
 
 import android.appwidget.AppWidgetManager
 import android.content.Context

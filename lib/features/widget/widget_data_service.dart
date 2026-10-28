@@ -2,7 +2,7 @@ import 'package:home_widget/home_widget.dart';
 
 /// Pushes the latest balance data to the native home screen widget.
 class WidgetDataService {
-  static const _appGroupId = 'group.com.example.spendsplit';
+  static const _appGroupId = 'group.com.abrar.spendsplit';
   static const _androidWidgetName = 'SpendSplitWidgetProvider';
 
   static Future<void> initialize() async {

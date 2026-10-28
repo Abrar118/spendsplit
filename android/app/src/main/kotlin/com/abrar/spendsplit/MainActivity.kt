@@ -1,4 +1,4 @@
-package com.example.spendsplit
+package com.abrar.spendsplit
 
 import androidx.core.app.ActivityCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
