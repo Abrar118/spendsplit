@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -8,9 +6,8 @@ import '../../../core/theme/app_decorations.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/amount_text.dart';
 import '../../../data/models/financial_summaries.dart';
-import '../../../providers/providers.dart';
 
-class BalanceCard extends ConsumerWidget {
+class BalanceCard extends StatelessWidget {
   const BalanceCard({
     required this.summary,
     required this.cardNumber,
@@ -23,7 +20,7 @@ class BalanceCard extends ConsumerWidget {
   final VoidCallback onEditCardNumber;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Column(
       children: [
@@ -170,9 +167,6 @@ class BalanceCard extends ConsumerWidget {
                       alignEnd: false,
                       emphasize: true,
                     ),
-                    const SizedBox(height: 4),
-                    _RunwayLine(runway: ref.watch(spendingRunwayProvider)),
-                    _SafeToSpendLine(safe: ref.watch(safeToSpendProvider)),
                   ],
                 ),
               ),
@@ -244,58 +238,6 @@ class _BalanceSegment extends StatelessWidget {
           textAlign: alignEnd ? TextAlign.right : TextAlign.left,
         ),
       ],
-    );
-  }
-}
-
-class _SafeToSpendLine extends StatelessWidget {
-  const _SafeToSpendLine({required this.safe});
-
-  final SafeToSpend? safe;
-
-  @override
-  Widget build(BuildContext context) {
-    final safe = this.safe;
-    if (safe == null) return const SizedBox.shrink();
-    final until = DateFormat('MMM d').format(safe.until);
-    return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: Text(
-        '${formatCompactBdt(safe.perDay)}/day safe to spend · '
-        '${safe.isPayday ? 'payday $until' : 'until $until'}',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: safe.perDay <= 0 ? AppColors.coral : AppColors.textSecondary,
-        ),
-      ),
-    );
-  }
-}
-
-class _RunwayLine extends StatelessWidget {
-  const _RunwayLine({required this.runway});
-
-  final AsyncValue<SpendingRunway> runway;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.labelSmall;
-    return runway.maybeWhen(
-      orElse: () => const SizedBox(height: 14),
-      data: (r) {
-        if (r.daysRemaining == null) {
-          return Text(
-            'No recent spending',
-            style: style?.copyWith(color: AppColors.textTertiary),
-          );
-        }
-        final tight = r.daysRemaining! < 14;
-        return Text(
-          '~${r.daysRemaining} days left · ${formatCompactBdt(r.dailyPace)}/day pace',
-          style: style?.copyWith(
-            color: tight ? AppColors.coral : AppColors.textSecondary,
-          ),
-        );
-      },
     );
   }
 }

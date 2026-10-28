@@ -32,10 +32,6 @@ pure-black glassmorphic UI, biometric lock, and an isolated USD spending tracker
 
 - **Split balance** — one bank balance, tracked as Available + Savings; every figure
   (Total, Available, Savings, Dollar Remaining) is derived, never stored.
-- **Runway** — how many days Available lasts at a trend-adjusted trailing-30-day burn
-  rate (future-dated entries don't count toward balances).
-- **Safe to spend** — Available per day until your next payday (inferred from your
-  income history), net of anything scheduled before it.
 - **Upcoming** — future-dated entries and what Available becomes once they post.
 - **Balance Trend** — 6-month reconstructed Available / Savings stacked-bar history.
 - **Spending Velocity** — rolling 12-month expense bars with an income overlay.
@@ -79,7 +75,7 @@ pure-black glassmorphic UI, biometric lock, and an isolated USD spending tracker
 | Secure storage | flutter_secure_storage |
 | Files | file_selector, share_plus, path_provider, pdf |
 | Widget | home_widget |
-| Design | "Luminous Depth" — OLED black `#000000`, frosted-glass nav pill, no card borders |
+| Design | "Luminous Depth" — charcoal `#1D1D20`, frosted-glass nav pill, no card borders |
 
 Architecture is feature-first with MVVM: pure-Dart calculators in `FinanceCalculators`
 (unit-tested), exposed through Riverpod providers, consumed by thin widgets.

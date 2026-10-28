@@ -115,22 +115,6 @@ class SavingsInsights {
   final double monthOverMonthDelta;
 }
 
-class SpendingRunway {
-  const SpendingRunway({
-    required this.dailyPace,
-    required this.daysRemaining,
-    required this.windowDays,
-  });
-
-  /// Trend-adjusted daily expense rate used for the runway estimate.
-  final double dailyPace;
-
-  /// Whole days of Available left at [dailyPace]. Null when there is no
-  /// recent spending to project from.
-  final int? daysRemaining;
-  final int windowDays;
-}
-
 class BalancePoint {
   const BalancePoint({
     required this.month,
@@ -222,27 +206,6 @@ class UpcomingSummary {
   final double availableAfter;
 }
 
-class SafeToSpend {
-  const SafeToSpend({
-    required this.perDay,
-    required this.days,
-    required this.until,
-    required this.isPayday,
-  });
-
-  /// Available, less entries scheduled before [until], spread over [days].
-  final double perDay;
-
-  /// Days from today up to (not including) [until]; at least 1.
-  final int days;
-
-  /// The next payday when one was detected, else the first of next month.
-  final DateTime until;
-
-  /// Whether [until] came from the income history.
-  final bool isPayday;
-}
-
 abstract final class FinanceCalculators {
   static const double _epsilon = 1e-9;
 
@@ -289,71 +252,6 @@ abstract final class FinanceCalculators {
       };
     }
     return UpcomingSummary(entries: entries, availableAfter: available);
-  }
-
-  /// How much can be spent per day until the next payday. Payday is the
-  /// usual day of the month of the largest income, when that pattern shows
-  /// in at least two of the last three months; otherwise the horizon is the
-  /// end of this month. Scheduled entries before the horizon count first.
-  static SafeToSpend safeToSpend({
-    required Iterable<TransactionsTableData> transactions,
-    required double availableNow,
-    DateTime? asOf,
-  }) {
-    final now = asOf ?? DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    // Largest posted income per month, for the last three calendar months.
-    final firstMonth = DateTime(today.year, today.month - 2);
-    final largestByMonth = <int, TransactionsTableData>{};
-    for (final entry in transactions) {
-      if (entry.type != 'income' ||
-          entry.date.isAfter(now) ||
-          entry.date.isBefore(firstMonth)) {
-        continue;
-      }
-      final key = entry.date.year * 12 + entry.date.month;
-      final best = largestByMonth[key];
-      if (best == null || entry.amount > best.amount) {
-        largestByMonth[key] = entry;
-      }
-    }
-
-    DateTime? payday;
-    if (largestByMonth.length >= 2) {
-      final days = largestByMonth.values.map((e) => e.date.day).toList()
-        ..sort();
-      final day = days[(days.length - 1) ~/ 2]; // lower median
-      DateTime onDay(int year, int month) {
-        final last = DateTime(year, month + 1, 0).day;
-        return DateTime(year, month, day > last ? last : day);
-      }
-
-      final thisMonth = onDay(today.year, today.month);
-      payday = thisMonth.isAfter(today)
-          ? thisMonth
-          : onDay(today.year, today.month + 1);
-    }
-    final until = payday ?? DateTime(today.year, today.month + 1);
-
-    var available = availableNow;
-    for (final entry in transactions) {
-      if (!entry.date.isAfter(now) || !entry.date.isBefore(until)) continue;
-      available += switch (entry.type) {
-        'income' || 'savings_withdrawal' => entry.amount,
-        'expense' || 'savings_deposit' => -entry.amount,
-        _ => 0.0,
-      };
-    }
-
-    final days = calendarDaysUntil(until, from: today);
-    final span = days < 1 ? 1 : days;
-    return SafeToSpend(
-      perDay: available <= 0 ? 0 : available / span,
-      days: span,
-      until: until,
-      isPayday: payday != null,
-    );
   }
 
   static MonthlyFinanceSummary monthlySummary({
@@ -410,88 +308,6 @@ abstract final class FinanceCalculators {
   /// Days into the year before a USD pace is shown. Earlier, one annual
   /// payment extrapolates to many times the limit.
   static const minPaceDays = 30;
-
-  /// How many days Available lasts at a trend-adjusted expense rate.
-  ///
-  /// The estimate blends 65% of the latest seven-day pace with 35% of the
-  /// trailing [windowDays] baseline. For histories shorter than [windowDays],
-  /// both rates use the number of calendar days actually observed. Only
-  /// `expense` transactions count as burn; future entries are ignored.
-  static SpendingRunway spendingRunway({
-    required Iterable<TransactionsTableData> transactions,
-    required double availableBalance,
-    DateTime? asOf,
-    int windowDays = 30,
-  }) {
-    if (windowDays <= 0) {
-      throw ArgumentError.value(windowDays, 'windowDays', 'Must be positive');
-    }
-
-    final now = asOf ?? DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final windowStart = today.subtract(Duration(days: windowDays - 1));
-    final history = transactions
-        .where((transaction) => !transaction.date.isAfter(now))
-        .toList();
-    final observed = history
-        .where((transaction) => !transaction.date.isBefore(windowStart))
-        .toList();
-
-    if (observed.isEmpty) {
-      return SpendingRunway(
-        dailyPace: 0,
-        daysRemaining: null,
-        windowDays: windowDays,
-      );
-    }
-
-    // From the first entry ever (clamped to the window), not the first one
-    // inside it: a quiet stretch is zero spending, not a shorter history.
-    final firstDay = history
-        .map((transaction) {
-          final date = transaction.date;
-          return DateTime(date.year, date.month, date.day);
-        })
-        .reduce((first, date) => date.isBefore(first) ? date : first);
-    final historyStart = firstDay.isBefore(windowStart)
-        ? windowStart
-        : firstDay;
-    final observedDays = today.difference(historyStart).inDays + 1;
-    final baselineExpense = observed
-        .where((transaction) => transaction.type == 'expense')
-        .fold<double>(0, (sum, transaction) => sum + transaction.amount);
-    final baselineRate = baselineExpense / observedDays;
-
-    final recentDays = observedDays < 7 ? observedDays : 7;
-    final recentStart = today.subtract(Duration(days: recentDays - 1));
-    final recentExpense = observed
-        .where(
-          (transaction) =>
-              transaction.type == 'expense' &&
-              !transaction.date.isBefore(recentStart),
-        )
-        .fold<double>(0, (sum, transaction) => sum + transaction.amount);
-    final recentRate = recentExpense / recentDays;
-    final dailyPace = observedDays <= 7
-        ? baselineRate
-        : (recentRate * 0.65) + (baselineRate * 0.35);
-
-    if (dailyPace <= _epsilon) {
-      return SpendingRunway(
-        dailyPace: 0,
-        daysRemaining: null,
-        windowDays: windowDays,
-      );
-    }
-    final days = availableBalance <= 0
-        ? 0
-        : (availableBalance / dailyPace).floor();
-    return SpendingRunway(
-      dailyPace: dailyPace,
-      daysRemaining: days,
-      windowDays: windowDays,
-    );
-  }
 
   /// End-of-month Available / Savings / Total for the trailing [months]
   /// window. Transactions before the window fold into the first point;

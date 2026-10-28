@@ -91,114 +91,6 @@ void main() {
     expect(result.categories, isEmpty);
   });
 
-  group('spendingRunway', () {
-    final asOf = DateTime(2026, 9, 30);
-
-    test('no expenses in window -> daysRemaining is null', () {
-      final runway = FinanceCalculators.spendingRunway(
-        transactions: [
-          _expense(amount: 500, date: DateTime(2026, 1, 1)),
-          _income(amount: 9000, date: DateTime(2026, 9, 10)),
-        ],
-        availableBalance: 20000,
-        asOf: asOf,
-      );
-      expect(runway.dailyPace, 0);
-      expect(runway.daysRemaining, isNull);
-    });
-
-    test('computes steady pace from expenses only', () {
-      final runway = FinanceCalculators.spendingRunway(
-        transactions: [
-          for (var day = 1; day <= 30; day++)
-            _expense(amount: 200, date: DateTime(2026, 9, day)),
-          _income(amount: 50000, date: DateTime(2026, 9, 15)),
-          _savingsDeposit(amount: 10000, date: DateTime(2026, 9, 15)),
-        ],
-        availableBalance: 30000,
-        asOf: asOf,
-        windowDays: 30,
-      );
-      expect(runway.dailyPace, closeTo(200, 1e-6));
-      expect(runway.daysRemaining, 150);
-    });
-
-    test('negative available balance -> daysRemaining 0', () {
-      final runway = FinanceCalculators.spendingRunway(
-        transactions: [_expense(amount: 3000, date: DateTime(2026, 9, 10))],
-        availableBalance: -100,
-        asOf: asOf,
-      );
-      expect(runway.daysRemaining, 0);
-    });
-
-    test('short history uses observed days instead of assuming 30 days', () {
-      final transactions = [
-        for (var day = 26; day <= 30; day++)
-          _expense(amount: 500, date: DateTime(2026, 9, day)),
-      ];
-
-      final runway = FinanceCalculators.spendingRunway(
-        transactions: transactions,
-        availableBalance: 30000,
-        asOf: asOf,
-      );
-
-      expect(runway.dailyPace, closeTo(500, 1e-6));
-      expect(runway.daysRemaining, 60);
-    });
-
-    test('accelerating spending gives the latest seven days more weight', () {
-      final transactions = [
-        for (var day = 1; day <= 23; day++)
-          _expense(amount: 50, date: DateTime(2026, 9, day)),
-        for (var day = 24; day <= 30; day++)
-          _expense(amount: 500, date: DateTime(2026, 9, day)),
-      ];
-
-      final runway = FinanceCalculators.spendingRunway(
-        transactions: transactions,
-        availableBalance: 30000,
-        asOf: asOf,
-      );
-
-      // 65% of the recent 500/day pace + 35% of the 155/day baseline.
-      expect(runway.dailyPace, closeTo(379.25, 1e-6));
-      expect(runway.daysRemaining, 79);
-    });
-
-    test('slowing spending retains some longer-term baseline', () {
-      final transactions = [
-        for (var day = 1; day <= 23; day++)
-          _expense(amount: 500, date: DateTime(2026, 9, day)),
-        for (var day = 24; day <= 30; day++)
-          _expense(amount: 50, date: DateTime(2026, 9, day)),
-      ];
-
-      final runway = FinanceCalculators.spendingRunway(
-        transactions: transactions,
-        availableBalance: 30000,
-        asOf: asOf,
-      );
-
-      // 65% of the recent 50/day pace + 35% of the 395/day baseline.
-      expect(runway.dailyPace, closeTo(170.75, 1e-6));
-      expect(runway.daysRemaining, 175);
-    });
-
-    test('rejects a non-positive averaging window', () {
-      expect(
-        () => FinanceCalculators.spendingRunway(
-          transactions: const [],
-          availableBalance: 30000,
-          asOf: asOf,
-          windowDays: 0,
-        ),
-        throwsArgumentError,
-      );
-    });
-  });
-
   test('balance summary excludes future-dated transactions', () {
     final summary = FinanceCalculators.balanceSummary(
       transactions: [
@@ -420,23 +312,6 @@ void main() {
   });
 
   group('fixes 2026-10-28', () {
-    test('runway counts a quiet stretch as zero spending', () {
-      // Long-time user, nothing logged for weeks, then one 6,000 expense.
-      final runway = FinanceCalculators.spendingRunway(
-        transactions: [
-          _income(amount: 50000, date: DateTime(2026, 6, 1)),
-          _expense(amount: 6000, date: DateTime(2026, 10, 25)),
-        ],
-        availableBalance: 30000,
-        asOf: DateTime(2026, 10, 28),
-      );
-      // Baseline over the full 30-day window (200/day), not 4 days (1,500).
-      expect(
-        runway.dailyPace,
-        closeTo(6000 / 30 * 0.35 + 6000 / 7 * 0.65, 1e-6),
-      );
-    });
-
     test('savings month-over-month sign follows better/worse', () {
       double delta(double previous, double current) =>
           FinanceCalculators.savingsInsights(
@@ -539,36 +414,6 @@ void main() {
       );
       expect(summary.entries.map((e) => e.amount), [50000, 15000, 5000]);
       expect(summary.availableAfter, 10000 + 50000 - 15000 - 5000);
-    });
-
-    test('safe to spend runs to the usual payday, net of scheduled', () {
-      final safe = FinanceCalculators.safeToSpend(
-        transactions: [
-          _income(amount: 80000, date: DateTime(2026, 8, 25)),
-          _income(amount: 80000, date: DateTime(2026, 9, 26)),
-          _income(amount: 2000, date: DateTime(2026, 10, 3)), // not salary
-          _expense(amount: 1000, date: DateTime(2026, 11, 2)), // scheduled
-        ],
-        availableNow: 9000,
-        asOf: DateTime(2026, 10, 28, 12),
-      );
-      // Days 25 and 26 seen; lower median 25 has passed, so Nov 25.
-      expect(safe.isPayday, isTrue);
-      expect(safe.until, DateTime(2026, 11, 25));
-      expect(safe.days, 28);
-      expect(safe.perDay, closeTo((9000 - 1000) / 28, 1e-9));
-    });
-
-    test('safe to spend falls back to month end without a payday', () {
-      final safe = FinanceCalculators.safeToSpend(
-        transactions: const [],
-        availableNow: 400,
-        asOf: DateTime(2026, 10, 28),
-      );
-      expect(safe.isPayday, isFalse);
-      expect(safe.until, DateTime(2026, 11));
-      expect(safe.days, 4); // 28, 29, 30, 31
-      expect(safe.perDay, 100);
     });
 
     test('recap flags categories well off their 3-month usual', () {
