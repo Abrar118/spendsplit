@@ -60,8 +60,9 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
       icon: icon == null ? const Value.absent() : Value(icon),
       color: color == null ? const Value.absent() : Value(color),
     );
-    await (update(categoriesTable)..where((t) => t.id.equals(id)))
-        .write(companion);
+    await (update(
+      categoriesTable,
+    )..where((t) => t.id.equals(id))).write(companion);
   }
 
   /// Deletes the category and its budget, and leaves the transactions and
@@ -74,11 +75,11 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
       await (db.update(db.transactionsTable)
             ..where((t) => t.categoryId.equals(id)))
           .write(const TransactionsTableCompanion(categoryId: Value(null)));
-      await (db.update(db.transactionTemplatesTable)
-            ..where((t) => t.categoryId.equals(id)))
-          .write(
-            const TransactionTemplatesTableCompanion(categoryId: Value(null)),
-          );
+      await (db.update(
+        db.transactionTemplatesTable,
+      )..where((t) => t.categoryId.equals(id))).write(
+        const TransactionTemplatesTableCompanion(categoryId: Value(null)),
+      );
       await (db.delete(
         db.categoryBudgetsTable,
       )..where((t) => t.categoryId.equals(id))).go();

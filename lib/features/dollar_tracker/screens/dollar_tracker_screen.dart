@@ -58,9 +58,7 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
         child: RefreshIndicator(
           color: AppColors.teal,
           onRefresh: () async {
-            ref.invalidate(
-              dollarExpensesForYearProvider(year),
-            );
+            ref.invalidate(dollarExpensesForYearProvider(year));
             final _ = await ref.refresh(
               dollarExpensesForYearProvider(year).future,
             );
@@ -82,9 +80,8 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
                 loading: () => const _SummarySkeleton(),
                 error: (error, _) => _ErrorCard(
                   title: 'Unable to load dollar summary',
-                  onRetry: () => ref.invalidate(
-                    dollarExpensesForYearProvider(year),
-                  ),
+                  onRetry: () =>
+                      ref.invalidate(dollarExpensesForYearProvider(year)),
                 ),
                 data: (summary) => DollarHeaderCard(summary: summary),
               ),
@@ -127,9 +124,8 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
                 loading: () => const _ExpenseListSkeleton(),
                 error: (error, _) => _ErrorCard(
                   title: 'Unable to load dollar expenses',
-                  onRetry: () => ref.invalidate(
-                    dollarExpensesForYearProvider(year),
-                  ),
+                  onRetry: () =>
+                      ref.invalidate(dollarExpensesForYearProvider(year)),
                 ),
                 data: (expenses) {
                   if (expenses.isEmpty) {

@@ -713,41 +713,41 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
     try {
       // Paused so an SMS import can't insert rows the table swap then drops
       // and advance the watermark past them.
-      final (counts, smsTurnedOff, lockSkipped) = await runner.whilePaused(
-        () async {
-          final counts = await snapshots.importTables(parsed);
+      final (
+        counts,
+        smsTurnedOff,
+        lockSkipped,
+      ) = await runner.whilePaused(() async {
+        final counts = await snapshots.importTables(parsed);
 
-          if (settings != null) {
-            await ctrl.setDollarAnnualLimit(
-              number('dollarAnnualLimit') ?? 12000,
-            );
-            await ctrl.setDollarLimitYear(
-              number('dollarLimitYear')?.toInt() ?? DateTime.now().year,
-            );
-            await ctrl.setInitialBalance(number('initialBalance') ?? 0);
-            await ctrl.setMonthlyExpenseBudget(budget < 0 ? 0 : budget);
-            if (card is String && card.isNotEmpty) {
-              await ctrl.setCardNumber(card);
-            }
-          }
-
-          // Permissions aren't in a backup: keep its SMS watermark only
-          // when this phone already allows READ_SMS, otherwise import
-          // goes off.
-          final smsPermissions = await smsGateway.hasPermission();
-          final smsTurnedOff = await ctrl.restoreSmsImport(
-            since: number('smsImportSince')?.toInt(),
-            readGranted: smsPermissions.read,
+        if (settings != null) {
+          await ctrl.setDollarAnnualLimit(number('dollarAnnualLimit') ?? 12000);
+          await ctrl.setDollarLimitYear(
+            number('dollarLimitYear')?.toInt() ?? DateTime.now().year,
           );
+          await ctrl.setInitialBalance(number('initialBalance') ?? 0);
+          await ctrl.setMonthlyExpenseBudget(budget < 0 ? 0 : budget);
+          if (card is String && card.isNotEmpty) {
+            await ctrl.setCardNumber(card);
+          }
+        }
 
-          // Last, and with this session marked unlocked, so turning the lock
-          // on can't redirect to /lock in the middle of the restore.
-          final lockOn = wantsLock && await auth.isDeviceSupported();
-          if (lockOn) session.unlock();
-          await ctrl.setBiometricEnabled(lockOn);
-          return (counts, smsTurnedOff, wantsLock && !lockOn);
-        },
-      );
+        // Permissions aren't in a backup: keep its SMS watermark only
+        // when this phone already allows READ_SMS, otherwise import
+        // goes off.
+        final smsPermissions = await smsGateway.hasPermission();
+        final smsTurnedOff = await ctrl.restoreSmsImport(
+          since: number('smsImportSince')?.toInt(),
+          readGranted: smsPermissions.read,
+        );
+
+        // Last, and with this session marked unlocked, so turning the lock
+        // on can't redirect to /lock in the middle of the restore.
+        final lockOn = wantsLock && await auth.isDeviceSupported();
+        if (lockOn) session.unlock();
+        await ctrl.setBiometricEnabled(lockOn);
+        return (counts, smsTurnedOff, wantsLock && !lockOn);
+      });
 
       messenger.showSnackBar(
         SnackBar(
