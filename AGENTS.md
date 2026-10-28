@@ -68,7 +68,8 @@ lib/
 
 Features use `screens/`, `widgets/`, `providers/` as needed. Android native code
 (SMS bridge/receiver, widget provider) lives in
-`android/app/src/main/kotlin/com/example/spendsplit/`.
+`android/app/src/main/kotlin/com/abrar/spendsplit/` (app ID `com.abrar.spendsplit`
+on both platforms).
 
 ## Key Dependencies
 
