@@ -13,10 +13,10 @@ spending tracker.
 
 - **Owner's device:** iPhone 17 (base model, iOS). Previously a Galaxy S25, so
   the codebase grew up Android-first — verify new work on iOS.
-- **Platforms:** iOS + Android. Android-only today: Trust Bank SMS import (iOS
-  has no SMS-read API — `SmsGateway` no-ops off Android) and the home-screen
-  widget (`home_widget` is wired with `iOSName: 'SpendSplitWidget'`, but no iOS
-  widget extension exists in `ios/`).
+- **Platforms:** iOS + Android. Trust Bank SMS import works differently per
+  platform (iOS has no SMS-read API — see Features). Android-only today: the
+  home-screen widget (`home_widget` is wired with `iOSName: 'SpendSplitWidget'`,
+  but no iOS widget extension exists in `ios/`).
 - iOS builds need macOS + Xcode; the dev machine is Windows, so iOS changes
   can't be built or run locally here — say so rather than claiming they work.
 - **State:** Riverpod (plain providers — no `riverpod_annotation` codegen)
@@ -231,7 +231,7 @@ or reverse the full amount; never cap at the target.
 - **Export/backup** — CSV/PDF export, CSV import, full JSON snapshot of all six
   tables + settings (`SnapshotService`), restore behind hold-to-confirm.
 - **Home-screen widget** (Android) — Available balance via `home_widget`.
-- **Trust Bank SMS import** (Android only) — Settings → "Import Trust Bank SMS".
+- **Trust Bank SMS import** — Android: Settings → "Import Trust Bank SMS".
   Debits → expenses in Other, credits → income, flagged `needs_review` until
   saved from the edit sheet. Runs on app open/resume and in the background via
   `SmsReceiver` + headless `smsBackgroundMain`. Dedupe: unique `sms_ref`; the
@@ -240,8 +240,15 @@ or reverse the full amount; never cap at the target.
   stay deleted. Restore runs under `SmsImportRunner.whilePaused`. Dashboard
   shows a review card and a bank-balance reconciliation card
   (`bankReconciliationProvider`). Settings counts alerts that mention
-  DEBIT/CREDIT but fail to parse, a sign the bank changed its format. Not
-  available on the owner's iPhone.
+  DEBIT/CREDIT but fail to parse, a sign the bank changed its format.
+  **iOS:** a user-built Shortcuts automation (message contains "Balance TK",
+  no confirm) saves each alert as a file in `Documents/SMS Inbox` (exposed in
+  Files via `UIFileSharingEnabled`). On open/resume `SmsImportRunner` imports
+  and deletes those files; receive time = file mtime. Shortcuts saves text
+  copied from Messages as RTFD, so files are decoded natively
+  (`spendsplit/text` channel in `AppDelegate.swift`, `NSAttributedString`); an
+  unreadable file is kept and skipped. The first iOS import switches
+  `sms_import_since` on so the reconciliation card works.
 
 ## Gotchas
 

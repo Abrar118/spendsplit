@@ -1,7 +1,11 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../../providers/providers.dart';
 import 'providers/sms_providers.dart';
@@ -11,6 +15,26 @@ final smsImportRunnerProvider = Provider<SmsImportRunner>(
   (ref) => SmsImportRunner(ref),
 );
 
+/// iOS can't read the SMS inbox. A Shortcuts automation instead saves each
+/// bank SMS as a file in this folder (shown in Files > SpendSplit). Null off
+/// iOS.
+Future<Directory?> smsInboxDirectory() async {
+  if (!Platform.isIOS) return null;
+  final documents = await getApplicationDocumentsDirectory();
+  return Directory(p.join(documents.path, 'SMS Inbox')).create(recursive: true);
+}
+
+/// Text copied from Messages is saved by Shortcuts as rich text (RTFD), not
+/// UTF-8, so iOS decodes it natively (AppDelegate.swift). Plain text too.
+Future<String> readInboxText(File file) async {
+  if (!Platform.isIOS) return file.readAsString();
+  final text = await const MethodChannel(
+    'spendsplit/text',
+  ).invokeMethod<String>('plainText', file.path);
+  if (text == null) throw FormatException('Unreadable file', file.path);
+  return text;
+}
+
 /// Imports Trust Bank SMS newer than the watermark, one run at a time.
 /// Never throws; returns the number of transactions inserted.
 class SmsImportRunner {
@@ -18,9 +42,13 @@ class SmsImportRunner {
     this._ref, {
     this.retryDelay = const Duration(seconds: 1),
     this.lookback = const Duration(minutes: 10),
+    this.inboxDirectory = smsInboxDirectory,
+    this.readInboxFile = readInboxText,
   });
 
   final Ref _ref;
+  final Future<Directory?> Function() inboxDirectory;
+  final Future<String> Function(File file) readInboxFile;
   final Duration retryDelay;
 
   /// How far behind the newest SMS the watermark trails. The SMS app can
@@ -60,6 +88,8 @@ class SmsImportRunner {
 
   Future<int> _runOnce(bool waitForNew) async {
     try {
+      final inbox = await inboxDirectory();
+      if (inbox != null) return await _runInboxFolder(inbox);
       // The other engine may have advanced the watermark or seen refs.
       await _ref.read(appSettingsProvider.notifier).reloadFromDisk();
       final settings = _ref.read(appSettingsProvider);
@@ -103,5 +133,52 @@ class SmsImportRunner {
       debugPrint('SMS import failed: $error\n$stack');
       return 0;
     }
+  }
+
+  /// iOS: imports every file in [inbox], then deletes it. Files are removed
+  /// only after the insert commits; a file left behind by a crash re-imports
+  /// to the same `sms_ref` (receive time = file mtime) and is dropped.
+  Future<int> _runInboxFolder(Directory inbox) async {
+    final files = <File>[];
+    final messages = <InboxSms>[];
+    for (final entity in inbox.listSync()) {
+      if (entity is! File || p.basename(entity.path).startsWith('.')) continue;
+      try {
+        messages.add(
+          InboxSms(
+            body: (await readInboxFile(entity)).trim(),
+            receivedMillis:
+                (await entity.lastModified()).millisecondsSinceEpoch,
+          ),
+        );
+        files.add(entity);
+      } catch (error) {
+        // Kept for a later run (or the user) rather than lost; never blocks
+        // the rest.
+        debugPrint('SMS inbox: skipped ${entity.path}: $error');
+      }
+    }
+    if (files.isEmpty) return 0;
+    final result = await importSmsMessages(
+      _ref.read(appDatabaseProvider),
+      messages,
+    );
+    for (final file in files) {
+      await file.delete();
+    }
+
+    final settings = _ref.read(appSettingsProvider.notifier);
+    // recordSmsImport is a no-op until "enabled"; the bank balance needs it.
+    if (!_ref.read(appSettingsProvider).smsImportEnabled) {
+      await settings.enableSmsImport(DateTime.now().millisecondsSinceEpoch);
+    }
+    await settings.recordSmsUnparsed(result.unparsed);
+    await settings.recordSmsImport(
+      watermark: 0,
+      seenRefs: const [],
+      balance: result.latest?.balance,
+      balanceAt: result.latest?.dateTime,
+    );
+    return result.inserted;
   }
 }

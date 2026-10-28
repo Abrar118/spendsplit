@@ -13,6 +13,23 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    // SMS Inbox files from Shortcuts are often rich text (RTFD); NSAttributedString
+    // detects RTFD/RTF/plain and returns the text (see readInboxText in Dart).
+    FlutterMethodChannel(
+      name: "spendsplit/text",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    ).setMethodCallHandler { call, result in
+      guard call.method == "plainText", let path = call.arguments as? String else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      let url = URL(fileURLWithPath: path)
+      let text = (try? Data(contentsOf: url)).flatMap {
+        try? NSAttributedString(data: $0, options: [:], documentAttributes: nil).string
+      }
+      result(text)
+    }
   }
 
   private func excludeSensitiveContainersFromBackup() {
