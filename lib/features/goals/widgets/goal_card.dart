@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -7,6 +6,7 @@ import 'package:spendsplit/core/icons/lucide_icons.dart';
 import '../../../core/constants/goal_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/date_utils.dart';
 import '../../../data/database/app_database.dart';
 
 class GoalCard extends StatelessWidget {
@@ -259,12 +259,11 @@ class GoalCard extends StatelessWidget {
       return 'No deadline';
     }
 
-    final now = DateTime.now();
-    final difference = deadline.difference(now).inDays;
+    final difference = calendarDaysUntil(deadline);
     if (difference <= 0) {
       return 'Due now';
     }
-    return '${math.max(1, difference)} days remaining';
+    return '$difference day${difference == 1 ? '' : 's'} remaining';
   }
 }
 

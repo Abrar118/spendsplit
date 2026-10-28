@@ -532,18 +532,26 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       }
     }
 
-    await ref.read(appDatabaseProvider).transaction(() async {
-      await repository.deleteTransactionById(transaction.id);
-      if (linkedGoalId != null && goalDelta.abs() > 1e-9) {
-        final updated = await savingsRepository.adjustGoalAmountBy(
-          linkedGoalId,
-          -goalDelta,
-        );
-        if (!updated) {
-          throw StateError('Failed to update linked savings goal.');
+    // Captured now: the Undo snackbar outlives this screen when the user
+    // switches tabs, and `ref` is unusable after dispose.
+    final db = ref.read(appDatabaseProvider);
+    try {
+      await db.transaction(() async {
+        await repository.deleteTransactionById(transaction.id);
+        if (linkedGoalId != null && goalDelta.abs() > 1e-9) {
+          final updated = await savingsRepository.adjustGoalAmountBy(
+            linkedGoalId,
+            -goalDelta,
+          );
+          if (!updated) {
+            throw StateError('Failed to update linked savings goal.');
+          }
         }
-      }
-    });
+      });
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+      return;
+    }
 
     var undoFired = false;
 
@@ -556,22 +564,33 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           onPressed: () async {
             if (undoFired) return;
             undoFired = true;
-            await ref.read(appDatabaseProvider).transaction(() async {
-              await repository.createTransactionWithId(transaction);
-              // Only re-apply goal delta if the goal still exists
-              if (linkedGoalId != null && goalDelta.abs() > 1e-9) {
-                final goal = await savingsRepository.getGoalById(linkedGoalId);
-                if (goal != null && !goal.isCompleted) {
-                  final updated = await savingsRepository.adjustGoalAmountBy(
+            try {
+              await db.transaction(() async {
+                await repository.createTransactionWithId(transaction);
+                // Only re-apply goal delta if the goal still exists. Completed
+                // goals too: the delete took the amount off them as well.
+                if (linkedGoalId != null && goalDelta.abs() > 1e-9) {
+                  final goal = await savingsRepository.getGoalById(
                     linkedGoalId,
-                    goalDelta,
                   );
-                  if (!updated) {
-                    throw StateError('Failed to restore linked savings goal.');
+                  if (goal != null) {
+                    final updated = await savingsRepository.adjustGoalAmountBy(
+                      linkedGoalId,
+                      goalDelta,
+                    );
+                    if (!updated) {
+                      throw StateError(
+                        'Failed to restore linked savings goal.',
+                      );
+                    }
                   }
                 }
-              }
-            });
+              });
+            } catch (e) {
+              messenger.showSnackBar(
+                SnackBar(content: Text('Undo failed: $e')),
+              );
+            }
           },
         ),
       ),

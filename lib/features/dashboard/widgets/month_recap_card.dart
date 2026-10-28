@@ -14,6 +14,7 @@ String _monthKey(DateTime month) =>
 /// Whether the month-end recap card should render right now (days 1–5, not
 /// dismissed for that month, and there was activity to recap).
 final monthRecapVisibleProvider = Provider<bool>((ref) {
+  ref.watch(clockTickProvider);
   if (DateTime.now().day > 5) return false;
   final recap = ref.watch(monthRecapProvider).valueOrNull;
   if (recap == null) return false;

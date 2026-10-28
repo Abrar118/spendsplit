@@ -173,7 +173,12 @@ class _ProjectionCard extends StatelessWidget {
     final theme = Theme.of(context);
     final lines = <String>[];
 
-    if (projection.estimatedCompletion != null) {
+    final funded = goal.currentAmount >= goal.targetAmount - 1e-9;
+    final deadline = goal.deadline;
+
+    if (funded) {
+      lines.add('Fully funded.');
+    } else if (projection.estimatedCompletion != null) {
       lines.add(
         'At ${formatBdtAmount(projection.weeklyRate, fractionDigits: 0)}/week, '
         'done ~${DateFormat('MMM yyyy').format(projection.estimatedCompletion!)}.',
@@ -183,11 +188,17 @@ class _ProjectionCard extends StatelessWidget {
     }
 
     final required = projection.requiredWeeklyForDeadline;
-    if (required != null && required > 0) {
-      lines.add(
-        'Put aside ${formatBdtAmount(required, fractionDigits: 0)}/week to hit '
-        'your ${DateFormat('MMM d').format(goal.deadline!)} deadline.',
-      );
+    if (!funded && deadline != null) {
+      if (required == null) {
+        lines.add(
+          'The ${DateFormat('MMM d').format(deadline)} deadline has passed.',
+        );
+      } else if (required > 0) {
+        lines.add(
+          'Put aside ${formatBdtAmount(required, fractionDigits: 0)}/week to hit '
+          'your ${DateFormat('MMM d').format(deadline)} deadline.',
+        );
+      }
     }
 
     return GlassCard(

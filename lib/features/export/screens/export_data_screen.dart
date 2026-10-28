@@ -20,6 +20,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../data/database/app_database.dart';
 import '../../../providers/providers.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../sms_import/providers/sms_providers.dart';
 import '../../sms_import/sms_import_runner.dart';
 
@@ -533,16 +534,20 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
   }
 
   Future<void> _handleImportCsv() async {
-    final pickedFile = await fs.openFile(
-      acceptedTypeGroups: const [
-        fs.XTypeGroup(
-          label: 'CSV',
-          extensions: ['csv'],
-          mimeTypes: ['text/csv', 'text/plain', 'application/csv'],
-        ),
-      ],
-      confirmButtonText: 'Import',
-    );
+    final pickedFile = await ref
+        .read(appSessionUnlockedProvider.notifier)
+        .stayUnlockedDuring(
+          () => fs.openFile(
+            acceptedTypeGroups: const [
+              fs.XTypeGroup(
+                label: 'CSV',
+                extensions: ['csv'],
+                mimeTypes: ['text/csv', 'text/plain', 'application/csv'],
+              ),
+            ],
+            confirmButtonText: 'Import',
+          ),
+        );
 
     if (pickedFile == null || !mounted) return;
 
@@ -636,16 +641,20 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
   }
 
   Future<void> _handleJsonRestore() async {
-    final picked = await fs.openFile(
-      acceptedTypeGroups: const [
-        fs.XTypeGroup(
-          label: 'JSON',
-          extensions: ['json'],
-          mimeTypes: ['application/json', 'text/plain'],
-        ),
-      ],
-      confirmButtonText: 'Restore',
-    );
+    final picked = await ref
+        .read(appSessionUnlockedProvider.notifier)
+        .stayUnlockedDuring(
+          () => fs.openFile(
+            acceptedTypeGroups: const [
+              fs.XTypeGroup(
+                label: 'JSON',
+                extensions: ['json'],
+                mimeTypes: ['application/json', 'text/plain'],
+              ),
+            ],
+            confirmButtonText: 'Restore',
+          ),
+        );
     if (picked == null || !mounted) return;
 
     Map<String, dynamic> parsed;
@@ -677,72 +686,80 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
     );
     if (confirmed != true || !mounted) return;
 
+    // Everything is read up front: a settings write can redirect away from
+    // this screen, and `ref` is unusable once the screen is disposed.
+    final runner = ref.read(smsImportRunnerProvider);
+    final snapshots = ref.read(snapshotServiceProvider);
+    final ctrl = ref.read(appSettingsProvider.notifier);
+    final session = ref.read(appSessionUnlockedProvider.notifier);
+    final smsGateway = ref.read(smsGatewayProvider);
+    final auth = ref.read(authRepositoryProvider);
+    final messenger = ScaffoldMessenger.of(context);
+
+    // Validated before any write so a bad value can't fail the restore
+    // after the tables have already been replaced.
+    final rawSettings = parsed['settings'];
+    final settings = rawSettings is Map<String, dynamic> ? rawSettings : null;
+    double? number(String key) {
+      final value = settings?[key];
+      return value is num && value.isFinite ? value.toDouble() : null;
+    }
+
+    final budget = number('monthlyExpenseBudget') ?? 0;
+    final card = settings?['cardNumber'];
+    final wantsLock = settings?['biometricEnabled'] == true;
+
     setState(() => _restoring = true);
     try {
       // Paused so an SMS import can't insert rows the table swap then drops
       // and advance the watermark past them.
-      final (counts, smsTurnedOff) = await ref
-          .read(smsImportRunnerProvider)
-          .whilePaused(() async {
-            final counts = await ref
-                .read(snapshotServiceProvider)
-                .importTables(parsed);
+      final (counts, smsTurnedOff, lockSkipped) = await runner.whilePaused(
+        () async {
+          final counts = await snapshots.importTables(parsed);
 
-            final settings = parsed['settings'] as Map<String, dynamic>?;
-            if (settings != null) {
-              final ctrl = ref.read(appSettingsProvider.notifier);
-              await ctrl.setBiometricEnabled(
-                settings['biometricEnabled'] == true,
-              );
-              await ctrl.setDollarAnnualLimit(
-                (settings['dollarAnnualLimit'] as num?)?.toDouble() ?? 12000,
-              );
-              await ctrl.setDollarLimitYear(
-                (settings['dollarLimitYear'] as num?)?.toInt() ??
-                    DateTime.now().year,
-              );
-              await ctrl.setInitialBalance(
-                (settings['initialBalance'] as num?)?.toDouble() ?? 0,
-              );
-              await ctrl.setMonthlyExpenseBudget(
-                (settings['monthlyExpenseBudget'] as num?)?.toDouble() ?? 0,
-              );
-              final card = settings['cardNumber'];
-              if (card is String && card.isNotEmpty) {
-                await ctrl.setCardNumber(card);
-              }
+          if (settings != null) {
+            await ctrl.setDollarAnnualLimit(
+              number('dollarAnnualLimit') ?? 12000,
+            );
+            await ctrl.setDollarLimitYear(
+              number('dollarLimitYear')?.toInt() ?? DateTime.now().year,
+            );
+            await ctrl.setInitialBalance(number('initialBalance') ?? 0);
+            await ctrl.setMonthlyExpenseBudget(budget < 0 ? 0 : budget);
+            if (card is String && card.isNotEmpty) {
+              await ctrl.setCardNumber(card);
             }
+          }
 
-            // Permissions aren't in a backup: keep its SMS watermark only
-            // when this phone already allows READ_SMS, otherwise import
-            // goes off.
-            final smsPermissions = await ref
-                .read(smsGatewayProvider)
-                .hasPermission();
-            final smsTurnedOff = await ref
-                .read(appSettingsProvider.notifier)
-                .restoreSmsImport(
-                  since: (settings?['smsImportSince'] as num?)?.toInt(),
-                  readGranted: smsPermissions.read,
-                );
-            return (counts, smsTurnedOff);
-          });
+          // Permissions aren't in a backup: keep its SMS watermark only
+          // when this phone already allows READ_SMS, otherwise import
+          // goes off.
+          final smsPermissions = await smsGateway.hasPermission();
+          final smsTurnedOff = await ctrl.restoreSmsImport(
+            since: number('smsImportSince')?.toInt(),
+            readGranted: smsPermissions.read,
+          );
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+          // Last, and with this session marked unlocked, so turning the lock
+          // on can't redirect to /lock in the middle of the restore.
+          final lockOn = wantsLock && await auth.isDeviceSupported();
+          if (lockOn) session.unlock();
+          await ctrl.setBiometricEnabled(lockOn);
+          return (counts, smsTurnedOff, wantsLock && !lockOn);
+        },
+      );
+
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             'Restored ${counts.total} records.'
-            '${smsTurnedOff ? ' SMS import is off — turn it on in Settings.' : ''}',
+            '${smsTurnedOff ? ' SMS import is off — turn it on in Settings.' : ''}'
+            '${lockSkipped ? ' Biometric lock is off — this device has no screen lock.' : ''}',
           ),
         ),
       );
-    } on Exception catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Restore failed: $e')));
-      }
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Restore failed: $e')));
     } finally {
       if (mounted) setState(() => _restoring = false);
     }
@@ -785,19 +802,23 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
       for (final category in categories)
         category.id: _normalizeKey(category.name),
     };
-    final existingSignatures = {
-      for (final transaction in existingTransactions)
-        _transactionSignature(
-          type: transaction.type,
-          amount: transaction.amount,
-          date: transaction.date,
-          categoryName: transaction.categoryId == null
-              ? null
-              : categoryNameById[transaction.categoryId],
-          source: transaction.source,
-          note: transaction.note,
-        ),
-    };
+    // A count per signature, not a set: a file row only cancels against one
+    // existing row, so two identical same-minute entries both survive a
+    // fresh-device import.
+    final existingSignatures = <String, int>{};
+    for (final transaction in existingTransactions) {
+      final signature = _transactionSignature(
+        type: transaction.type,
+        amount: transaction.amount,
+        date: transaction.date,
+        categoryName: transaction.categoryId == null
+            ? null
+            : categoryNameById[transaction.categoryId],
+        source: transaction.source,
+        note: transaction.note,
+      );
+      existingSignatures.update(signature, (n) => n + 1, ifAbsent: () => 1);
+    }
 
     final parsedRows = <_ParsedCsvTransaction>[];
     var invalidRows = 0;
@@ -820,12 +841,13 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
         source: parsed.source,
         note: parsed.note,
       );
-      if (existingSignatures.contains(signature)) {
+      final existing = existingSignatures[signature] ?? 0;
+      if (existing > 0) {
+        existingSignatures[signature] = existing - 1;
         duplicateRows += 1;
         continue;
       }
 
-      existingSignatures.add(signature);
       parsedRows.add(parsed);
     }
 
@@ -909,9 +931,9 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
     }
     if (date == null) return null;
 
-    final categoryCell = cell('category');
-    final sourceCell = cell('source');
-    final noteCell = cell('note');
+    final categoryCell = _csvUnescape(cell('category'));
+    final sourceCell = _csvUnescape(cell('source'));
+    final noteCell = _csvUnescape(cell('note'));
 
     return _ParsedCsvTransaction(
       type: type,
@@ -1025,7 +1047,8 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
     return [
       type,
       amount.toStringAsFixed(2),
-      date.toIso8601String(),
+      // Minute precision, matching what the CSV export writes.
+      DateFormat('yyyy-MM-dd HH:mm').format(date),
       _normalizeKey(categoryName),
       _normalizeKey(source),
       _normalizeKey(note),
@@ -1057,6 +1080,10 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
     await file.writeAsString(buf.toString());
     return file;
   }
+
+  /// Undoes the formula-injection guard [_csvEscape] adds on export.
+  String _csvUnescape(String value) =>
+      value.replaceFirst(RegExp(r"^'(?=[\t\r ]*[=+@-])"), '');
 
   String _csvEscape(String value) {
     final sanitized = RegExp(r'^[\t\r ]*[=+@-]').hasMatch(value)

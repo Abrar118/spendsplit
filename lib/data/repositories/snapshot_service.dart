@@ -129,6 +129,24 @@ class SnapshotService {
         counts.categoryBudgets++;
       }
 
+      // Backups can reference categories deleted before they were taken.
+      // Detach those where the column allows it, and keep the ID sequence
+      // above every referenced ID so a new category can't inherit old rows.
+      for (final table in const [
+        'transactions_table',
+        'transaction_templates_table',
+      ]) {
+        await _db.customStatement(
+          'UPDATE $table SET category_id = NULL WHERE category_id IS NOT NULL '
+          'AND category_id NOT IN (SELECT id FROM categories_table)',
+        );
+      }
+      await _db.customStatement(
+        'UPDATE sqlite_sequence SET seq = MAX(seq, '
+        '(SELECT COALESCE(MAX(category_id), 0) FROM dollar_expenses_table)) '
+        "WHERE name = 'categories_table'",
+      );
+
       return counts;
     });
   }

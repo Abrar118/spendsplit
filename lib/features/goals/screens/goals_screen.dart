@@ -381,9 +381,6 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
     final db = ref.read(appDatabaseProvider);
     final repository = ref.read(savingsRepositoryProvider);
     final target = goal.targetAmount;
-    final applied = (goal.currentAmount + amount) > target
-        ? (target - goal.currentAmount).clamp(0.0, amount)
-        : amount;
 
     try {
       await db.transaction(() async {
@@ -396,7 +393,8 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
             note: const Value('Goal contribution'),
           ),
         );
-        final ok = await repository.adjustGoalAmountBy(goal.id, applied);
+        // The full amount, matching what delete and edit later reverse.
+        final ok = await repository.adjustGoalAmountBy(goal.id, amount);
         if (!ok) throw StateError('Could not update the goal.');
       });
     } catch (e) {
@@ -405,7 +403,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
     }
 
     if (!mounted) return;
-    final reachedTarget = goal.currentAmount + applied >= target - 1e-9;
+    final reachedTarget = goal.currentAmount + amount >= target - 1e-9;
     if (reachedTarget) {
       final complete = await showDialog<bool>(
         context: context,
@@ -430,7 +428,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
           goal.copyWith(
             isCompleted: true,
             completedAt: Value(DateTime.now()),
-            currentAmount: target,
+            // `goal` predates the contribution; keep the amount just saved
+            // rather than clamping it to the target.
+            currentAmount: goal.currentAmount + amount,
           ),
         );
       }
@@ -438,7 +438,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Added ${formatBdtAmount(applied, fractionDigits: 0)} to "${goal.name}"',
+            'Added ${formatBdtAmount(amount, fractionDigits: 0)} to "${goal.name}"',
           ),
         ),
       );

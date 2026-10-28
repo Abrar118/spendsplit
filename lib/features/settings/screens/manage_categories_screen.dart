@@ -150,7 +150,6 @@ class ManageCategoriesScreen extends ConsumerWidget {
 
     final db = ref.read(appDatabaseProvider);
     await db.categoryDao.deleteCategory(category.id);
-    await db.categoryBudgetDao.clearBudget(category.id);
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

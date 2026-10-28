@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spendsplit/core/utils/currency_formatter.dart';
+import 'package:spendsplit/core/utils/date_utils.dart';
 import 'package:spendsplit/data/database/app_database.dart';
 import 'package:spendsplit/data/models/financial_summaries.dart';
 
@@ -414,6 +416,120 @@ void main() {
       expect(summary.pacePerDay, 0);
       expect(summary.projectedYearEnd, 0);
       expect(summary.projectedVsLimit, -1000);
+    });
+  });
+
+  group('fixes 2026-10-28', () {
+    test('runway counts a quiet stretch as zero spending', () {
+      // Long-time user, nothing logged for weeks, then one 6,000 expense.
+      final runway = FinanceCalculators.spendingRunway(
+        transactions: [
+          _income(amount: 50000, date: DateTime(2026, 6, 1)),
+          _expense(amount: 6000, date: DateTime(2026, 10, 25)),
+        ],
+        availableBalance: 30000,
+        asOf: DateTime(2026, 10, 28),
+      );
+      // Baseline over the full 30-day window (200/day), not 4 days (1,500).
+      expect(
+        runway.dailyPace,
+        closeTo(6000 / 30 * 0.35 + 6000 / 7 * 0.65, 1e-6),
+      );
+    });
+
+    test('savings month-over-month sign follows better/worse', () {
+      double delta(double previous, double current) =>
+          FinanceCalculators.savingsInsights(
+            transactions: [
+              if (previous != 0)
+                _mkTx(
+                  previous > 0 ? 'savings_deposit' : 'savings_withdrawal',
+                  previous.abs(),
+                  DateTime(2026, 9, 10),
+                ),
+              if (current != 0)
+                _mkTx(
+                  current > 0 ? 'savings_deposit' : 'savings_withdrawal',
+                  current.abs(),
+                  DateTime(2026, 10, 10),
+                ),
+            ],
+            referenceMonth: DateTime(2026, 10),
+          ).monthOverMonthDelta;
+
+      expect(delta(-2000, 1000), closeTo(1.5, 1e-9));
+      expect(delta(0, -3000), -1.0);
+      expect(delta(-2000, -4000), closeTo(-1.0, 1e-9));
+      expect(delta(1000, 1500), closeTo(0.5, 1e-9));
+    });
+
+    test('average monthly savings includes quiet months, not future ones', () {
+      final insights = FinanceCalculators.savingsInsights(
+        transactions: [
+          _savingsDeposit(amount: 12000, date: DateTime(2026, 1, 5)),
+          _savingsDeposit(amount: 99999, date: DateTime(2026, 12, 5)),
+        ],
+        referenceMonth: DateTime(2026, 10),
+      );
+      expect(insights.averageMonthlySavings, closeTo(1200, 1e-9));
+    });
+
+    test('dollar pace waits a month and ignores future-dated expenses', () {
+      final early = FinanceCalculators.dollarSummary(
+        expenses: [_dollar(amount: 300, date: DateTime(2027, 1, 1))],
+        annualLimit: 12000,
+        year: 2027,
+        asOf: DateTime(2027, 1, 2),
+      );
+      expect(early.hasPace, isFalse);
+      expect(early.projectedOver, isFalse);
+
+      final later = FinanceCalculators.dollarSummary(
+        expenses: [
+          _dollar(amount: 300, date: DateTime(2026, 2, 1)),
+          _dollar(amount: 500, date: DateTime(2026, 12, 1)),
+        ],
+        annualLimit: 12000,
+        year: 2026,
+        asOf: DateTime(2026, 10, 28),
+      );
+      expect(later.hasPace, isTrue);
+      expect(later.spentYtd, 300);
+    });
+
+    test('a passed deadline asks for no weekly amount', () {
+      final projection = FinanceCalculators.goalProjection(
+        goal: _goal(
+          target: 1000,
+          current: 200,
+          deadline: DateTime(2026, 10, 1),
+        ),
+        linkedTransactions: [
+          _linkedDeposit(amount: 200, date: DateTime(2026, 9, 1), goalId: 7),
+        ],
+        asOf: DateTime(2026, 10, 28),
+      );
+      expect(projection.requiredWeeklyForDeadline, isNull);
+    });
+
+    test('calendarDaysUntil ignores time of day', () {
+      expect(
+        calendarDaysUntil(
+          DateTime(2026, 10, 29),
+          from: DateTime(2026, 10, 28, 15),
+        ),
+        1,
+      );
+      expect(
+        calendarDaysUntil(DateTime(2026, 10, 27), from: DateTime(2026, 10, 28)),
+        -1,
+      );
+    });
+
+    test('amounts that round to zero never print a minus sign', () {
+      expect(formatBdtAmount(-0.3), '৳ 0');
+      expect(formatBdtAmount(-0.0), '৳ 0');
+      expect(formatBdtAmount(-1), '-৳ 1');
     });
   });
 }

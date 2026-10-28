@@ -30,7 +30,8 @@ class DashboardScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final balanceSummary = ref.watch(balanceSummaryProvider);
     final currentMonthSummary = ref.watch(currentMonthSummaryProvider);
-    final transactions = ref.watch(transactionsProvider);
+    // Posted only: the spending chart shouldn't count future-dated entries.
+    final transactions = ref.watch(postedTransactionsProvider);
     final goals = ref.watch(savingsGoalsProvider);
     final dollarSummary = ref.watch(dollarTrackerSummaryProvider);
     final settings = ref.watch(appSettingsProvider);

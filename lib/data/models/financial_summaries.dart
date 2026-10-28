@@ -1,3 +1,4 @@
+import '../../core/utils/date_utils.dart';
 import '../database/app_database.dart';
 
 class BalanceSummary {
@@ -79,6 +80,7 @@ class DollarTrackerSummary {
     required this.pacePerDay,
     required this.projectedYearEnd,
     required this.projectedVsLimit,
+    required this.hasPace,
   });
 
   final int year;
@@ -94,6 +96,13 @@ class DollarTrackerSummary {
 
   /// [projectedYearEnd] minus [annualLimit] — positive means projected over.
   final double projectedVsLimit;
+
+  /// False until [FinanceCalculators.minPaceDays] into the year; don't show
+  /// the projection before then.
+  final bool hasPace;
+
+  /// Projected to end the year over the limit (only once [hasPace]).
+  bool get projectedOver => hasPace && projectedVsLimit > 0;
 }
 
 class SavingsInsights {
@@ -231,11 +240,13 @@ abstract final class FinanceCalculators {
     required int year,
     DateTime? asOf,
   }) {
+    final now = asOf ?? DateTime.now();
     final spentYtd = expenses
-        .where((expense) => expense.date.year == year)
+        .where(
+          (expense) => expense.date.year == year && !expense.date.isAfter(now),
+        )
         .fold<double>(0, (sum, expense) => sum + expense.amount);
 
-    final now = asOf ?? DateTime.now();
     final refInYear = now.year == year
         ? now
         : (now.year > year ? DateTime(year, 12, 31) : DateTime(year));
@@ -252,8 +263,13 @@ abstract final class FinanceCalculators {
       pacePerDay: pacePerDay,
       projectedYearEnd: projectedYearEnd,
       projectedVsLimit: projectedYearEnd - annualLimit,
+      hasPace: dayOfYear >= minPaceDays,
     );
   }
+
+  /// Days into the year before a USD pace is shown. Earlier, one annual
+  /// payment extrapolates to many times the limit.
+  static const minPaceDays = 30;
 
   /// How many days Available lasts at a trend-adjusted expense rate.
   ///
@@ -274,10 +290,12 @@ abstract final class FinanceCalculators {
     final now = asOf ?? DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final windowStart = today.subtract(Duration(days: windowDays - 1));
-    final observed = transactions.where((transaction) {
-      final date = transaction.date;
-      return !date.isBefore(windowStart) && !date.isAfter(now);
-    }).toList();
+    final history = transactions
+        .where((transaction) => !transaction.date.isAfter(now))
+        .toList();
+    final observed = history
+        .where((transaction) => !transaction.date.isBefore(windowStart))
+        .toList();
 
     if (observed.isEmpty) {
       return SpendingRunway(
@@ -287,13 +305,18 @@ abstract final class FinanceCalculators {
       );
     }
 
-    final firstObservedDay = observed
+    // From the first entry ever (clamped to the window), not the first one
+    // inside it: a quiet stretch is zero spending, not a shorter history.
+    final firstDay = history
         .map((transaction) {
           final date = transaction.date;
           return DateTime(date.year, date.month, date.day);
         })
         .reduce((first, date) => date.isBefore(first) ? date : first);
-    final observedDays = today.difference(firstObservedDay).inDays + 1;
+    final historyStart = firstDay.isBefore(windowStart)
+        ? windowStart
+        : firstDay;
+    final observedDays = today.difference(historyStart).inDays + 1;
     final baselineExpense = observed
         .where((transaction) => transaction.type == 'expense')
         .fold<double>(0, (sum, transaction) => sum + transaction.amount);
@@ -382,11 +405,13 @@ abstract final class FinanceCalculators {
     required Iterable<TransactionsTableData> transactions,
     required DateTime referenceMonth,
   }) {
-    final bucketedSavings = <String, double>{};
+    int monthIndex(DateTime date) => date.year * 12 + date.month - 1;
+    final referenceIndex = monthIndex(referenceMonth);
+    final bucketedSavings = <int, double>{};
 
     for (final entry in transactions) {
-      final monthKey =
-          '${entry.date.year.toString().padLeft(4, '0')}-${entry.date.month.toString().padLeft(2, '0')}';
+      final monthKey = monthIndex(entry.date);
+      if (monthKey > referenceIndex) continue;
       final delta = switch (entry.type) {
         'savings_deposit' => entry.amount,
         'savings_withdrawal' => -entry.amount,
@@ -407,9 +432,11 @@ abstract final class FinanceCalculators {
       );
     }
 
+    // Spread over every month since saving started, quiet ones included.
+    final firstIndex = bucketedSavings.keys.reduce((a, b) => a < b ? a : b);
     final average =
         bucketedSavings.values.fold<double>(0, (sum, value) => sum + value) /
-        bucketedSavings.length;
+        (referenceIndex - firstIndex + 1);
 
     final current = monthlySummary(
       transactions: transactions,
@@ -424,9 +451,11 @@ abstract final class FinanceCalculators {
       month: previousMonth,
     ).saved;
 
+    // Divide by |previous| so the sign always says better (+) or worse (-),
+    // even when last month was a net withdrawal.
     final delta = _isNearZero(previous)
-        ? (_isNearZero(current) ? 0.0 : 1.0)
-        : (current - previous) / previous;
+        ? (_isNearZero(current) ? 0.0 : (current > 0 ? 1.0 : -1.0))
+        : (current - previous) / previous.abs();
 
     return SavingsInsights(
       averageMonthlySavings: average,
@@ -511,8 +540,9 @@ abstract final class FinanceCalculators {
     DateTime? asOf,
   }) {
     final now = asOf ?? DateTime.now();
-    final linked = linkedTransactions.toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final linked =
+        linkedTransactions.where((t) => !t.date.isAfter(now)).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
 
     var net = 0.0;
     for (final t in linked) {
@@ -540,11 +570,16 @@ abstract final class FinanceCalculators {
       estimatedCompletion = now.add(Duration(days: (weeksLeft * 7).ceil()));
     }
 
+    // Null once the deadline day has passed: there's no weekly amount left
+    // that would still hit it.
     double? requiredWeeklyForDeadline;
-    if (goal.deadline != null) {
-      final daysUntil = goal.deadline!.difference(now).inDays;
-      final weeksUntil = daysUntil < 7 ? 1.0 : daysUntil / 7.0;
-      requiredWeeklyForDeadline = remaining / weeksUntil;
+    final deadline = goal.deadline;
+    if (deadline != null) {
+      final daysUntil = calendarDaysUntil(deadline, from: now);
+      if (daysUntil >= 0) {
+        final weeksUntil = daysUntil < 7 ? 1.0 : daysUntil / 7.0;
+        requiredWeeklyForDeadline = remaining / weeksUntil;
+      }
     }
 
     return GoalProjection(
