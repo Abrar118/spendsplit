@@ -541,6 +541,36 @@ void main() {
       expect(summary.availableAfter, 10000 + 50000 - 15000 - 5000);
     });
 
+    test('safe to spend runs to the usual payday, net of scheduled', () {
+      final safe = FinanceCalculators.safeToSpend(
+        transactions: [
+          _income(amount: 80000, date: DateTime(2026, 8, 25)),
+          _income(amount: 80000, date: DateTime(2026, 9, 26)),
+          _income(amount: 2000, date: DateTime(2026, 10, 3)), // not salary
+          _expense(amount: 1000, date: DateTime(2026, 11, 2)), // scheduled
+        ],
+        availableNow: 9000,
+        asOf: DateTime(2026, 10, 28, 12),
+      );
+      // Days 25 and 26 seen; lower median 25 has passed, so Nov 25.
+      expect(safe.isPayday, isTrue);
+      expect(safe.until, DateTime(2026, 11, 25));
+      expect(safe.days, 28);
+      expect(safe.perDay, closeTo((9000 - 1000) / 28, 1e-9));
+    });
+
+    test('safe to spend falls back to month end without a payday', () {
+      final safe = FinanceCalculators.safeToSpend(
+        transactions: const [],
+        availableNow: 400,
+        asOf: DateTime(2026, 10, 28),
+      );
+      expect(safe.isPayday, isFalse);
+      expect(safe.until, DateTime(2026, 11));
+      expect(safe.days, 4); // 28, 29, 30, 31
+      expect(safe.perDay, 100);
+    });
+
     test('budget pace is the share of the current month gone', () {
       final now = DateTime(2026, 10, 15, 9);
       expect(monthPaceFraction(DateTime(2026, 10), now: now), 15 / 31);

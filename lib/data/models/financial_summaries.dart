@@ -201,6 +201,27 @@ class UpcomingSummary {
   final double availableAfter;
 }
 
+class SafeToSpend {
+  const SafeToSpend({
+    required this.perDay,
+    required this.days,
+    required this.until,
+    required this.isPayday,
+  });
+
+  /// Available, less entries scheduled before [until], spread over [days].
+  final double perDay;
+
+  /// Days from today up to (not including) [until]; at least 1.
+  final int days;
+
+  /// The next payday when one was detected, else the first of next month.
+  final DateTime until;
+
+  /// Whether [until] came from the income history.
+  final bool isPayday;
+}
+
 abstract final class FinanceCalculators {
   static const double _epsilon = 1e-9;
 
@@ -247,6 +268,71 @@ abstract final class FinanceCalculators {
       };
     }
     return UpcomingSummary(entries: entries, availableAfter: available);
+  }
+
+  /// How much can be spent per day until the next payday. Payday is the
+  /// usual day of the month of the largest income, when that pattern shows
+  /// in at least two of the last three months; otherwise the horizon is the
+  /// end of this month. Scheduled entries before the horizon count first.
+  static SafeToSpend safeToSpend({
+    required Iterable<TransactionsTableData> transactions,
+    required double availableNow,
+    DateTime? asOf,
+  }) {
+    final now = asOf ?? DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Largest posted income per month, for the last three calendar months.
+    final firstMonth = DateTime(today.year, today.month - 2);
+    final largestByMonth = <int, TransactionsTableData>{};
+    for (final entry in transactions) {
+      if (entry.type != 'income' ||
+          entry.date.isAfter(now) ||
+          entry.date.isBefore(firstMonth)) {
+        continue;
+      }
+      final key = entry.date.year * 12 + entry.date.month;
+      final best = largestByMonth[key];
+      if (best == null || entry.amount > best.amount) {
+        largestByMonth[key] = entry;
+      }
+    }
+
+    DateTime? payday;
+    if (largestByMonth.length >= 2) {
+      final days = largestByMonth.values.map((e) => e.date.day).toList()
+        ..sort();
+      final day = days[(days.length - 1) ~/ 2]; // lower median
+      DateTime onDay(int year, int month) {
+        final last = DateTime(year, month + 1, 0).day;
+        return DateTime(year, month, day > last ? last : day);
+      }
+
+      final thisMonth = onDay(today.year, today.month);
+      payday = thisMonth.isAfter(today)
+          ? thisMonth
+          : onDay(today.year, today.month + 1);
+    }
+    final until = payday ?? DateTime(today.year, today.month + 1);
+
+    var available = availableNow;
+    for (final entry in transactions) {
+      if (!entry.date.isAfter(now) || !entry.date.isBefore(until)) continue;
+      available += switch (entry.type) {
+        'income' || 'savings_withdrawal' => entry.amount,
+        'expense' || 'savings_deposit' => -entry.amount,
+        _ => 0.0,
+      };
+    }
+
+    final days = calendarDaysUntil(until, from: today);
+    final span = days < 1 ? 1 : days;
+    return SafeToSpend(
+      perDay: available <= 0 ? 0 : available / span,
+      days: span,
+      until: until,
+      isPayday: payday != null,
+    );
   }
 
   static MonthlyFinanceSummary monthlySummary({

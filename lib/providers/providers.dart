@@ -274,6 +274,18 @@ final upcomingProvider = Provider<UpcomingSummary?>((ref) {
   );
 });
 
+/// Per-day spending room until the next payday; null while loading.
+final safeToSpendProvider = Provider<SafeToSpend?>((ref) {
+  ref.watch(clockTickProvider);
+  final transactions = ref.watch(transactionsProvider).valueOrNull;
+  final balance = ref.watch(balanceSummaryProvider).valueOrNull;
+  if (transactions == null || balance == null) return null;
+  return FinanceCalculators.safeToSpend(
+    transactions: transactions,
+    availableNow: balance.availableBalance,
+  );
+});
+
 final spendingRunwayProvider = Provider<AsyncValue<SpendingRunway>>((ref) {
   final transactions = ref.watch(postedTransactionsProvider);
   final balance = ref.watch(balanceSummaryProvider);
