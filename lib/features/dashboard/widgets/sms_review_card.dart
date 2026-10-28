@@ -18,6 +18,7 @@ class SmsReviewCard extends ConsumerWidget {
     return GestureDetector(
       onTap: () => context.go('${AppRoute.transactions.path}?review=1'),
       child: GlassCard(
+        shadow: false,
         glowColor: AppColors.amber,
         radius: 20,
         child: Row(

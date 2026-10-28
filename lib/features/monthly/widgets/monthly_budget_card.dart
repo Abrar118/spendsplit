@@ -34,6 +34,8 @@ class MonthlyBudgetCard extends ConsumerWidget {
 
     if (!enabled) {
       return GlassCard(
+        color: AppColors.surfaceRaised,
+        shadow: false,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -67,6 +69,8 @@ class MonthlyBudgetCard extends ConsumerWidget {
     }
 
     return GlassCard(
+      color: AppColors.surfaceRaised,
+      shadow: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

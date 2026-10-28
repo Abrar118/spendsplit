@@ -180,7 +180,7 @@ class _TileBody extends StatelessWidget {
     if (!frosted) {
       return DecoratedBox(
         decoration: BoxDecoration(
-          color: AppColors.surfaceLight.withValues(alpha: 0.92),
+          color: AppColors.surfaceRaised,
           borderRadius: BorderRadius.circular(20),
         ),
         child: content,

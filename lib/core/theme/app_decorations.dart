@@ -51,6 +51,7 @@ abstract final class AppDecorations {
     Color? glowColor,
     double opacity = 1,
     double radius = 20,
+    bool shadow = true,
   }) {
     final base = glowColor == null
         ? color.withValues(alpha: opacity)
@@ -72,14 +73,15 @@ abstract final class AppDecorations {
       ),
       borderRadius: BorderRadius.circular(radius),
       boxShadow: [
-        BoxShadow(
-          color: (glowColor ?? Colors.black).withValues(
-            alpha: glowColor == null ? 0.28 : 0.22,
+        if (shadow)
+          BoxShadow(
+            color: (glowColor ?? Colors.black).withValues(
+              alpha: glowColor == null ? 0.28 : 0.22,
+            ),
+            blurRadius: glowColor == null ? 24 : 34,
+            offset: const Offset(0, 14),
+            spreadRadius: -6,
           ),
-          blurRadius: glowColor == null ? 24 : 34,
-          offset: const Offset(0, 14),
-          spreadRadius: -6,
-        ),
       ],
     );
   }
@@ -88,15 +90,7 @@ abstract final class AppDecorations {
     return BoxDecoration(
       gradient: AppColors.balanceCardGradient,
       borderRadius: BorderRadius.circular(radius),
-      boxShadow: [
-        ...heroInnerGlow(),
-        const BoxShadow(
-          color: Color(0xB3000000),
-          blurRadius: 60,
-          spreadRadius: -15,
-          offset: Offset(0, 30),
-        ),
-      ],
+      boxShadow: heroInnerGlow(),
     );
   }
 

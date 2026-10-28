@@ -30,6 +30,7 @@ class DollarSummaryCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: GlassCard(
+        shadow: false,
         glowColor: AppColors.purple,
         radius: 24,
         opacity: 0.8,

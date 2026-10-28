@@ -83,6 +83,7 @@ class _SnapshotCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GlassCard(
+      shadow: false,
       glowColor: color,
       radius: 16,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),

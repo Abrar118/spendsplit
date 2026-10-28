@@ -87,9 +87,9 @@ Source of truth is `lib/core/theme/` (`app_colors.dart`, `app_typography.dart`,
 `app_decorations.dart`, `app_spacing.dart`). Reuse `AppColors`,
 `AppDecorations`, `AppSpacing`, `AppTypography` — never hand-roll colors.
 
-- **Dark theme only.** Base void is pure black `#000000`
-  (`AppColors.background`) — the older "never use #000000" rule in the design
-  docs was deliberately overridden (OLED black). Card surfaces `#15131F`
+- **Dark theme only.** Base void is charcoal `#1D1D20` (`AppColors.background`,
+  the owner's Kitty "Adwaita dark" background; it replaced the earlier OLED
+  black `#000000`). Card surfaces `#15131F`
   (`AppColors.surface`), elevated `#1E1A2C` (`AppColors.surfaceLight`).
 - **Glassmorphism** on floating UI (sheets, nav pill): backdrop blur over a
   low-opacity tint. The nav composes a saturation matrix onto the blur
@@ -119,7 +119,7 @@ Source of truth is `lib/core/theme/` (`app_colors.dart`, `app_typography.dart`,
 ### Design references (historical)
 
 `asset/DESIGN.md`, `asset/stitch_add_transaction_sheet/*/{screen.png,code.html}`
-and `lucid_obsidian/DESIGN.md` predate the live design (pure black, frosted
+and `lucid_obsidian/DESIGN.md` predate the live design (charcoal, frosted
 glass, Manrope). Treat them as directional only; match the current in-app style.
 `asset/SpendSplit_Flutter_Guide.md` is still useful for screen specs and
 calculated-value definitions.
@@ -168,7 +168,7 @@ SharedPreferences separately, so SMS imports call
 `SettingsController.reloadFromDisk()` first.
 
 **Time and future-dated entries:**
-- Balances, charts, summaries, budgets, runway and goal/dollar pacing use
+- Balances, charts, summaries, budgets and goal/dollar pacing use
   `postedTransactionsProvider`, which drops entries dated after now. Lists
   use `transactionsProvider`.
 - Date-based providers `ref.watch(clockTickProvider)` (bumped on resume and
@@ -201,8 +201,7 @@ or reverse the full amount; never cap at the target.
 
 ## Features
 
-- **Runway** — days Available lasts at a trend-adjusted trailing-30-day burn
-  rate; future-dated entries are excluded from balances.
+- **Future-dated entries** are excluded from balances.
 - **Balance trend** — 6-month reconstructed Available/Savings chart.
 - **Spending Velocity** — rolling 12-month expense bars with income overlay.
 - **Category budgets** — per-category monthly limits, edited inline on Monthly's
@@ -214,9 +213,6 @@ or reverse the full amount; never cap at the target.
   completion projection.
 - **Upcoming** — a dashboard card listing future-dated entries, plus
   "Available after scheduled" (`upcomingProvider`).
-- **Safe to spend** — per-day room until the next payday, shown on the balance
-  card (`safeToSpendProvider`). Payday is inferred from the usual day of the
-  month of the largest income; otherwise it runs to month end.
 - **Budget pace** — on the current month, `BudgetProgressBar` shows a tick at
   the share of the month gone. Bars turn amber when spending is ahead of pace.
 - **Dollar pacing** — projected year-end USD spend vs. the annual limit,

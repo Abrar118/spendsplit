@@ -208,6 +208,7 @@ class _ProjectionCard extends StatelessWidget {
     }
 
     return GlassCard(
+      shadow: false,
       glowColor: AppColors.purple,
       radius: 20,
       child: Column(

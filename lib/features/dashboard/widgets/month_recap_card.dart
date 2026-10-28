@@ -42,6 +42,7 @@ class MonthRecapCard extends ConsumerWidget {
     final ratePct = (recap.savingsRate * 100).round();
 
     return GlassCard(
+      shadow: false,
       glowColor: AppColors.purple,
       radius: 20,
       child: Column(

@@ -18,6 +18,7 @@ class BalanceTrendChart extends ConsumerWidget {
     final trend = ref.watch(balanceTrendProvider);
 
     return GlassCard(
+      shadow: false,
       glowColor: AppColors.purple,
       radius: 24,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),

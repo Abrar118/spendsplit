@@ -49,6 +49,7 @@ class _SpendingChartState extends State<SpendingChart> {
     final normalizedMax = maxValue <= 0 ? 1.0 : maxValue;
 
     return GlassCard(
+      shadow: false,
       glowColor: AppColors.teal,
       radius: 24,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),

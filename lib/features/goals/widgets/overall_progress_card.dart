@@ -23,6 +23,7 @@ class OverallProgressCard extends StatelessWidget {
     final clamped = progress.clamp(0.0, 1.0).toDouble();
 
     return GlassCard(
+      shadow: false,
       glowColor: AppColors.teal,
       radius: 32,
       child: Row(
