@@ -60,6 +60,8 @@ class SmsImportRunner {
 
   Future<int> _runOnce(bool waitForNew) async {
     try {
+      // The other engine may have advanced the watermark or seen refs.
+      await _ref.read(appSettingsProvider.notifier).reloadFromDisk();
       final settings = _ref.read(appSettingsProvider);
       final since = settings.smsImportSince;
       if (since == null) return 0;
@@ -87,14 +89,15 @@ class SmsImportRunner {
         ...messages.map((m) => m.ref),
       }.where((ref) => receivedMillisOfRef(ref) > watermark).toList();
       // Only after a successful import, so a failure rereads next time.
-      await _ref
-          .read(appSettingsProvider.notifier)
-          .recordSmsImport(
-            watermark: watermark,
-            seenRefs: seenRefs,
-            balance: result.latest?.balance,
-            balanceAt: result.latest?.dateTime,
-          );
+      // Seen refs keep these from being counted twice.
+      final settingsController = _ref.read(appSettingsProvider.notifier);
+      await settingsController.recordSmsUnparsed(result.unparsed);
+      await settingsController.recordSmsImport(
+        watermark: watermark,
+        seenRefs: seenRefs,
+        balance: result.latest?.balance,
+        balanceAt: result.latest?.dateTime,
+      );
       return result.inserted;
     } catch (error, stack) {
       debugPrint('SMS import failed: $error\n$stack');

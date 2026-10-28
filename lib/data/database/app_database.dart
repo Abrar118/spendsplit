@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:sqlite3/sqlite3.dart' show Database;
 
 import '../../core/constants/categories.dart';
 import 'daos/category_budget_dao.dart';
@@ -139,14 +140,18 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 7) {
         await m.createTable(categoryBudgetsTable);
-        await m.addColumn(
-          transactionTemplatesTable,
-          transactionTemplatesTable.useCount,
-        );
-        await m.addColumn(
-          transactionTemplatesTable,
-          transactionTemplatesTable.isMonthly,
-        );
+        // A table made by the `from < 5` step already has these columns
+        // (createTable uses the current definition).
+        if (from >= 5) {
+          await m.addColumn(
+            transactionTemplatesTable,
+            transactionTemplatesTable.useCount,
+          );
+          await m.addColumn(
+            transactionTemplatesTable,
+            transactionTemplatesTable.isMonthly,
+          );
+        }
       }
       if (from < 8) {
         // Additive only: existing rows get sms_ref NULL, needs_review false.
@@ -206,20 +211,34 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
+/// The database file: Application Support on iOS, private app storage on
+/// Android. Backup exclusion is handled natively.
+Future<File> databaseFile() async {
+  final directory = Platform.isIOS
+      ? await getApplicationSupportDirectory()
+      : await getApplicationDocumentsDirectory();
+
+  // Ensure the directory exists (applicationSupport may not on first run)
+  if (!directory.existsSync()) {
+    directory.createSync(recursive: true);
+  }
+  return File(path.join(directory.path, 'spendsplit.sqlite'));
+}
+
 LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    // Store the database in Application Support on iOS and private app
-    // storage on Android. Backup exclusion is handled natively.
-    final directory = Platform.isIOS
-        ? await getApplicationSupportDirectory()
-        : await getApplicationDocumentsDirectory();
+  return LazyDatabase(
+    () async => NativeDatabase.createInBackground(
+      await databaseFile(),
+      setup: _configureConnection,
+    ),
+  );
+}
 
-    // Ensure the directory exists (applicationSupport may not on first run)
-    if (!directory.existsSync()) {
-      directory.createSync(recursive: true);
-    }
-
-    final file = File(path.join(directory.path, 'spendsplit.sqlite'));
-    return NativeDatabase.createInBackground(file);
-  });
+/// The app and the Android SMS background engine each open their own
+/// connection. WAL lets one read while the other writes, and the busy
+/// timeout makes a clashing write wait instead of failing "database is
+/// locked". Top-level: drift runs it on its background isolate.
+void _configureConnection(Database database) {
+  database.execute('PRAGMA journal_mode = WAL');
+  database.execute('PRAGMA busy_timeout = 5000');
 }

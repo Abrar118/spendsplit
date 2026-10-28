@@ -27,7 +27,7 @@ Future<TransactionTemplatesTableData?> showTemplatePickerSheet(
   );
 }
 
-class _TemplatePickerBody extends StatelessWidget {
+class _TemplatePickerBody extends StatefulWidget {
   const _TemplatePickerBody({
     required this.templates,
     required this.categoriesById,
@@ -37,6 +37,18 @@ class _TemplatePickerBody extends StatelessWidget {
   final List<TransactionTemplatesTableData> templates;
   final Map<int, CategoriesTableData> categoriesById;
   final Future<void> Function(int id) onDelete;
+
+  @override
+  State<_TemplatePickerBody> createState() => _TemplatePickerBodyState();
+}
+
+class _TemplatePickerBodyState extends State<_TemplatePickerBody> {
+  // A local copy so a long-press delete drops the row right away.
+  late final List<TransactionTemplatesTableData> templates = [
+    ...widget.templates,
+  ];
+
+  Map<int, CategoriesTableData> get categoriesById => widget.categoriesById;
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +191,8 @@ class _TemplatePickerBody extends StatelessWidget {
       ),
     );
     if (confirmed == true) {
-      await onDelete(template.id);
+      await widget.onDelete(template.id);
+      if (mounted) setState(() => templates.remove(template));
     }
   }
 

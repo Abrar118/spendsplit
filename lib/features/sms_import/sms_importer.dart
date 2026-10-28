@@ -26,6 +26,7 @@ class SmsImportResult {
     required this.inserted,
     required this.newestReceivedMillis,
     this.latest,
+    this.unparsed = const [],
   });
 
   final int inserted;
@@ -36,7 +37,16 @@ class SmsImportResult {
 
   /// The parsed SMS with the latest transaction time (for reconciliation).
   final ParsedSms? latest;
+
+  /// Bodies that mention DEBIT/CREDIT yet didn't parse: likely a new bank
+  /// format the parser misses, not an OTP or promo.
+  final List<String> unparsed;
 }
+
+final _looksLikeTransaction = RegExp(
+  r'\b(DEBIT|CREDIT)\b',
+  caseSensitive: false,
+);
 
 /// Inserts one transaction per parseable SMS. Insert-only: never updates or
 /// deletes, and the unique `sms_ref` index silently drops repeats.
@@ -56,12 +66,16 @@ Future<SmsImportResult> importSmsMessages(
     var inserted = 0;
     int? newest;
     ParsedSms? latest;
+    final unparsed = <String>[];
     for (final sms in messages) {
       if (newest == null || sms.receivedMillis > newest) {
         newest = sms.receivedMillis;
       }
       final parsed = parseTrustBankSms(sms.body);
-      if (parsed == null) continue;
+      if (parsed == null) {
+        if (_looksLikeTransaction.hasMatch(sms.body)) unparsed.add(sms.body);
+        continue;
+      }
       if (latest == null || !parsed.dateTime.isBefore(latest.dateTime)) {
         latest = parsed;
       }
@@ -92,6 +106,7 @@ Future<SmsImportResult> importSmsMessages(
       inserted: inserted,
       newestReceivedMillis: newest,
       latest: latest,
+      unparsed: unparsed,
     );
   });
 }

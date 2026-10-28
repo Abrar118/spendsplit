@@ -526,6 +526,92 @@ void main() {
       );
     });
 
+    test('upcoming lists future entries and Available after them', () {
+      final summary = FinanceCalculators.upcoming(
+        transactions: [
+          _expense(amount: 15000, date: DateTime(2026, 11, 1)),
+          _income(amount: 50000, date: DateTime(2026, 10, 31)),
+          _savingsDeposit(amount: 5000, date: DateTime(2026, 11, 2)),
+          _expense(amount: 999, date: DateTime(2026, 10, 1)), // posted
+        ],
+        availableNow: 10000,
+        asOf: DateTime(2026, 10, 28),
+      );
+      expect(summary.entries.map((e) => e.amount), [50000, 15000, 5000]);
+      expect(summary.availableAfter, 10000 + 50000 - 15000 - 5000);
+    });
+
+    test('safe to spend runs to the usual payday, net of scheduled', () {
+      final safe = FinanceCalculators.safeToSpend(
+        transactions: [
+          _income(amount: 80000, date: DateTime(2026, 8, 25)),
+          _income(amount: 80000, date: DateTime(2026, 9, 26)),
+          _income(amount: 2000, date: DateTime(2026, 10, 3)), // not salary
+          _expense(amount: 1000, date: DateTime(2026, 11, 2)), // scheduled
+        ],
+        availableNow: 9000,
+        asOf: DateTime(2026, 10, 28, 12),
+      );
+      // Days 25 and 26 seen; lower median 25 has passed, so Nov 25.
+      expect(safe.isPayday, isTrue);
+      expect(safe.until, DateTime(2026, 11, 25));
+      expect(safe.days, 28);
+      expect(safe.perDay, closeTo((9000 - 1000) / 28, 1e-9));
+    });
+
+    test('safe to spend falls back to month end without a payday', () {
+      final safe = FinanceCalculators.safeToSpend(
+        transactions: const [],
+        availableNow: 400,
+        asOf: DateTime(2026, 10, 28),
+      );
+      expect(safe.isPayday, isFalse);
+      expect(safe.until, DateTime(2026, 11));
+      expect(safe.days, 4); // 28, 29, 30, 31
+      expect(safe.perDay, 100);
+    });
+
+    test('recap flags categories well off their 3-month usual', () {
+      TransactionsTableData spend(int cat, double amount, DateTime date) =>
+          _expense(
+            amount: amount,
+            date: date,
+          ).copyWith(id: cat * 1000 + date.month, categoryId: Value(cat));
+      CategoriesTableData category(int id, String name) => CategoriesTableData(
+        id: id,
+        name: name,
+        icon: 'x',
+        color: 0,
+        isPredefined: false,
+        isDollarCategory: false,
+      );
+
+      final recap = FinanceCalculators.monthRecap(
+        month: DateTime(2026, 9),
+        transactions: [
+          for (final m in [6, 7, 8]) spend(1, 1000, DateTime(2026, m, 5)),
+          spend(1, 1400, DateTime(2026, 9, 5)), // Food +40%
+          for (final m in [6, 7, 8]) spend(2, 1000, DateTime(2026, m, 6)),
+          spend(2, 1100, DateTime(2026, 9, 6)), // Rent +10%: not notable
+          spend(3, 900, DateTime(2026, 9, 7)), // no history: skipped
+        ],
+        categories: [
+          category(1, 'Food'),
+          category(2, 'Rent'),
+          category(3, 'Gifts'),
+        ],
+      );
+      expect(recap.categoryChanges.map((c) => c.category.name), ['Food']);
+      expect(recap.categoryChanges.single.change, closeTo(0.4, 1e-9));
+    });
+
+    test('budget pace is the share of the current month gone', () {
+      final now = DateTime(2026, 10, 15, 9);
+      expect(monthPaceFraction(DateTime(2026, 10), now: now), 15 / 31);
+      expect(monthPaceFraction(DateTime(2026, 9), now: now), isNull);
+      expect(monthPaceFraction(DateTime(2026, 11), now: now), isNull);
+    });
+
     test('amounts that round to zero never print a minus sign', () {
       expect(formatBdtAmount(-0.3), '৳ 0');
       expect(formatBdtAmount(-0.0), '৳ 0');

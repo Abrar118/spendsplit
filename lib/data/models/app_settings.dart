@@ -10,6 +10,8 @@ class AppSettings {
     this.smsSeenRefs = const [],
     this.bankBalance,
     this.bankBalanceAt,
+    this.smsUnparsedCount = 0,
+    this.smsUnparsedLatest,
     String? cardNumber,
   }) : cardNumber = _normalizeCardNumber(cardNumber);
 
@@ -35,6 +37,12 @@ class AppSettings {
   final double? bankBalance;
   final DateTime? bankBalanceAt;
 
+  /// Trust Bank SMS that mention DEBIT/CREDIT but didn't parse, since the
+  /// user last cleared the count, and the most recent such body. A rising
+  /// count means the bank changed its message format.
+  final int smsUnparsedCount;
+  final String? smsUnparsedLatest;
+
   bool get smsImportEnabled => smsImportSince != null;
 
   bool get needsDollarLimitRefresh => dollarLimitYear != DateTime.now().year;
@@ -51,6 +59,8 @@ class AppSettings {
     List<String>? smsSeenRefs,
     double? Function()? bankBalance,
     DateTime? Function()? bankBalanceAt,
+    int? smsUnparsedCount,
+    String? Function()? smsUnparsedLatest,
   }) {
     return AppSettings(
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
@@ -68,6 +78,10 @@ class AppSettings {
       bankBalanceAt: bankBalanceAt != null
           ? bankBalanceAt()
           : this.bankBalanceAt,
+      smsUnparsedCount: smsUnparsedCount ?? this.smsUnparsedCount,
+      smsUnparsedLatest: smsUnparsedLatest != null
+          ? smsUnparsedLatest()
+          : this.smsUnparsedLatest,
     );
   }
 

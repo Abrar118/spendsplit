@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -50,102 +51,105 @@ class BalanceCard extends ConsumerWidget {
                   ),
                 ),
                 Padding(
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                  padding: const EdgeInsets.all(22),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Trust Bank PLC',
-                            style: theme.textTheme.titleMedium,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Trust Bank PLC',
+                                style: theme.textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'BANGLADESH',
+                                style: theme.textTheme.labelMedium,
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'BANGLADESH',
-                            style: theme.textTheme.labelMedium,
+                          const Spacer(),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.asset(
+                              'asset/chip.png',
+                              width: 42,
+                              height: 30,
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ],
                       ),
-                      const Spacer(),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.asset(
-                          'asset/chip.png',
-                          width: 42,
-                          height: 30,
-                          fit: BoxFit.cover,
+                      const SizedBox(height: 34),
+                      Text('TOTAL BALANCE', style: theme.textTheme.labelMedium),
+                      const SizedBox(height: 8),
+                      // Balance amount with text glow
+                      AnimatedAmountText(
+                        value: summary.totalBalance,
+                        formatter: (value) =>
+                            formatBdtAmount(value, fractionDigits: 0),
+                        textStyle: theme.textTheme.displayLarge?.copyWith(
+                          fontSize: 42,
+                          color: AppColors.textPrimary,
+                          shadows: [
+                            const Shadow(
+                              color: Color(0x4DFFFFFF),
+                              blurRadius: 12,
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 34),
-                  Text('TOTAL BALANCE', style: theme.textTheme.labelMedium),
-                  const SizedBox(height: 8),
-                  // Balance amount with text glow
-                  AnimatedAmountText(
-                    value: summary.totalBalance,
-                    formatter: (value) =>
-                        formatBdtAmount(value, fractionDigits: 0),
-                    textStyle: theme.textTheme.displayLarge?.copyWith(
-                      fontSize: 42,
-                      color: AppColors.textPrimary,
-                      shadows: [
-                        const Shadow(color: Color(0x4DFFFFFF), blurRadius: 12),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 34),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _formatMaskedCardNumber(cardNumber),
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: AppColors.textPrimary.withValues(
-                              alpha: 0.72,
+                      const SizedBox(height: 34),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _formatMaskedCardNumber(cardNumber),
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: AppColors.textPrimary.withValues(
+                                  alpha: 0.72,
+                                ),
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: onEditCardNumber,
-                        splashRadius: 18,
-                        style: IconButton.styleFrom(
-                          minimumSize: const Size(32, 32),
-                          padding: EdgeInsets.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        icon: const Icon(
-                          LucideIcons.pencil,
-                          color: AppColors.textPrimary,
-                          size: 16,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Icon(
-                        LucideIcons.nfc,
-                        color: AppColors.textPrimary,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'VISA',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontStyle: FontStyle.italic,
-                        ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: onEditCardNumber,
+                            splashRadius: 18,
+                            style: IconButton.styleFrom(
+                              minimumSize: const Size(32, 32),
+                              padding: EdgeInsets.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            icon: const Icon(
+                              LucideIcons.pencil,
+                              color: AppColors.textPrimary,
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(
+                            LucideIcons.nfc,
+                            color: AppColors.textPrimary,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'VISA',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
+                ),
               ],
             ),
           ),
@@ -168,6 +172,7 @@ class BalanceCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     _RunwayLine(runway: ref.watch(spendingRunwayProvider)),
+                    _SafeToSpendLine(safe: ref.watch(safeToSpendProvider)),
                   ],
                 ),
               ),
@@ -223,9 +228,7 @@ class _BalanceSegment extends StatelessWidget {
     final amountStyle = theme.textTheme.headlineMedium?.copyWith(
       color: color,
       fontSize: emphasize ? 26 : null,
-      shadows: [
-        Shadow(color: color.withValues(alpha: 0.35), blurRadius: 16),
-      ],
+      shadows: [Shadow(color: color.withValues(alpha: 0.35), blurRadius: 16)],
     );
     return Column(
       crossAxisAlignment: alignEnd
@@ -241,6 +244,29 @@ class _BalanceSegment extends StatelessWidget {
           textAlign: alignEnd ? TextAlign.right : TextAlign.left,
         ),
       ],
+    );
+  }
+}
+
+class _SafeToSpendLine extends StatelessWidget {
+  const _SafeToSpendLine({required this.safe});
+
+  final SafeToSpend? safe;
+
+  @override
+  Widget build(BuildContext context) {
+    final safe = this.safe;
+    if (safe == null) return const SizedBox.shrink();
+    final until = DateFormat('MMM d').format(safe.until);
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Text(
+        '${formatCompactBdt(safe.perDay)}/day safe to spend · '
+        '${safe.isPayday ? 'payday $until' : 'until $until'}',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: safe.perDay <= 0 ? AppColors.coral : AppColors.textSecondary,
+        ),
+      ),
     );
   }
 }

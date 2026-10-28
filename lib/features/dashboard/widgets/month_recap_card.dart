@@ -117,6 +117,18 @@ class MonthRecapCard extends ConsumerWidget {
               ],
             ),
           ],
+          if (recap.categoryChanges.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            for (final c in recap.categoryChanges)
+              Text(
+                '${c.category.name} ${c.change > 0 ? '+' : '−'}'
+                '${(c.change.abs() * 100).round()}% vs usual '
+                '(${formatBdtAmount(c.usual, fractionDigits: 0)}/month)',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: c.change > 0 ? AppColors.coral : AppColors.green,
+                ),
+              ),
+          ],
         ],
       ),
     );

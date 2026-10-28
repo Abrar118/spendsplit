@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,165 +43,174 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     return PopScope(
       canPop: false,
       child: Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [AppColors.surfaceDim, AppColors.background],
+        backgroundColor: AppColors.background,
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [AppColors.surfaceDim, AppColors.background],
+                  ),
                 ),
               ),
             ),
-          ),
-          Positioned(
-            top: -120,
-            right: -80,
-            child: _GlowOrb(
-              color: AppColors.teal.withValues(alpha: 0.06),
-              size: 240,
+            Positioned(
+              top: -120,
+              right: -80,
+              child: _GlowOrb(
+                color: AppColors.teal.withValues(alpha: 0.06),
+                size: 240,
+              ),
             ),
-          ),
-          Positioned(
-            bottom: -140,
-            left: -90,
-            child: _GlowOrb(
-              color: AppColors.purple.withValues(alpha: 0.05),
-              size: 280,
+            Positioned(
+              bottom: -140,
+              left: -90,
+              child: _GlowOrb(
+                color: AppColors.purple.withValues(alpha: 0.05),
+                size: 280,
+              ),
             ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              child: Column(
-                children: [
-                  const _LockTopBar(),
-                  const SizedBox(height: 28),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        const Spacer(flex: 2),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 360),
-                          child: GlassCard(
-                            glowColor: AppColors.teal,
-                            radius: 32,
-                            padding: const EdgeInsets.fromLTRB(24, 30, 24, 28),
-                            opacity: 0.74,
-                            child: Column(
-                              children: [
-                                GestureDetector(
-                                  onTap: _authenticating
-                                      ? null
-                                      : _attemptBiometricUnlock,
-                                  child: _FingerprintHero(
-                                    active: _authenticating,
-                                    dimmed: !_deviceSupported,
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                child: Column(
+                  children: [
+                    const _LockTopBar(),
+                    const SizedBox(height: 28),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          const Spacer(flex: 2),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 360),
+                            child: GlassCard(
+                              glowColor: AppColors.teal,
+                              radius: 32,
+                              padding: const EdgeInsets.fromLTRB(
+                                24,
+                                30,
+                                24,
+                                28,
+                              ),
+                              opacity: 0.74,
+                              child: Column(
+                                children: [
+                                  GestureDetector(
+                                    onTap: _authenticating
+                                        ? null
+                                        : _attemptBiometricUnlock,
+                                    child: _FingerprintHero(
+                                      active: _authenticating,
+                                      dimmed: !_deviceSupported,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 28),
-                                Text(
-                                  'BIOMETRIC AUTHENTICATION',
-                                  style: theme.textTheme.labelLarge?.copyWith(
-                                    color: AppColors.onSurfaceVariant,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  _headlineText,
-                                  style: theme.textTheme.headlineMedium
-                                      ?.copyWith(height: 1.22),
-                                  textAlign: TextAlign.center,
-                                ),
-                                if (_statusMessage != null) ...[
-                                  const SizedBox(height: AppSpacing.sm),
+                                  const SizedBox(height: 28),
                                   Text(
-                                    _statusMessage!,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: AppColors.textSecondary,
+                                    'BIOMETRIC AUTHENTICATION',
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      color: AppColors.onSurfaceVariant,
                                     ),
                                     textAlign: TextAlign.center,
                                   ),
-                                ],
-                                const SizedBox(height: 30),
-                                Container(
-                                  height: 1,
-                                  color: AppColors.outlineVariant.withValues(
-                                    alpha: 0.14,
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _headlineText,
+                                    style: theme.textTheme.headlineMedium
+                                        ?.copyWith(height: 1.22),
+                                    textAlign: TextAlign.center,
                                   ),
-                                ),
-                                const SizedBox(height: 28),
-                                const _PatternGrid(),
-                              ],
+                                  if (_statusMessage != null) ...[
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      _statusMessage!,
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: AppColors.textSecondary,
+                                          ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                  const SizedBox(height: 30),
+                                  Container(
+                                    height: 1,
+                                    color: AppColors.outlineVariant.withValues(
+                                      alpha: 0.14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 28),
+                                  const _PatternGrid(),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        const Spacer(flex: 2),
-                        if (!_deviceSupported || !_authenticating) ...[
-                          FilledButton.icon(
+                          const Spacer(flex: 2),
+                          if (!_deviceSupported || !_authenticating) ...[
+                            FilledButton.icon(
+                              onPressed: _authenticating
+                                  ? null
+                                  : () => _authenticate(biometricOnly: false),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.teal,
+                                foregroundColor: AppColors.onPrimary,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 14,
+                                ),
+                              ),
+                              icon: const Icon(
+                                LucideIcons.fingerprint,
+                                size: 18,
+                              ),
+                              label: Text(
+                                _deviceSupported
+                                    ? 'Try ${_copy.biometric} Again'
+                                    : 'Unlock With ${_copy.credential}',
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                          ],
+                          TextButton.icon(
                             onPressed: _authenticating
                                 ? null
                                 : () => _authenticate(biometricOnly: false),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.teal,
-                              foregroundColor: AppColors.onPrimary,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 14,
-                              ),
-                            ),
-                            icon: const Icon(LucideIcons.fingerprint, size: 18),
-                            label: Text(
-                              _deviceSupported
-                                  ? 'Try Fingerprint Again'
-                                  : 'Unlock With Device Credentials',
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                        ],
-                        TextButton.icon(
-                          onPressed: _authenticating
-                              ? null
-                              : () => _authenticate(biometricOnly: false),
-                          icon: const Icon(
-                            LucideIcons.grid,
-                            size: 16,
-                            color: AppColors.teal,
-                          ),
-                          label: Text(
-                            'Use Pattern',
-                            style: theme.textTheme.titleMedium?.copyWith(
+                            icon: const Icon(
+                              LucideIcons.grid,
+                              size: 16,
                               color: AppColors.teal,
                             ),
+                            label: Text(
+                              'Use ${_copy.credential}',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: AppColors.teal,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 
   String get _headlineText {
     if (_authenticating) {
-      return 'Confirm your fingerprint to unlock';
+      return 'Confirm with ${_copy.biometric} to unlock';
     }
 
     if (!_deviceSupported) {
-      return 'Use your pattern or PIN to unlock';
+      return 'Set a ${_copy.credential.toLowerCase()} to unlock';
     }
 
-    return 'Scan your fingerprint to unlock';
+    return 'Use ${_copy.biometric} to unlock';
   }
 
   Future<void> _attemptBiometricUnlock() async {
@@ -226,8 +236,10 @@ class _LockScreenState extends ConsumerState<LockScreen> {
       setState(() {
         _authenticating = false;
         _deviceSupported = false;
+        // The lock was turned on, then the screen lock removed: say how out.
         _statusMessage =
-            'No authentication method available on this device.';
+            'This device has no screen lock. Add one in ${_copy.settingsPath}, '
+            'then try again.';
       });
       return;
     }
@@ -244,7 +256,8 @@ class _LockScreenState extends ConsumerState<LockScreen> {
         _authenticating = false;
         _deviceSupported = true;
         _statusMessage =
-            'No biometrics enrolled. Use your PIN, pattern, or password instead.';
+            'No ${_copy.biometric} set up. Use your '
+            '${_copy.credential.toLowerCase()} instead.';
       });
       return;
     }
@@ -270,7 +283,8 @@ class _LockScreenState extends ConsumerState<LockScreen> {
       _authenticating = false;
       _deviceSupported = true;
       _statusMessage = biometricOnly
-          ? 'Fingerprint verification was not completed. You can retry or use your device pattern/PIN.'
+          ? "${_copy.biometric} didn't complete. Retry, or use your "
+                '${_copy.credential.toLowerCase()}.'
           : 'Device verification was not completed.';
     });
   }
@@ -310,6 +324,21 @@ class _LockTopBar extends StatelessWidget {
     );
   }
 }
+
+/// Platform wording: Face ID and a passcode on iPhone, fingerprint and a
+/// PIN or pattern on Android.
+({String biometric, String credential, String settingsPath}) get _copy =>
+    defaultTargetPlatform == TargetPlatform.iOS
+    ? (
+        biometric: 'Face ID',
+        credential: 'Passcode',
+        settingsPath: 'Settings → Face ID & Passcode',
+      )
+    : (
+        biometric: 'Fingerprint',
+        credential: 'PIN or Pattern',
+        settingsPath: 'Settings → Security',
+      );
 
 class _FingerprintHero extends StatelessWidget {
   const _FingerprintHero({required this.active, required this.dimmed});

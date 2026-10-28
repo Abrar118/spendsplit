@@ -3,19 +3,34 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/date_utils.dart';
+import '../../../core/widgets/budget_progress_bar.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../providers/providers.dart';
 
 class MonthlyBudgetCard extends ConsumerWidget {
-  const MonthlyBudgetCard({required this.spent, super.key});
+  const MonthlyBudgetCard({
+    required this.spent,
+    required this.month,
+    super.key,
+  });
   final double spent;
+  final DateTime month;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final budget = ref.watch(appSettingsProvider).monthlyExpenseBudget;
+    ref.watch(clockTickProvider);
+    final pace = monthPaceFraction(month);
     final remaining = budget - spent;
     final enabled = budget > 0;
-    final color = remaining < 0 ? AppColors.coral : AppColors.blue;
+    // Spent beyond where the budget says we should be by today.
+    final aheadOfPace = pace == null ? 0.0 : spent - budget * pace;
+    final color = remaining < 0
+        ? AppColors.coral
+        : aheadOfPace > 0
+        ? AppColors.amber
+        : AppColors.blue;
 
     if (!enabled) {
       return GlassCard(
@@ -82,17 +97,20 @@ class MonthlyBudgetCard extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           if (enabled) ...[
-            LinearProgressIndicator(
-              value: (spent / budget).clamp(0.0, 1.0),
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
+            BudgetProgressBar(
+              used: spent / budget,
+              pace: pace,
               color: color,
-              backgroundColor: AppColors.surfaceContainerHighest,
               semanticsLabel: 'Monthly budget used',
             ),
             const SizedBox(height: 10),
             Text(
-              '${formatBdtAmount(spent)} spent of ${formatBdtAmount(budget)}',
+              '${formatBdtAmount(spent)} spent of ${formatBdtAmount(budget)}'
+              '${pace == null || remaining < 0
+                  ? ''
+                  : aheadOfPace > 0
+                  ? ' · ${formatBdtAmount(aheadOfPace)} ahead of pace'
+                  : ' · on pace'}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],

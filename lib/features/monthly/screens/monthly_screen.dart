@@ -12,6 +12,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/amount_text.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/budget_progress_bar.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/shimmer_skeleton.dart';
 import '../../../data/models/financial_summaries.dart';
@@ -95,7 +96,10 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
                               : () => _changeMonth(1),
                         ),
                         const SizedBox(height: AppSpacing.section),
-                        MonthlyBudgetCard(spent: analytics.summary.expenses),
+                        MonthlyBudgetCard(
+                          spent: analytics.summary.expenses,
+                          month: _visibleMonth,
+                        ),
                         const SizedBox(height: AppSpacing.section),
                         if (analytics.transactionCount == 0)
                           const SizedBox.shrink()
@@ -188,7 +192,9 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
                                   '${AppRoute.transactions.path}?month=${_formatMonthQuery(_visibleMonth)}',
                                 ),
                                 onCategoryTap: (item) {
-                                  final monthParam = _formatMonthQuery(_visibleMonth);
+                                  final monthParam = _formatMonthQuery(
+                                    _visibleMonth,
+                                  );
                                   final catParam = item.categoryId != null
                                       ? '&categoryId=${item.categoryId}'
                                       : '';
@@ -227,6 +233,7 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
                             ) ...[
                               _CategoryDetailTile(
                                     item: analytics.categories[i],
+                                    pace: monthPaceFraction(_visibleMonth),
                                     highlightAsTop: i == 0,
                                     onEditBudget:
                                         analytics.categories[i].categoryId ==
@@ -700,10 +707,9 @@ class _CategoryDonutCard extends StatelessWidget {
                           if (event is FlTapUpEvent &&
                               response?.touchedSection != null &&
                               onCategoryTap != null) {
-                            final idx = response!
-                                .touchedSection!.touchedSectionIndex;
-                            if (idx >= 0 &&
-                                idx < analytics.categories.length) {
+                            final idx =
+                                response!.touchedSection!.touchedSectionIndex;
+                            if (idx >= 0 && idx < analytics.categories.length) {
                               onCategoryTap!(analytics.categories[idx]);
                             }
                           }
@@ -822,10 +828,14 @@ class _CategoryDetailTile extends StatelessWidget {
   const _CategoryDetailTile({
     required this.item,
     required this.highlightAsTop,
+    this.pace,
     this.onEditBudget,
   });
 
   final MonthlyCategoryBreakdown item;
+
+  /// Share of the month gone (current month only), for the pace tick.
+  final double? pace;
   final bool highlightAsTop;
   final VoidCallback? onEditBudget;
 
@@ -835,6 +845,9 @@ class _CategoryDetailTile extends StatelessWidget {
     final color = highlightAsTop ? AppColors.teal : Color(item.colorValue);
     final limit = item.monthlyLimit;
     final overBudget = limit != null && limit > 0 && item.amount > limit;
+    final pace = this.pace;
+    final aheadOfPace =
+        limit != null && pace != null && item.amount > limit * pace;
     return InkWell(
       onTap: onEditBudget,
       borderRadius: BorderRadius.circular(24),
@@ -857,90 +870,92 @@ class _CategoryDetailTile extends StatelessWidget {
             children: [
               Row(
                 children: [
-            Container(
-              width: 18,
-              height: 72,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [color, color.withValues(alpha: 0.42)],
-                ),
-                borderRadius: BorderRadius.circular(999),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.18),
-                    blurRadius: 14,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
+                  Container(
+                    width: 18,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [color, color.withValues(alpha: 0.42)],
+                      ),
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.18),
+                          blurRadius: 14,
+                          spreadRadius: 1,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _categoryClassification(item.name),
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: AppColors.textSecondary,
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _categoryClassification(item.name),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  formatBdtAmount(item.amount, fractionDigits: 0),
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontSize: 18,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
+                  const SizedBox(width: 16),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        formatBdtAmount(item.amount, fractionDigits: 0),
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontSize: 18,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        limit != null
+                            ? '${formatBdtAmount(item.amount)} / ${formatBdtAmount(limit)}'
+                            : '${(item.share * 100).toStringAsFixed(1)}% OF TOTAL',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: overBudget
+                              ? AppColors.coral
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  limit != null
-                      ? '${formatBdtAmount(item.amount)} / ${formatBdtAmount(limit)}'
-                      : '${(item.share * 100).toStringAsFixed(1)}% OF TOTAL',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: overBudget
-                        ? AppColors.coral
-                        : AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
                 ],
               ),
               if (limit != null && limit > 0) ...[
                 const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    minHeight: 3,
-                    value: (item.amount / limit).clamp(0.0, 1.0),
-                    backgroundColor: Colors.white.withValues(alpha: 0.06),
-                    color: overBudget ? AppColors.coral : AppColors.teal,
-                  ),
+                BudgetProgressBar(
+                  used: item.amount / limit,
+                  pace: pace,
+                  height: 3,
+                  backgroundColor: Colors.white.withValues(alpha: 0.06),
+                  color: overBudget
+                      ? AppColors.coral
+                      : aheadOfPace
+                      ? AppColors.amber
+                      : AppColors.teal,
                 ),
               ],
             ],

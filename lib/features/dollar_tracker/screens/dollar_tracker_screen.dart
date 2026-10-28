@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -170,6 +171,7 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
     final messenger = ScaffoldMessenger.of(context);
 
     await repository.deleteExpenseById(expense.id);
+    HapticFeedback.mediumImpact();
 
     var undoFired = false;
     messenger.showSnackBar(

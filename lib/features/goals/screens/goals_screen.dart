@@ -294,11 +294,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
         break;
       case GoalMenuAction.complete:
         await repository.updateGoal(
-          goal.copyWith(
-            isCompleted: true,
-            completedAt: Value(DateTime.now()),
-            currentAmount: goal.targetAmount,
-          ),
+          // The amount stays the sum of linked transactions; completing an
+          // underfunded goal doesn't invent savings.
+          goal.copyWith(isCompleted: true, completedAt: Value(DateTime.now())),
         );
         if (mounted) {
           ScaffoldMessenger.of(
@@ -307,12 +305,17 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
         }
         break;
       case GoalMenuAction.delete:
+        // Captured: the Undo snackbar can outlive this screen.
+        final messenger = ScaffoldMessenger.of(context);
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) {
             return AlertDialog(
               title: const Text('Delete goal?'),
-              content: Text('Remove "${goal.name}" permanently?'),
+              content: Text(
+                'Remove "${goal.name}"? Its contributions stay in your '
+                'history, unlinked.',
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
@@ -331,12 +334,28 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
           return;
         }
 
-        await repository.deleteGoalById(goal.id);
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Goal deleted')));
-        }
+        final linked = await repository.deleteGoalById(goal.id);
+        var undone = false;
+        messenger.showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 4),
+            content: Text('"${goal.name}" deleted'),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () async {
+                if (undone) return;
+                undone = true;
+                try {
+                  await repository.restoreGoal(goal, linked);
+                } catch (e) {
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('Undo failed: $e')),
+                  );
+                }
+              },
+            ),
+          ),
+        );
         break;
     }
   }

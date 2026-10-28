@@ -28,6 +28,11 @@ class SecureStorageRepository {
     await _storage.write(key: _keyInitialBalance, value: value.toString());
   }
 
+  Future<void> clear() async {
+    await _storage.delete(key: _keyCardNumber);
+    await _storage.delete(key: _keyInitialBalance);
+  }
+
   /// One-time migration: move values from SharedPreferences to secure storage.
   /// Call on app startup; safe to call multiple times (idempotent).
   Future<void> migrateFromSharedPreferences({
@@ -36,12 +41,16 @@ class SecureStorageRepository {
   }) async {
     // Only migrate if secure storage is empty and old values exist
     final existingCard = await _storage.read(key: _keyCardNumber);
-    if (existingCard == null && oldCardNumber != null && oldCardNumber.isNotEmpty) {
+    if (existingCard == null &&
+        oldCardNumber != null &&
+        oldCardNumber.isNotEmpty) {
       await _storage.write(key: _keyCardNumber, value: oldCardNumber);
     }
 
     final existingBalance = await _storage.read(key: _keyInitialBalance);
-    if (existingBalance == null && oldInitialBalance != null && oldInitialBalance != 0.0) {
+    if (existingBalance == null &&
+        oldInitialBalance != null &&
+        oldInitialBalance != 0.0) {
       await _storage.write(
         key: _keyInitialBalance,
         value: oldInitialBalance.toString(),

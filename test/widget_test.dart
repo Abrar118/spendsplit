@@ -38,42 +38,45 @@ void main() {
     expect(tester.takeException(), isNull);
   });
   testWidgets(
-      'MonthlySnapshotRow shows all three cards with no overflow at 320dp', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(320, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: MonthlySnapshotRow(
-            summary: MonthlyFinanceSummary(
-              month: DateTime(2026, 9),
-              income: 77000,
-              expenses: 12345,
-              saved: 5000,
+    'MonthlySnapshotRow shows all three cards with no overflow at 320dp',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MonthlySnapshotRow(
+              summary: MonthlyFinanceSummary(
+                month: DateTime(2026, 9),
+                income: 77000,
+                expenses: 12345,
+                saved: 5000,
+              ),
             ),
           ),
         ),
-      ),
-    );
-    expect(find.text('INCOME'), findsOneWidget);
-    expect(find.text('SPENT'), findsOneWidget);
-    expect(find.text('SAVED'), findsOneWidget);
-    // The row must lay all three out at once — no horizontal scroll view that
-    // pushes SAVED off-screen.
-    expect(
-      find.descendant(
-        of: find.byType(MonthlySnapshotRow),
-        matching: find.byType(Scrollable),
-      ),
-      findsNothing,
-    );
-    // SAVED's amount stays within the 320dp viewport.
-    expect(tester.getBottomRight(find.text('SAVED')).dx, lessThanOrEqualTo(320));
-    expect(tester.takeException(), isNull);
-  });
+      );
+      expect(find.text('INCOME'), findsOneWidget);
+      expect(find.text('SPENT'), findsOneWidget);
+      expect(find.text('SAVED'), findsOneWidget);
+      // The row must lay all three out at once — no horizontal scroll view that
+      // pushes SAVED off-screen.
+      expect(
+        find.descendant(
+          of: find.byType(MonthlySnapshotRow),
+          matching: find.byType(Scrollable),
+        ),
+        findsNothing,
+      );
+      // SAVED's amount stays within the 320dp viewport.
+      expect(
+        tester.getBottomRight(find.text('SAVED')).dx,
+        lessThanOrEqualTo(320),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'SpendingChart shows 12 rolling month labels ending at the current month',
@@ -108,8 +111,18 @@ void main() {
         ),
       );
       final currentLabel = [
-        'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-        'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+        'JAN',
+        'FEB',
+        'MAR',
+        'APR',
+        'MAY',
+        'JUN',
+        'JUL',
+        'AUG',
+        'SEP',
+        'OCT',
+        'NOV',
+        'DEC',
       ][now.month - 1];
       expect(find.text(currentLabel), findsWidgets);
       expect(tester.takeException(), isNull);
@@ -124,8 +137,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-        child: const MaterialApp(
-          home: Scaffold(body: MonthlyBudgetCard(spent: 150)),
+        child: MaterialApp(
+          // A past month: no pace marker, so the text doesn't depend on today.
+          home: Scaffold(
+            body: MonthlyBudgetCard(spent: 150, month: DateTime(2020)),
+          ),
         ),
       ),
     );

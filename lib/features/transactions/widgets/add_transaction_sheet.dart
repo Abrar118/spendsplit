@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
@@ -73,6 +74,10 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   bool _saving = false;
   bool _didAutoSelectCategory = false;
 
+  /// Template the form was filled from; its use count goes up on save, so
+  /// opening and cancelling doesn't skew the quick-apply chips.
+  int? _appliedTemplateId;
+
   static const _incomeSources = [
     IncomeSource.salary,
     IncomeSource.freelance,
@@ -126,11 +131,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
           _entryType = _TransactionEntryType.savings;
           _savingsFlowType = _SavingsFlowType.withdrawal;
       }
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref
-            .read(transactionTemplateRepositoryProvider)
-            .markUsed(tpl.id);
-      });
+      _appliedTemplateId = tpl.id;
     }
   }
 
@@ -612,7 +613,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     if (selected == null) return;
 
     setState(() {
-      _selectedDate = selected;
+      _selectedDate = onDayKeepingTime(selected, _selectedDate);
     });
   }
 
@@ -727,6 +728,10 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
       final repository = ref.read(transactionRepositoryProvider);
       final savingsRepository = ref.read(savingsRepositoryProvider);
+      final templateRepository = ref.read(
+        transactionTemplateRepositoryProvider,
+      );
+      final appliedTemplateId = _isEditing ? null : _appliedTemplateId;
       await ref.read(appDatabaseProvider).transaction(() async {
         if (_isEditing) {
           final existing = widget.existingTransaction!;
@@ -771,8 +776,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             );
           }
         }
+        if (appliedTemplateId != null) {
+          await templateRepository.markUsed(appliedTemplateId);
+        }
       });
 
+      HapticFeedback.mediumImpact();
       if (!mounted) return;
 
       // Reset saving state before pop to avoid setState-after-dispose
@@ -828,7 +837,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   }
 
   void _useTemplate(TransactionTemplatesTableData template) {
-    ref.read(transactionTemplateRepositoryProvider).markUsed(template.id);
+    _appliedTemplateId = template.id;
     _applyTemplate(template);
   }
 
@@ -887,7 +896,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     );
     if (confirmed != true || !mounted) return;
     final name = nameController.text.trim();
-    if (name.isEmpty) return;
+    if (name.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Give the template a name')),
+      );
+      return;
+    }
 
     final type = switch (_entryType) {
       _TransactionEntryType.expense => TransactionType.expense,

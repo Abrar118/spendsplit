@@ -174,6 +174,7 @@ class MonthRecap {
     required this.topCategories,
     required this.budgetDelta,
     required this.expenseVsPrevMonth,
+    this.categoryChanges = const [],
   });
 
   final DateTime month;
@@ -189,6 +190,57 @@ class MonthRecap {
 
   /// Proportional change in expenses vs. the previous month.
   final double expenseVsPrevMonth;
+
+  /// Categories well above or below their usual spend, biggest change
+  /// first (at most two).
+  final List<CategoryChange> categoryChanges;
+}
+
+class CategoryChange {
+  const CategoryChange({
+    required this.category,
+    required this.usual,
+    required this.change,
+  });
+
+  final MonthlyCategoryBreakdown category;
+
+  /// Average monthly spend over the three months before the recap month.
+  final double usual;
+
+  /// `(this month - usual) / usual`, e.g. 0.4 for +40%.
+  final double change;
+}
+
+class UpcomingSummary {
+  const UpcomingSummary({required this.entries, required this.availableAfter});
+
+  /// Future-dated transactions, soonest first.
+  final List<TransactionsTableData> entries;
+
+  /// Available once every entry in [entries] has posted.
+  final double availableAfter;
+}
+
+class SafeToSpend {
+  const SafeToSpend({
+    required this.perDay,
+    required this.days,
+    required this.until,
+    required this.isPayday,
+  });
+
+  /// Available, less entries scheduled before [until], spread over [days].
+  final double perDay;
+
+  /// Days from today up to (not including) [until]; at least 1.
+  final int days;
+
+  /// The next payday when one was detected, else the first of next month.
+  final DateTime until;
+
+  /// Whether [until] came from the income history.
+  final bool isPayday;
 }
 
 abstract final class FinanceCalculators {
@@ -213,6 +265,94 @@ abstract final class FinanceCalculators {
       totalBalance: totalBalance,
       savingsBalance: savingsBalance,
       availableBalance: totalBalance - savingsBalance,
+    );
+  }
+
+  /// Future-dated entries and what Available becomes once they post. A
+  /// savings deposit lowers Available (the money moves to Savings), a
+  /// withdrawal raises it, matching [balanceSummary].
+  static UpcomingSummary upcoming({
+    required Iterable<TransactionsTableData> transactions,
+    required double availableNow,
+    DateTime? asOf,
+  }) {
+    final now = asOf ?? DateTime.now();
+    final entries =
+        transactions.where((entry) => entry.date.isAfter(now)).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+    var available = availableNow;
+    for (final entry in entries) {
+      available += switch (entry.type) {
+        'income' || 'savings_withdrawal' => entry.amount,
+        'expense' || 'savings_deposit' => -entry.amount,
+        _ => 0.0,
+      };
+    }
+    return UpcomingSummary(entries: entries, availableAfter: available);
+  }
+
+  /// How much can be spent per day until the next payday. Payday is the
+  /// usual day of the month of the largest income, when that pattern shows
+  /// in at least two of the last three months; otherwise the horizon is the
+  /// end of this month. Scheduled entries before the horizon count first.
+  static SafeToSpend safeToSpend({
+    required Iterable<TransactionsTableData> transactions,
+    required double availableNow,
+    DateTime? asOf,
+  }) {
+    final now = asOf ?? DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Largest posted income per month, for the last three calendar months.
+    final firstMonth = DateTime(today.year, today.month - 2);
+    final largestByMonth = <int, TransactionsTableData>{};
+    for (final entry in transactions) {
+      if (entry.type != 'income' ||
+          entry.date.isAfter(now) ||
+          entry.date.isBefore(firstMonth)) {
+        continue;
+      }
+      final key = entry.date.year * 12 + entry.date.month;
+      final best = largestByMonth[key];
+      if (best == null || entry.amount > best.amount) {
+        largestByMonth[key] = entry;
+      }
+    }
+
+    DateTime? payday;
+    if (largestByMonth.length >= 2) {
+      final days = largestByMonth.values.map((e) => e.date.day).toList()
+        ..sort();
+      final day = days[(days.length - 1) ~/ 2]; // lower median
+      DateTime onDay(int year, int month) {
+        final last = DateTime(year, month + 1, 0).day;
+        return DateTime(year, month, day > last ? last : day);
+      }
+
+      final thisMonth = onDay(today.year, today.month);
+      payday = thisMonth.isAfter(today)
+          ? thisMonth
+          : onDay(today.year, today.month + 1);
+    }
+    final until = payday ?? DateTime(today.year, today.month + 1);
+
+    var available = availableNow;
+    for (final entry in transactions) {
+      if (!entry.date.isAfter(now) || !entry.date.isBefore(until)) continue;
+      available += switch (entry.type) {
+        'income' || 'savings_withdrawal' => entry.amount,
+        'expense' || 'savings_deposit' => -entry.amount,
+        _ => 0.0,
+      };
+    }
+
+    final days = calendarDaysUntil(until, from: today);
+    final span = days < 1 ? 1 : days;
+    return SafeToSpend(
+      perDay: available <= 0 ? 0 : available / span,
+      days: span,
+      until: until,
+      isPayday: payday != null,
     );
   }
 
@@ -605,6 +745,35 @@ abstract final class FinanceCalculators {
     );
     final expenses = analytics.summary.expenses;
 
+    // "Usual" = average of the three months before, quiet months as zero.
+    final usualById = <int?, double>{};
+    for (var back = 1; back <= 3; back++) {
+      final earlier = DateTime(month.year, month.month - back);
+      for (final entry in transactions) {
+        if (entry.type != 'expense' || !_isSameMonth(entry.date, earlier)) {
+          continue;
+        }
+        usualById.update(
+          entry.categoryId,
+          (value) => value + entry.amount / 3,
+          ifAbsent: () => entry.amount / 3,
+        );
+      }
+    }
+    final changes =
+        <CategoryChange>[
+            for (final category in analytics.categories)
+              if ((usualById[category.categoryId] ?? 0) >= _minUsualForChange)
+                CategoryChange(
+                  category: category,
+                  usual: usualById[category.categoryId]!,
+                  change:
+                      (category.amount - usualById[category.categoryId]!) /
+                      usualById[category.categoryId]!,
+                ),
+          ].where((c) => c.change.abs() >= _minRecapChange).toList()
+          ..sort((a, b) => b.change.abs().compareTo(a.change.abs()));
+
     return MonthRecap(
       month: DateTime(month.year, month.month),
       income: analytics.summary.income,
@@ -616,8 +785,14 @@ abstract final class FinanceCalculators {
           ? monthlyExpenseBudget - expenses
           : null,
       expenseVsPrevMonth: analytics.expenseDelta,
+      categoryChanges: changes.take(2).toList(),
     );
   }
+
+  /// A category change is worth a line only past these: a 25% swing on a
+  /// usual spend of at least ৳500/month (smaller ones are noise).
+  static const _minRecapChange = 0.25;
+  static const _minUsualForChange = 500.0;
 
   static double _sumByType(
     Iterable<TransactionsTableData> transactions,

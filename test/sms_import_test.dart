@@ -76,6 +76,16 @@ void main() {
     expect(result.newestReceivedMillis, 9000);
     expect(result.latest, isNull);
     expect(await rows(), isEmpty);
+    expect(result.unparsed, isEmpty); // an OTP isn't a missed transaction
+  });
+
+  test('a DEBIT/CREDIT SMS that fails to parse is reported', () async {
+    const changedFormat = 'Card Txn\nBDT 70.00 DEBIT\n21/09/2026 17:28';
+    final result = await importSmsMessages(db, const [
+      InboxSms(body: changedFormat, receivedMillis: 9000),
+    ]);
+    expect(result.inserted, 0);
+    expect(result.unparsed, [changedFormat]);
   });
 
   test('existing hand-entered rows are untouched', () async {

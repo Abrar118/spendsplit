@@ -185,15 +185,40 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     );
 
                     if (filtered.isEmpty) {
+                      // Only "no transactions yet" when there really are none;
+                      // otherwise say a filter is hiding them.
+                      final reviewOnly =
+                          _quickFilter == TransactionQuickFilter.review;
                       return ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        children: const [
-                          SizedBox(height: 120),
-                          EmptyState(
-                            icon: LucideIcons.wallet,
-                            title: 'No transactions yet.',
-                            message: 'Tap + to add your first one.',
-                          ),
+                        children: [
+                          const SizedBox(height: 120),
+                          if (transactions.isEmpty)
+                            const EmptyState(
+                              icon: LucideIcons.wallet,
+                              title: 'No transactions yet.',
+                              message: 'Tap + to add your first one.',
+                            )
+                          else ...[
+                            EmptyState(
+                              icon: reviewOnly
+                                  ? LucideIcons.checkCircle
+                                  : LucideIcons.search,
+                              title: reviewOnly
+                                  ? 'Nothing to review.'
+                                  : 'No matches.',
+                              message: reviewOnly
+                                  ? 'Every imported transaction has been checked.'
+                                  : 'Nothing fits the current search or filters.',
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            Center(
+                              child: TextButton(
+                                onPressed: _clearFilters,
+                                child: const Text('Clear filters'),
+                              ),
+                            ),
+                          ],
                         ],
                       );
                     }
@@ -309,6 +334,15 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
   }
 
+  void _clearFilters() {
+    _searchController.clear();
+    setState(() {
+      _quickFilter = TransactionQuickFilter.all;
+      _advancedFilters = const TransactionAdvancedFilters();
+      _showSearch = false;
+    });
+  }
+
   List<TransactionsTableData> _applyFilters(
     List<TransactionsTableData> transactions,
     Map<int, CategoriesTableData> categoriesById,
@@ -420,8 +454,15 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    final name = nameController.text.trim();
-    if (name.isEmpty) return;
+    // The hint shows the note, so an empty field means "use the note".
+    final typed = nameController.text.trim();
+    final name = typed.isEmpty ? (transaction.note?.trim() ?? '') : typed;
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Give the template a name')));
+      return;
+    }
 
     await ref
         .read(transactionTemplateRepositoryProvider)
@@ -554,6 +595,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       return;
     }
 
+    HapticFeedback.mediumImpact();
     var undoFired = false;
 
     messenger.showSnackBar(

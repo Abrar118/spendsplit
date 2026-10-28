@@ -123,6 +123,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     const _SmsImportRow(),
+                    const _SmsUnparsedRow(),
                   ],
                 ),
               ),
@@ -572,6 +573,71 @@ class _LeadingIcon extends StatelessWidget {
       ),
       child: Icon(icon, color: AppColors.teal, size: 20),
     );
+  }
+}
+
+/// Shown only after bank SMS failed to parse: a format change would
+/// otherwise skip messages silently and for good.
+class _SmsUnparsedRow extends ConsumerWidget {
+  const _SmsUnparsedRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count = ref.watch(
+      appSettingsProvider.select((s) => s.smsUnparsedCount),
+    );
+    if (count == 0) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: _ActionRow(
+        icon: LucideIcons.info,
+        title: "Couldn't read $count bank SMS",
+        subtitle: 'They mention a debit or credit but no transaction was made',
+        value: 'View',
+        accentColor: AppColors.amber,
+        onTap: () => _show(context, ref),
+      ),
+    );
+  }
+
+  Future<void> _show(BuildContext context, WidgetRef ref) async {
+    final latest = ref.read(appSettingsProvider).smsUnparsedLatest ?? '';
+    final clear = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceLight,
+        title: const Text('Latest unread SMS'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SelectableText(latest),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Add these by hand. If this keeps happening, the bank changed '
+                'its format and the parser needs an update.',
+                style: Theme.of(ctx).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Close'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+    if (clear == true) {
+      await ref.read(appSettingsProvider.notifier).clearSmsUnparsed();
+    }
   }
 }
 

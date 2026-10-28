@@ -224,4 +224,60 @@ void main() {
     final fresh = await db.categoryDao.insertCategory(category('Gifts', false));
     expect(fresh, greaterThan(95));
   });
+
+  test('undoing a goal delete relinks its contributions', () async {
+    final goalId = await db.savingsGoalDao.insertGoal(
+      SavingsGoalsTableCompanion.insert(name: 'Trip', targetAmount: 1000),
+    );
+    await db.savingsGoalDao.adjustCurrentAmountBy(goalId, 300);
+    await db.transactionDao.insertTransaction(
+      TransactionsTableCompanion.insert(
+        type: 'savings_deposit',
+        amount: 300,
+        date: DateTime(2026, 9, 3),
+        savingsGoalId: Value(goalId),
+      ),
+    );
+    final goal = (await db.savingsGoalDao.getGoalById(goalId))!;
+
+    final linked = await db.savingsGoalDao.deleteGoalWithReferenceCleanup(
+      goalId,
+    );
+    expect(linked, hasLength(1));
+    expect(
+      (await db.transactionDao.getTransactions()).single.savingsGoalId,
+      isNull,
+    );
+
+    await db.savingsGoalDao.restoreGoal(goal, linked);
+    expect((await db.savingsGoalDao.getGoalById(goalId))!.currentAmount, 300);
+    expect(
+      (await db.transactionDao.getTransactions()).single.savingsGoalId,
+      goalId,
+    );
+  });
+
+  test('deleting a category can move its rows to another one', () async {
+    final gym = await db.categoryDao.insertCategory(category('Gym', false));
+    final health = await db.categoryDao.insertCategory(
+      category('Fitness', false),
+    );
+    await db.transactionDao.insertTransaction(
+      TransactionsTableCompanion.insert(
+        type: 'expense',
+        amount: 500,
+        date: DateTime(2026, 9, 3),
+        categoryId: Value(gym),
+      ),
+    );
+    expect(await db.categoryDao.usageCount(gym), 1);
+
+    await db.categoryDao.deleteCategory(gym, moveTo: health);
+
+    expect(
+      (await db.transactionDao.getTransactions()).single.categoryId,
+      health,
+    );
+    expect(await db.categoryDao.usageCount(gym), 0);
+  });
 }

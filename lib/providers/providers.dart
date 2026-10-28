@@ -102,6 +102,20 @@ class SettingsController extends Notifier<AppSettings> {
     state = state.copyWith(cardNumber: value);
   }
 
+  /// Re-reads SharedPreferences from disk. Each Dart engine (app and the SMS
+  /// background one) caches its own copy, so a value the other engine wrote
+  /// is invisible until this runs. Keystore values aren't affected.
+  Future<void> reloadFromDisk() async {
+    await ref.read(sharedPreferencesProvider).reload();
+    state = ref
+        .read(settingsRepositoryProvider)
+        .loadSettings()
+        .copyWith(
+          cardNumber: state.cardNumber,
+          initialBalance: state.initialBalance,
+        );
+  }
+
   Future<void> enableSmsImport(int nowMillis) async {
     await ref.read(settingsRepositoryProvider).setSmsImportSince(nowMillis);
     state = state.copyWith(smsImportSince: () => nowMillis);
@@ -143,6 +157,24 @@ class SettingsController extends Notifier<AppSettings> {
   }
 
   /// Backup restore. Permissions aren't in a backup, so the backup's
+  /// Adds SMS that looked like transactions but didn't parse.
+  Future<void> recordSmsUnparsed(List<String> bodies) async {
+    if (bodies.isEmpty) return;
+    final count = state.smsUnparsedCount + bodies.length;
+    await ref
+        .read(settingsRepositoryProvider)
+        .setSmsUnparsed(count, bodies.last);
+    state = state.copyWith(
+      smsUnparsedCount: count,
+      smsUnparsedLatest: () => bodies.last,
+    );
+  }
+
+  Future<void> clearSmsUnparsed() async {
+    await ref.read(settingsRepositoryProvider).setSmsUnparsed(0, null);
+    state = state.copyWith(smsUnparsedCount: 0, smsUnparsedLatest: () => null);
+  }
+
   /// watermark is kept only when this phone already grants READ_SMS;
   /// otherwise import goes off. The bank balance is always cleared and the
   /// next import repopulates it. Returns true when this switched import off.
@@ -227,6 +259,30 @@ final balanceSummaryProvider = Provider<AsyncValue<BalanceSummary>>((ref) {
       transactions: entries,
       initialBalance: settings.initialBalance,
     ),
+  );
+});
+
+/// Future-dated entries and Available after them; null while loading.
+final upcomingProvider = Provider<UpcomingSummary?>((ref) {
+  ref.watch(clockTickProvider);
+  final transactions = ref.watch(transactionsProvider).valueOrNull;
+  final balance = ref.watch(balanceSummaryProvider).valueOrNull;
+  if (transactions == null || balance == null) return null;
+  return FinanceCalculators.upcoming(
+    transactions: transactions,
+    availableNow: balance.availableBalance,
+  );
+});
+
+/// Per-day spending room until the next payday; null while loading.
+final safeToSpendProvider = Provider<SafeToSpend?>((ref) {
+  ref.watch(clockTickProvider);
+  final transactions = ref.watch(transactionsProvider).valueOrNull;
+  final balance = ref.watch(balanceSummaryProvider).valueOrNull;
+  if (transactions == null || balance == null) return null;
+  return FinanceCalculators.safeToSpend(
+    transactions: transactions,
+    availableNow: balance.availableBalance,
   );
 });
 
@@ -372,10 +428,10 @@ final snapshotServiceProvider = Provider<SnapshotService>((ref) {
 
 final transactionTemplateRepositoryProvider =
     Provider<TransactionTemplateRepository>((ref) {
-  return TransactionTemplateRepository(
-    ref.watch(appDatabaseProvider).transactionTemplateDao,
-  );
-});
+      return TransactionTemplateRepository(
+        ref.watch(appDatabaseProvider).transactionTemplateDao,
+      );
+    });
 
 final transactionTemplatesProvider = StreamProvider((ref) {
   return ref.watch(transactionTemplateRepositoryProvider).watchTemplates();
@@ -392,32 +448,33 @@ final categoryBudgetsProvider = StreamProvider<Map<int, double>>((ref) {
 /// current calendar month. A match is the same type and, for
 /// expense/savings templates with a category, the same category — or, for
 /// income templates with a source, the same source. Amount is not compared.
-final expectedThisMonthProvider =
-    Provider<List<TransactionTemplatesTableData>>((ref) {
-      final templates =
-          ref.watch(transactionTemplatesProvider).valueOrNull ?? const [];
-      final txns = ref.watch(transactionsProvider).valueOrNull ?? const [];
-      final monthly = templates.where((t) => t.isMonthly).toList();
-      if (monthly.isEmpty) return const [];
+final expectedThisMonthProvider = Provider<List<TransactionTemplatesTableData>>(
+  (ref) {
+    final templates =
+        ref.watch(transactionTemplatesProvider).valueOrNull ?? const [];
+    final txns = ref.watch(transactionsProvider).valueOrNull ?? const [];
+    final monthly = templates.where((t) => t.isMonthly).toList();
+    if (monthly.isEmpty) return const [];
 
-      ref.watch(clockTickProvider);
-      final now = DateTime.now();
-      final thisMonth = txns.where(
-        (t) => t.date.year == now.year && t.date.month == now.month,
-      );
+    ref.watch(clockTickProvider);
+    final now = DateTime.now();
+    final thisMonth = txns.where(
+      (t) => t.date.year == now.year && t.date.month == now.month,
+    );
 
-      bool logged(TransactionTemplatesTableData tpl) {
-        return thisMonth.any((t) {
-          if (t.type != tpl.type) return false;
-          if (TransactionType.fromDbValue(tpl.type) == TransactionType.income) {
-            return tpl.source == null || t.source == tpl.source;
-          }
-          return tpl.categoryId == null || t.categoryId == tpl.categoryId;
-        });
-      }
+    bool logged(TransactionTemplatesTableData tpl) {
+      return thisMonth.any((t) {
+        if (t.type != tpl.type) return false;
+        if (TransactionType.fromDbValue(tpl.type) == TransactionType.income) {
+          return tpl.source == null || t.source == tpl.source;
+        }
+        return tpl.categoryId == null || t.categoryId == tpl.categoryId;
+      });
+    }
 
-      return monthly.where((t) => !logged(t)).toList();
-    });
+    return monthly.where((t) => !logged(t)).toList();
+  },
+);
 
 /// Month-end recap for the **previous** calendar month.
 final monthRecapProvider = Provider<AsyncValue<MonthRecap>>((ref) {
@@ -425,8 +482,7 @@ final monthRecapProvider = Provider<AsyncValue<MonthRecap>>((ref) {
   final categories = ref.watch(categoriesProvider);
   final settings = ref.watch(appSettingsProvider);
   final budgets =
-      ref.watch(categoryBudgetsProvider).valueOrNull ??
-      const <int, double>{};
+      ref.watch(categoryBudgetsProvider).valueOrNull ?? const <int, double>{};
 
   if (!transactions.hasValue || !categories.hasValue) {
     return const AsyncLoading();
@@ -446,11 +502,12 @@ final monthRecapProvider = Provider<AsyncValue<MonthRecap>>((ref) {
 
 /// Up to three templates with the highest use count (used at least once),
 /// surfaced as quick-apply chips in the add-transaction sheet.
-final mostUsedTemplatesProvider =
-    Provider<List<TransactionTemplatesTableData>>((ref) {
-      final templates =
-          ref.watch(transactionTemplatesProvider).valueOrNull ?? const [];
-      final used = templates.where((t) => t.useCount > 0).toList()
-        ..sort((a, b) => b.useCount.compareTo(a.useCount));
-      return used.take(3).toList();
-    });
+final mostUsedTemplatesProvider = Provider<List<TransactionTemplatesTableData>>(
+  (ref) {
+    final templates =
+        ref.watch(transactionTemplatesProvider).valueOrNull ?? const [];
+    final used = templates.where((t) => t.useCount > 0).toList()
+      ..sort((a, b) => b.useCount.compareTo(a.useCount));
+    return used.take(3).toList();
+  },
+);
