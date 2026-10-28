@@ -156,9 +156,16 @@ Migrations are additive only — add a migration test for any schema change.
 
 SharedPreferences: `biometric_enabled`, `dollar_annual_limit`,
 `dollar_limit_year`, `monthly_expense_budget`, `recap_dismissed_month`,
-`sms_import_since`, `sms_seen_refs`, `bank_balance`, `bank_balance_at`.
-`initial_balance` and `card_number` live in the platform keystore
-(`SecureStorageRepository`), not SharedPreferences.
+`sms_import_since`, `sms_seen_refs`, `bank_balance`, `bank_balance_at`,
+`sms_unparsed_count`, `sms_unparsed_latest`. `initial_balance` and
+`card_number` live in the platform keystore (`SecureStorageRepository`); the
+bootstrap removes any old plaintext copies, and on iOS clears the keystore on
+a fresh install (no database file), since the Keychain survives app deletion.
+
+The database runs in WAL mode with a 5 s busy timeout, because the Android
+SMS background engine opens its own connection. Each engine also caches
+SharedPreferences separately, so SMS imports call
+`SettingsController.reloadFromDisk()` first.
 
 **Time and future-dated entries:**
 - Balances, charts, summaries, budgets, runway and goal/dollar pacing use
@@ -205,9 +212,20 @@ or reverse the full amount; never cap at the target.
 - **Goal contributions** — "Add Contribution" logs a linked `savings_deposit`
   and bumps the goal; tapping a goal opens `/goal/:id` with history and a
   completion projection.
-- **Dollar pacing** — projected year-end USD spend vs. the annual limit.
+- **Upcoming** — a dashboard card listing future-dated entries, plus
+  "Available after scheduled" (`upcomingProvider`).
+- **Safe to spend** — per-day room until the next payday, shown on the balance
+  card (`safeToSpendProvider`). Payday is inferred from the usual day of the
+  month of the largest income; otherwise it runs to month end.
+- **Budget pace** — on the current month, `BudgetProgressBar` shows a tick at
+  the share of the month gone. Bars turn amber when spending is ahead of pace.
+- **Dollar pacing** — projected year-end USD spend vs. the annual limit,
+  hidden for the first 30 days of the year.
 - **Month-end recap** — dismissible dashboard card (days 1–5) for the prior
-  month; dismissal stored in `recap_dismissed_month`.
+  month; dismissal stored in `recap_dismissed_month`. Flags up to two
+  categories ±25% or more from their 3-month average.
+- **Privacy cover** — on Android 13+, `setRecentsScreenshotEnabled(false)`.
+  On iOS, a cover with the app icon whenever the app isn't resumed.
 - **Templates** — top-3 by `use_count` as quick chips in the add sheet;
   "Expected monthly" templates not yet logged this month surface on the dashboard.
 - **Export/backup** — CSV/PDF export, CSV import, full JSON snapshot of all six
@@ -221,7 +239,9 @@ or reverse the full amount; never cap at the target.
   `sms_seen_refs` skips already-processed SMS in that window, so deleted entries
   stay deleted. Restore runs under `SmsImportRunner.whilePaused`. Dashboard
   shows a review card and a bank-balance reconciliation card
-  (`bankReconciliationProvider`). Not available on the owner's iPhone.
+  (`bankReconciliationProvider`). Settings counts alerts that mention
+  DEBIT/CREDIT but fail to parse, a sign the bank changed its format. Not
+  available on the owner's iPhone.
 
 ## Gotchas
 
@@ -231,9 +251,12 @@ or reverse the full amount; never cap at the target.
 - Callbacks that outlive a screen (snackbar Undo, multi-step restore) must
   `ref.read` everything up front. `ref` throws once the widget is disposed,
   and tab switches dispose screens.
-- `CategoryDao.deleteCategory` detaches the category's transactions and
-  templates (sets them to null) and removes its budget. Restore keeps the
-  category ID sequence above every referenced ID.
+- `CategoryDao.deleteCategory(id, moveTo:)` moves the category's rows to
+  `moveTo`, or, without it, detaches the transactions and templates (sets
+  them to null). Either way it removes the budget. Restore keeps the category
+  ID sequence above every referenced ID.
+- Deleting a goal returns the IDs of the transactions it unlinked;
+  `restoreGoal` relinks them for Undo.
 
 Ideas and known-but-unfixed bugs: `docs/BACKLOG.md`.
 

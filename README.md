@@ -34,12 +34,16 @@ pure-black glassmorphic UI, biometric lock, and an isolated USD spending tracker
   (Total, Available, Savings, Dollar Remaining) is derived, never stored.
 - **Runway** — how many days Available lasts at a trend-adjusted trailing-30-day burn
   rate (future-dated entries don't count toward balances).
+- **Safe to spend** — Available per day until your next payday (inferred from your
+  income history), net of anything scheduled before it.
+- **Upcoming** — future-dated entries and what Available becomes once they post.
 - **Balance Trend** — 6-month reconstructed Available / Savings stacked-bar history.
 - **Spending Velocity** — rolling 12-month expense bars with an income overlay.
 - **Category budgets** — optional per-category monthly limits, edited inline on the
-  Monthly screen with a progress bar.
+  Monthly screen with a progress bar and a pace marker for where spending should be
+  by today.
 - **Category editor** — rename / re-icon / recolour custom categories; the six
-  predefined categories stay locked.
+  predefined categories stay locked. Deleting one can move its entries elsewhere.
 - **Savings goals** — progress rings, priority ordering, and per-goal contributions
   that post a linked deposit and bump the goal.
 - **Goal detail** — contribution history plus a completion projection from your
@@ -50,13 +54,15 @@ pure-black glassmorphic UI, biometric lock, and an isolated USD spending tracker
 - **Dollar tracker** — a fully isolated USD ledger with an annual limit, utilization
   ring, and year-end pace projection. No currency conversion, no BDT cross-contamination.
 - **Month-end recap** — a dismissible dashboard card (days 1–5) summarising the prior
-  month: net saved, savings rate, top categories, budget result.
+  month: net saved, savings rate, top categories, budget result, and categories well
+  off their usual spend.
 - **CSV / PDF export**, **CSV import**, **full JSON snapshot backup & restore**
   (hold-to-confirm), and an Android home-screen widget.
 - **Trust Bank SMS import** (Android) — debit/credit alerts become transactions flagged
   for review, imported on open and in the background, with a bank-balance
   reconciliation card.
-- **Biometric lock** with re-lock on background.
+- **Biometric lock** with re-lock on background; balances are hidden in the app
+  switcher.
 
 ---
 
