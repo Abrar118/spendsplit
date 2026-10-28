@@ -39,13 +39,12 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(appSettingsProvider);
-    final summaryAsync = ref.watch(
-      dollarTrackerSummaryForYearProvider(settings.dollarLimitYear),
-    );
-    final expensesAsync = ref.watch(
-      dollarExpensesForYearProvider(settings.dollarLimitYear),
-    );
+    // The calendar year, even before the rollover prompt is answered, so new
+    // expenses never vanish into a list still showing last year.
+    ref.watch(clockTickProvider);
+    final year = DateTime.now().year;
+    final summaryAsync = ref.watch(dollarTrackerSummaryForYearProvider(year));
+    final expensesAsync = ref.watch(dollarExpensesForYearProvider(year));
     final categories = {
       for (final category
           in ref.watch(dollarCategoriesProvider).valueOrNull ??
@@ -59,11 +58,9 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
         child: RefreshIndicator(
           color: AppColors.teal,
           onRefresh: () async {
-            ref.invalidate(
-              dollarExpensesForYearProvider(settings.dollarLimitYear),
-            );
+            ref.invalidate(dollarExpensesForYearProvider(year));
             final _ = await ref.refresh(
-              dollarExpensesForYearProvider(settings.dollarLimitYear).future,
+              dollarExpensesForYearProvider(year).future,
             );
           },
           child: ListView(
@@ -77,15 +74,14 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
               AppSpacing.navClearance,
             ),
             children: [
-              _TopBar(year: settings.dollarLimitYear),
+              _TopBar(year: year),
               const SizedBox(height: AppSpacing.xl),
               summaryAsync.when(
                 loading: () => const _SummarySkeleton(),
                 error: (error, _) => _ErrorCard(
                   title: 'Unable to load dollar summary',
-                  onRetry: () => ref.invalidate(
-                    dollarExpensesForYearProvider(settings.dollarLimitYear),
-                  ),
+                  onRetry: () =>
+                      ref.invalidate(dollarExpensesForYearProvider(year)),
                 ),
                 data: (summary) => DollarHeaderCard(summary: summary),
               ),
@@ -128,9 +124,8 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
                 loading: () => const _ExpenseListSkeleton(),
                 error: (error, _) => _ErrorCard(
                   title: 'Unable to load dollar expenses',
-                  onRetry: () => ref.invalidate(
-                    dollarExpensesForYearProvider(settings.dollarLimitYear),
-                  ),
+                  onRetry: () =>
+                      ref.invalidate(dollarExpensesForYearProvider(year)),
                 ),
                 data: (expenses) {
                   if (expenses.isEmpty) {
@@ -304,7 +299,7 @@ class _YearRolloverDialogState extends State<_YearRolloverDialog> {
       actions: [
         TextButton(
           onPressed: () =>
-              Navigator.of(context).pop(_YearRolloverAction.keepExisting),
+              Navigator.of(context).pop(_YearRolloverAction.keepExisting()),
           child: const Text('Keep Existing'),
         ),
         FilledButton(onPressed: _submit, child: const Text('Save New Limit')),

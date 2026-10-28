@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -105,24 +106,27 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.section),
-            GlassCard(
-              glowColor: AppColors.amber,
-              radius: 24,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'BANK SMS',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: AppColors.textSecondary,
+            // SMS reading is Android-only (iOS has no SMS API).
+            if (defaultTargetPlatform == TargetPlatform.android) ...[
+              const SizedBox(height: AppSpacing.section),
+              GlassCard(
+                glowColor: AppColors.amber,
+                radius: 24,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'BANK SMS',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  const _SmsImportRow(),
-                ],
+                    const SizedBox(height: AppSpacing.md),
+                    const _SmsImportRow(),
+                  ],
+                ),
               ),
-            ),
+            ],
             const SizedBox(height: AppSpacing.section),
             GlassCard(
               glowColor: AppColors.purple,

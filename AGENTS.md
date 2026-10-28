@@ -160,6 +160,19 @@ SharedPreferences: `biometric_enabled`, `dollar_annual_limit`,
 `initial_balance` and `card_number` live in the platform keystore
 (`SecureStorageRepository`), not SharedPreferences.
 
+**Time and future-dated entries:**
+- Balances, charts, summaries, budgets, runway and goal/dollar pacing use
+  `postedTransactionsProvider`, which drops entries dated after now. Lists
+  use `transactionsProvider`.
+- Date-based providers `ref.watch(clockTickProvider)` (bumped on resume and
+  at midnight), then read `DateTime.now()`. Never store a time in a provider:
+  it would lag behind entries saved later.
+- Use `calendarDaysUntil` for "days left", not `Duration.inDays`.
+
+**Goal amount invariant:** a goal's `currentAmount` equals the sum of its
+linked deposits minus withdrawals. Contribute, edit, delete and undo all add
+or reverse the full amount; never cap at the target.
+
 **Calculated values (derived, never stored):**
 - Total Balance = initial_balance + SUM(income) − SUM(expenses)
 - Savings Balance = SUM(savings_deposits) − SUM(savings_withdrawals)
@@ -209,6 +222,20 @@ SharedPreferences: `biometric_enabled`, `dollar_annual_limit`,
   stay deleted. Restore runs under `SmsImportRunner.whilePaused`. Dashboard
   shows a review card and a bank-balance reconciliation card
   (`bankReconciliationProvider`). Not available on the owner's iPhone.
+
+## Gotchas
+
+- Wrap system pickers in
+  `appSessionUnlockedProvider.notifier.stayUnlockedDuring(...)`. Android
+  backgrounds the app for them, and re-locking tears down the waiting screen.
+- Callbacks that outlive a screen (snackbar Undo, multi-step restore) must
+  `ref.read` everything up front. `ref` throws once the widget is disposed,
+  and tab switches dispose screens.
+- `CategoryDao.deleteCategory` detaches the category's transactions and
+  templates (sets them to null) and removes its budget. Restore keeps the
+  category ID sequence above every referenced ID.
+
+Ideas and known-but-unfixed bugs: `docs/BACKLOG.md`.
 
 ## Out of Scope
 

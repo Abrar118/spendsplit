@@ -94,12 +94,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          16,
-          16,
-          AppSpacing.navClearance,
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, AppSpacing.navClearance),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -184,7 +179,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                               const <CategoriesTableData>[])
                         category.id: category,
                     };
-                    final filtered = _applyFilters(transactions, categoriesById);
+                    final filtered = _applyFilters(
+                      transactions,
+                      categoriesById,
+                    );
 
                     if (filtered.isEmpty) {
                       return ListView(
@@ -246,9 +244,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             child: Center(
                               child: TextButton(
-                                onPressed: () => setState(
-                                  () => _visibleCount += 40,
-                                ),
+                                onPressed: () =>
+                                    setState(() => _visibleCount += 40),
                                 child: Text(
                                   'Load more (${filtered.length - _visibleCount} remaining)',
                                   style: TextStyle(color: AppColors.teal),
@@ -259,22 +256,22 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         }
 
                         final transaction = item.transaction!;
-                        final topLine = index > 0 &&
-                            items[index - 1].transaction != null;
-                        final bottomLine = index + 1 < items.length &&
+                        final topLine =
+                            index > 0 && items[index - 1].transaction != null;
+                        final bottomLine =
+                            index + 1 < items.length &&
                             items[index + 1].transaction != null;
                         return _TimelineEntry(
                           key: ValueKey(transaction.id),
-                          time: DateFormat('h:mm a')
-                              .format(transaction.date)
-                              .toLowerCase(),
+                          time: DateFormat(
+                            'h:mm a',
+                          ).format(transaction.date).toLowerCase(),
                           accent: transactionAccentColor(transaction),
                           topLine: topLine,
                           bottomLine: bottomLine,
                           child: TransactionTile(
                             transaction: transaction,
-                            category:
-                                categoriesById[transaction.categoryId],
+                            category: categoriesById[transaction.categoryId],
                             onTap: () => showAddTransactionSheet(
                               context,
                               existingTransaction: transaction,
@@ -282,8 +279,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             onLongPress: () => _copyAmount(transaction),
                             onSaveAsTemplate: () =>
                                 _saveTransactionAsTemplate(transaction),
-                            onDelete: () =>
-                                _deleteTransaction(transaction),
+                            onDelete: () => _deleteTransaction(transaction),
                           ),
                         );
                       },
@@ -427,24 +423,29 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final name = nameController.text.trim();
     if (name.isEmpty) return;
 
-    await ref.read(transactionTemplateRepositoryProvider).createTemplate(
-      TransactionTemplatesTableCompanion.insert(
-        name: name,
-        type: transaction.type,
-        amount: Value(transaction.amount),
-        categoryId: Value(transaction.categoryId),
-        source: Value(transaction.source),
-        note: Value(transaction.note),
-      ),
-    );
+    await ref
+        .read(transactionTemplateRepositoryProvider)
+        .createTemplate(
+          TransactionTemplatesTableCompanion.insert(
+            name: name,
+            type: transaction.type,
+            amount: Value(transaction.amount),
+            categoryId: Value(transaction.categoryId),
+            source: Value(transaction.source),
+            note: Value(transaction.note),
+          ),
+        );
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Template saved')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Template saved')));
   }
 
-  TransactionAdvancedFilters _filtersForMonth(DateTime? month, {int? categoryId}) {
+  TransactionAdvancedFilters _filtersForMonth(
+    DateTime? month, {
+    int? categoryId,
+  }) {
     if (month == null && categoryId == null) {
       return const TransactionAdvancedFilters();
     }
@@ -532,18 +533,26 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       }
     }
 
-    await ref.read(appDatabaseProvider).transaction(() async {
-      await repository.deleteTransactionById(transaction.id);
-      if (linkedGoalId != null && goalDelta.abs() > 1e-9) {
-        final updated = await savingsRepository.adjustGoalAmountBy(
-          linkedGoalId,
-          -goalDelta,
-        );
-        if (!updated) {
-          throw StateError('Failed to update linked savings goal.');
+    // Captured now: the Undo snackbar outlives this screen when the user
+    // switches tabs, and `ref` is unusable after dispose.
+    final db = ref.read(appDatabaseProvider);
+    try {
+      await db.transaction(() async {
+        await repository.deleteTransactionById(transaction.id);
+        if (linkedGoalId != null && goalDelta.abs() > 1e-9) {
+          final updated = await savingsRepository.adjustGoalAmountBy(
+            linkedGoalId,
+            -goalDelta,
+          );
+          if (!updated) {
+            throw StateError('Failed to update linked savings goal.');
+          }
         }
-      }
-    });
+      });
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+      return;
+    }
 
     var undoFired = false;
 
@@ -556,22 +565,33 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           onPressed: () async {
             if (undoFired) return;
             undoFired = true;
-            await ref.read(appDatabaseProvider).transaction(() async {
-              await repository.createTransactionWithId(transaction);
-              // Only re-apply goal delta if the goal still exists
-              if (linkedGoalId != null && goalDelta.abs() > 1e-9) {
-                final goal = await savingsRepository.getGoalById(linkedGoalId);
-                if (goal != null && !goal.isCompleted) {
-                  final updated = await savingsRepository.adjustGoalAmountBy(
+            try {
+              await db.transaction(() async {
+                await repository.createTransactionWithId(transaction);
+                // Only re-apply goal delta if the goal still exists. Completed
+                // goals too: the delete took the amount off them as well.
+                if (linkedGoalId != null && goalDelta.abs() > 1e-9) {
+                  final goal = await savingsRepository.getGoalById(
                     linkedGoalId,
-                    goalDelta,
                   );
-                  if (!updated) {
-                    throw StateError('Failed to restore linked savings goal.');
+                  if (goal != null) {
+                    final updated = await savingsRepository.adjustGoalAmountBy(
+                      linkedGoalId,
+                      goalDelta,
+                    );
+                    if (!updated) {
+                      throw StateError(
+                        'Failed to restore linked savings goal.',
+                      );
+                    }
                   }
                 }
-              }
-            });
+              });
+            } catch (e) {
+              messenger.showSnackBar(
+                SnackBar(content: Text('Undo failed: $e')),
+              );
+            }
           },
         ),
       ),
@@ -638,18 +658,18 @@ class _TransactionSection {
 
 class _ListItem {
   const _ListItem.header(this.headerText)
-      : transaction = null,
-        isHeader = true,
-        isLoadMore = false;
+    : transaction = null,
+      isHeader = true,
+      isLoadMore = false;
   const _ListItem.transaction(this.transaction)
-      : headerText = null,
-        isHeader = false,
-        isLoadMore = false;
+    : headerText = null,
+      isHeader = false,
+      isLoadMore = false;
   const _ListItem.loadMore()
-      : headerText = null,
-        transaction = null,
-        isHeader = false,
-        isLoadMore = true;
+    : headerText = null,
+      transaction = null,
+      isHeader = false,
+      isLoadMore = true;
 
   final String? headerText;
   final TransactionsTableData? transaction;
@@ -748,8 +768,9 @@ class _RailSegment extends StatelessWidget {
     return Container(
       width: 2,
       height: height,
-      color: visible ? Colors.white.withValues(alpha: 0.22) : Colors.transparent,
+      color: visible
+          ? Colors.white.withValues(alpha: 0.22)
+          : Colors.transparent,
     );
   }
 }
-

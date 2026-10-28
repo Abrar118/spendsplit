@@ -66,9 +66,11 @@ void main() {
       ),
     );
     await db.categoryBudgetDao.setBudget(catId, 5000);
-    await db.into(db.savingsGoalsTable).insert(
-      SavingsGoalsTableCompanion.insert(name: 'Trip', targetAmount: 20000),
-    );
+    await db
+        .into(db.savingsGoalsTable)
+        .insert(
+          SavingsGoalsTableCompanion.insert(name: 'Trip', targetAmount: 20000),
+        );
 
     final service = SnapshotService(db);
     final exported = await service.exportTables();
@@ -82,10 +84,7 @@ void main() {
     expect(counts.categories, greaterThanOrEqualTo(1));
 
     // No duplication of the default categories on restore.
-    expect(
-      (await db.categoryDao.getMainCategories()).length,
-      catCountBefore,
-    );
+    expect((await db.categoryDao.getMainCategories()).length, catCountBefore);
 
     final txns = await db.transactionDao.getTransactions();
     expect(txns.single.amount, 123.45);
@@ -167,5 +166,62 @@ void main() {
     expect(row.note, 'old');
     expect(row.smsRef, isNull);
     expect(row.needsReview, isFalse);
+  });
+
+  test('deleting a category detaches its rows and budget', () async {
+    final id = await db.categoryDao.insertCategory(category('Gym', false));
+    await db.transactionDao.insertTransaction(
+      TransactionsTableCompanion.insert(
+        type: 'expense',
+        amount: 500,
+        date: DateTime(2026, 9, 3),
+        categoryId: Value(id),
+      ),
+    );
+    await db.categoryBudgetDao.setBudget(id, 2000);
+
+    await db.categoryDao.deleteCategory(id);
+
+    expect(
+      (await db.transactionDao.getTransactions()).single.categoryId,
+      isNull,
+    );
+    expect(await db.categoryBudgetDao.watchAll().first, isEmpty);
+  });
+
+  test('restore never hands a deleted category ID to a new one', () async {
+    final service = SnapshotService(db);
+    final snapshot = await service.exportTables();
+    // A backup taken after "Gym" (id 90) was deleted: rows still point at it.
+    (snapshot['transactions'] as List).add(
+      TransactionsTableData(
+        id: 1,
+        type: 'expense',
+        amount: 500,
+        date: DateTime(2026, 9, 3),
+        categoryId: 90,
+        createdAt: DateTime(2026, 9, 3),
+        needsReview: false,
+      ).toJson(),
+    );
+    (snapshot['dollarExpenses'] as List).add(
+      DollarExpensesTableData(
+        id: 1,
+        amount: 20,
+        purpose: 'Gym app',
+        categoryId: 95,
+        date: DateTime(2026, 9, 3),
+        createdAt: DateTime(2026, 9, 3),
+      ).toJson(),
+    );
+
+    await service.importTables(snapshot);
+
+    expect(
+      (await db.transactionDao.getTransactions()).single.categoryId,
+      isNull,
+    );
+    final fresh = await db.categoryDao.insertCategory(category('Gifts', false));
+    expect(fresh, greaterThan(95));
   });
 }

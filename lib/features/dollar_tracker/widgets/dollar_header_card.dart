@@ -93,7 +93,7 @@ class DollarHeaderCard extends StatelessWidget {
                     Text(
                       _paceText(summary),
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: summary.projectedVsLimit > 0
+                        color: summary.projectedOver
                             ? AppColors.amber
                             : AppColors.green,
                         fontWeight: FontWeight.w600,
@@ -148,6 +148,9 @@ class DollarHeaderCard extends StatelessWidget {
 
 String _paceText(DollarTrackerSummary s) {
   if (s.spentYtd <= 0) return 'No spending yet this year';
+  if (!s.hasPace) {
+    return 'Year-end pace shows after ${FinanceCalculators.minPaceDays} days';
+  }
   final projected = formatUsdAmount(s.projectedYearEnd, fractionDigits: 0);
   final diff = formatUsdAmount(s.projectedVsLimit.abs(), fractionDigits: 0);
   final verb = s.projectedVsLimit > 0 ? 'over' : 'under';

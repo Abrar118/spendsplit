@@ -67,12 +67,27 @@ class AppSessionLockController extends Notifier<bool> {
   @override
   bool build() => false;
 
+  int _holds = 0;
+
   void unlock() {
     state = true;
   }
 
   void lock() {
+    if (_holds > 0) return;
     state = false;
+  }
+
+  /// Ignores [lock] while [action] runs. Android's system file picker
+  /// backgrounds the app; re-locking then would tear down the screen that is
+  /// waiting for the picked file.
+  Future<T> stayUnlockedDuring<T>(Future<T> Function() action) async {
+    _holds++;
+    try {
+      return await action();
+    } finally {
+      _holds--;
+    }
   }
 }
 

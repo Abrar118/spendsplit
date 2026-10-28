@@ -4,6 +4,7 @@ import 'package:spendsplit/core/icons/lucide_icons.dart';
 import '../../../core/constants/goal_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/goal_utils.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../data/database/app_database.dart';
@@ -253,8 +254,7 @@ class _ActiveGoalDisplay extends StatelessWidget {
 
   int? _daysRemaining(DateTime? deadline) {
     if (deadline == null) return null;
-    final now = DateTime.now();
-    final diff = deadline.difference(now).inDays;
+    final diff = calendarDaysUntil(deadline);
     return diff < 0 ? 0 : diff;
   }
 }

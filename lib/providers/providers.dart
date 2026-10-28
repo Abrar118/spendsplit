@@ -197,9 +197,30 @@ final dollarExpensesForYearProvider =
           .watchExpensesForYear(year);
     });
 
+/// Bumped on resume and at midnight (see `SpendSplitApp`). Date-based
+/// providers watch it so "today", "this month" and the future-dated cutoff
+/// move on while the app stays in memory. Read `DateTime.now()` alongside it
+/// rather than storing a time here: a stored time would lag behind entries
+/// saved after the last bump.
+final clockTickProvider = StateProvider<int>((ref) => 0);
+
+/// Transactions dated up to now. Balances, charts and summaries use these, so
+/// a future-dated entry counts once its date arrives. Lists show everything.
+final postedTransactionsProvider =
+    Provider<AsyncValue<List<TransactionsTableData>>>((ref) {
+      ref.watch(clockTickProvider);
+      final now = DateTime.now();
+      return ref
+          .watch(transactionsProvider)
+          .whenData(
+            (entries) =>
+                entries.where((entry) => !entry.date.isAfter(now)).toList(),
+          );
+    });
+
 final balanceSummaryProvider = Provider<AsyncValue<BalanceSummary>>((ref) {
   final settings = ref.watch(appSettingsProvider);
-  final transactions = ref.watch(transactionsProvider);
+  final transactions = ref.watch(postedTransactionsProvider);
 
   return transactions.whenData(
     (entries) => FinanceCalculators.balanceSummary(
@@ -210,7 +231,7 @@ final balanceSummaryProvider = Provider<AsyncValue<BalanceSummary>>((ref) {
 });
 
 final spendingRunwayProvider = Provider<AsyncValue<SpendingRunway>>((ref) {
-  final transactions = ref.watch(transactionsProvider);
+  final transactions = ref.watch(postedTransactionsProvider);
   final balance = ref.watch(balanceSummaryProvider);
 
   return transactions.when(
@@ -226,7 +247,7 @@ final spendingRunwayProvider = Provider<AsyncValue<SpendingRunway>>((ref) {
 });
 
 final balanceTrendProvider = Provider<AsyncValue<List<BalancePoint>>>((ref) {
-  final transactions = ref.watch(transactionsProvider);
+  final transactions = ref.watch(postedTransactionsProvider);
   final settings = ref.watch(appSettingsProvider);
 
   return transactions.whenData(
@@ -239,7 +260,7 @@ final balanceTrendProvider = Provider<AsyncValue<List<BalancePoint>>>((ref) {
 
 final currentMonthSummaryProvider = Provider<AsyncValue<MonthlyFinanceSummary>>(
   (ref) {
-    final transactions = ref.watch(transactionsProvider);
+    final transactions = ref.watch(postedTransactionsProvider);
     final month = DateTime.now();
 
     return transactions.whenData(
@@ -253,7 +274,7 @@ final currentMonthSummaryProvider = Provider<AsyncValue<MonthlyFinanceSummary>>(
 
 final monthlySummaryProvider =
     Provider.family<AsyncValue<MonthlyFinanceSummary>, DateTime>((ref, month) {
-      final transactions = ref.watch(transactionsProvider);
+      final transactions = ref.watch(postedTransactionsProvider);
 
       return transactions.whenData(
         (entries) => FinanceCalculators.monthlySummary(
@@ -265,7 +286,7 @@ final monthlySummaryProvider =
 
 final monthlyAnalyticsProvider =
     Provider.family<AsyncValue<MonthlyAnalytics>, DateTime>((ref, month) {
-      final transactions = ref.watch(transactionsProvider);
+      final transactions = ref.watch(postedTransactionsProvider);
       final categories = ref.watch(categoriesProvider);
 
       if (transactions.hasError) {
@@ -304,12 +325,16 @@ final dollarTrackerSummaryProvider = Provider<AsyncValue<DollarTrackerSummary>>(
   (ref) {
     final settings = ref.watch(appSettingsProvider);
     final expenses = ref.watch(dollarExpensesProvider);
+    ref.watch(clockTickProvider);
+    // The calendar year, not `dollarLimitYear`: that only advances once the
+    // rollover prompt in the tracker is answered.
+    final year = DateTime.now().year;
 
     return expenses.whenData(
       (entries) => FinanceCalculators.dollarSummary(
         expenses: entries,
         annualLimit: settings.dollarAnnualLimit,
-        year: settings.dollarLimitYear,
+        year: year,
       ),
     );
   },
@@ -319,6 +344,7 @@ final dollarTrackerSummaryForYearProvider =
     Provider.family<AsyncValue<DollarTrackerSummary>, int>((ref, year) {
       final settings = ref.watch(appSettingsProvider);
       final expenses = ref.watch(dollarExpensesForYearProvider(year));
+      ref.watch(clockTickProvider);
 
       return expenses.whenData(
         (entries) => FinanceCalculators.dollarSummary(
@@ -330,7 +356,7 @@ final dollarTrackerSummaryForYearProvider =
     });
 
 final savingsInsightsProvider = Provider<AsyncValue<SavingsInsights>>((ref) {
-  final transactions = ref.watch(transactionsProvider);
+  final transactions = ref.watch(postedTransactionsProvider);
 
   return transactions.whenData(
     (entries) => FinanceCalculators.savingsInsights(
@@ -374,6 +400,7 @@ final expectedThisMonthProvider =
       final monthly = templates.where((t) => t.isMonthly).toList();
       if (monthly.isEmpty) return const [];
 
+      ref.watch(clockTickProvider);
       final now = DateTime.now();
       final thisMonth = txns.where(
         (t) => t.date.year == now.year && t.date.month == now.month,
@@ -394,7 +421,7 @@ final expectedThisMonthProvider =
 
 /// Month-end recap for the **previous** calendar month.
 final monthRecapProvider = Provider<AsyncValue<MonthRecap>>((ref) {
-  final transactions = ref.watch(transactionsProvider);
+  final transactions = ref.watch(postedTransactionsProvider);
   final categories = ref.watch(categoriesProvider);
   final settings = ref.watch(appSettingsProvider);
   final budgets =

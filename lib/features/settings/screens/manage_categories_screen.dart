@@ -16,7 +16,8 @@ class ManageCategoriesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final mainCategories = ref.watch(categoriesProvider).valueOrNull ?? const [];
+    final mainCategories =
+        ref.watch(categoriesProvider).valueOrNull ?? const [];
     final dollarCategories =
         ref.watch(dollarCategoriesProvider).valueOrNull ?? const [];
 
@@ -25,7 +26,10 @@ class ManageCategoriesScreen extends ConsumerWidget {
         bottom: false,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md, AppSpacing.md, AppSpacing.md, 32,
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.md,
+            32,
           ),
           children: [
             Row(
@@ -58,7 +62,8 @@ class ManageCategoriesScreen extends ConsumerWidget {
                 category: cat,
                 onTap: cat.isPredefined
                     ? null
-                    : () => _openEditor(context, existing: cat, isDollar: false),
+                    : () =>
+                          _openEditor(context, existing: cat, isDollar: false),
                 onDelete: cat.isPredefined
                     ? null
                     : () => _confirmDelete(context, ref, cat),
@@ -150,12 +155,11 @@ class ManageCategoriesScreen extends ConsumerWidget {
 
     final db = ref.read(appDatabaseProvider);
     await db.categoryDao.deleteCategory(category.id);
-    await db.categoryBudgetDao.clearBudget(category.id);
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"${category.name}" deleted')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('"${category.name}" deleted')));
     }
   }
 }
@@ -185,50 +189,50 @@ class _CategoryTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.14),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                iconForCategoryKey(category.icon),
-                color: color,
-                size: 18,
-              ),
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    iconForCategoryKey(category.icon),
+                    color: color,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(category.name, style: theme.textTheme.titleSmall),
+                      if (category.isPredefined)
+                        Text(
+                          'Built-in',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (onDelete != null)
+                  IconButton(
+                    onPressed: onDelete,
+                    icon: const Icon(LucideIcons.trash2, size: 18),
+                    color: AppColors.coral,
+                  )
+                else
+                  Icon(
+                    LucideIcons.lock,
+                    size: 16,
+                    color: Colors.white.withValues(alpha: 0.2),
+                  ),
+              ],
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(category.name, style: theme.textTheme.titleSmall),
-                  if (category.isPredefined)
-                    Text(
-                      'Built-in',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            if (onDelete != null)
-              IconButton(
-                onPressed: onDelete,
-                icon: const Icon(LucideIcons.trash2, size: 18),
-                color: AppColors.coral,
-              )
-            else
-              Icon(
-                LucideIcons.lock,
-                size: 16,
-                color: Colors.white.withValues(alpha: 0.2),
-              ),
-            ],
-          ),
           ),
         ),
       ),

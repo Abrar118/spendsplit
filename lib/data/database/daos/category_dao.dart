@@ -60,11 +60,30 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
       icon: icon == null ? const Value.absent() : Value(icon),
       color: color == null ? const Value.absent() : Value(color),
     );
-    await (update(categoriesTable)..where((t) => t.id.equals(id)))
-        .write(companion);
+    await (update(
+      categoriesTable,
+    )..where((t) => t.id.equals(id))).write(companion);
   }
 
-  Future<int> deleteCategory(int id) {
-    return (delete(categoriesTable)..where((t) => t.id.equals(id))).go();
+  /// Deletes the category and its budget, and leaves the transactions and
+  /// templates that used it uncategorized. Dollar expenses can't be null,
+  /// so they keep the dead ID (shown as uncategorized). IDs are never reused
+  /// (AUTOINCREMENT, kept past restores by SnapshotService).
+  Future<void> deleteCategory(int id) {
+    final db = attachedDatabase;
+    return transaction(() async {
+      await (db.update(db.transactionsTable)
+            ..where((t) => t.categoryId.equals(id)))
+          .write(const TransactionsTableCompanion(categoryId: Value(null)));
+      await (db.update(
+        db.transactionTemplatesTable,
+      )..where((t) => t.categoryId.equals(id))).write(
+        const TransactionTemplatesTableCompanion(categoryId: Value(null)),
+      );
+      await (db.delete(
+        db.categoryBudgetsTable,
+      )..where((t) => t.categoryId.equals(id))).go();
+      await (delete(categoriesTable)..where((t) => t.id.equals(id))).go();
+    });
   }
 }

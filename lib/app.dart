@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -162,10 +164,26 @@ class _SpendSplitAppState extends ConsumerState<SpendSplitApp>
       return _importSms(waitForNew: args?['waitForNew'] == true);
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _importSms());
+    _scheduleMidnightTick();
   }
+
+  Timer? _midnightTimer;
+
+  void _scheduleMidnightTick() {
+    _midnightTimer?.cancel();
+    final now = DateTime.now();
+    final nextMidnight = DateTime(now.year, now.month, now.day + 1);
+    _midnightTimer = Timer(nextMidnight.difference(now), () {
+      _tickClock();
+      _scheduleMidnightTick();
+    });
+  }
+
+  void _tickClock() => ref.read(clockTickProvider.notifier).state++;
 
   @override
   void dispose() {
+    _midnightTimer?.cancel();
     SmsGateway.channel.setMethodCallHandler(null);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -174,6 +192,9 @@ class _SpendSplitAppState extends ConsumerState<SpendSplitApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      // Timers don't fire while suspended, so catch up on the date here too.
+      _tickClock();
+      _scheduleMidnightTick();
       _importSms();
     }
     if (state == AppLifecycleState.paused ||
