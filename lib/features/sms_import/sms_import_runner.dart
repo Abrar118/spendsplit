@@ -60,6 +60,8 @@ class SmsImportRunner {
 
   Future<int> _runOnce(bool waitForNew) async {
     try {
+      // The other engine may have advanced the watermark or seen refs.
+      await _ref.read(appSettingsProvider.notifier).reloadFromDisk();
       final settings = _ref.read(appSettingsProvider);
       final since = settings.smsImportSince;
       if (since == null) return 0;

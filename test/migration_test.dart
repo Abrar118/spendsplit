@@ -124,9 +124,8 @@ void main() {
 
         db = AppDatabase(executor: NativeDatabase(file));
 
-        final template = (await db.select(
-          db.transactionTemplatesTable,
-        ).get()).single;
+        final template =
+            (await db.select(db.transactionTemplatesTable).get()).single;
         expect(template.name, 'Rent');
         expect(template.amount, 15000);
         expect(template.useCount, 0);
@@ -205,8 +204,28 @@ void main() {
             .toList(),
         [
           (1, 'expense', 70.5, 3, null, null, 'Lunch', 1758450000, 1758450001),
-          (2, 'income', 14500.0, null, null, 'salary', null, 1758460000, 1758460001),
-          (3, 'savings_deposit', 1000.0, null, 1, null, 'Trip', 1758470000, 1758470001),
+          (
+            2,
+            'income',
+            14500.0,
+            null,
+            null,
+            'salary',
+            null,
+            1758460000,
+            1758460001,
+          ),
+          (
+            3,
+            'savings_deposit',
+            1000.0,
+            null,
+            1,
+            null,
+            'Trip',
+            1758470000,
+            1758470001,
+          ),
         ],
       );
       expect(rows.every((r) => r.smsRef == null && !r.needsReview), isTrue);
@@ -227,6 +246,39 @@ void main() {
       await insertRef('1|a');
       await expectLater(insertRef('1|a'), throwsA(isA<SqliteException>()));
 
+      expect(
+        (await db.customSelect('PRAGMA user_version').getSingle()).read<int>(
+          'user_version',
+        ),
+        8,
+      );
+    } finally {
+      await db.close();
+      await directory.delete(recursive: true);
+    }
+  });
+
+  test('v4 upgrade opens (templates table is created, not re-altered)', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'spendsplit_migration_v4',
+    );
+    final file = File('${directory.path}/legacy_v4.sqlite');
+    var db = AppDatabase(executor: NativeDatabase(file));
+    try {
+      await db.customSelect('SELECT 1').get();
+      await _stripV8(db);
+      // v4 had neither templates (v5) nor budgets (v7).
+      await db.customStatement('DROP TABLE transaction_templates_table');
+      await db.customStatement('DROP TABLE category_budgets_table');
+      await db.customStatement(
+        "INSERT INTO transactions_table (id, type, amount, date) VALUES (1, 'income', 500, 1700000000)",
+      );
+      await db.customStatement('PRAGMA user_version = 4');
+      await db.close();
+
+      db = AppDatabase(executor: NativeDatabase(file));
+      expect((await db.select(db.transactionsTable).get()).single.amount, 500);
+      expect(await db.select(db.transactionTemplatesTable).get(), isEmpty);
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle()).read<int>(
           'user_version',

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart' show TableUpdate;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -195,6 +196,10 @@ class _SpendSplitAppState extends ConsumerState<SpendSplitApp>
       // Timers don't fire while suspended, so catch up on the date here too.
       _tickClock();
       _scheduleMidnightTick();
+      // The SMS background engine inserts through its own connection, which
+      // this one's live queries don't hear about. Re-run them.
+      final db = ref.read(appDatabaseProvider);
+      db.notifyUpdates({TableUpdate.onTable(db.transactionsTable)});
       _importSms();
     }
     if (state == AppLifecycleState.paused ||

@@ -28,8 +28,11 @@ Future<void> main() async {
 Future<void> smsBackgroundMain() async {
   WidgetsFlutterBinding.ensureInitialized();
   await WidgetDataService.initialize();
-  final container = ProviderContainer(overrides: await bootstrapOverrides());
+  ProviderContainer? container;
   try {
+    // Inside the try: a keystore failure here must still release the
+    // receiver below instead of leaving it to time out.
+    container = ProviderContainer(overrides: await bootstrapOverrides());
     final inserted = await container
         .read(smsImportRunnerProvider)
         .run(waitForNew: true);
@@ -38,7 +41,7 @@ Future<void> smsBackgroundMain() async {
       await syncHomeWidget(container.read);
     }
   } finally {
-    container.dispose();
+    container?.dispose();
     await const SmsGateway().backgroundDone();
   }
 }

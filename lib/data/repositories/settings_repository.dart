@@ -54,20 +54,12 @@ class SettingsRepository {
     return _preferences.setInt(AppSettingsKey.dollarLimitYear.value, value);
   }
 
-  Future<void> setInitialBalance(double value) {
-    return _preferences.setDouble(AppSettingsKey.initialBalance.value, value);
-  }
-
   Future<void> setMonthlyExpenseBudget(double value) async {
     if (!value.isFinite || value < 0) {
       throw ArgumentError.value(value, 'budget');
     }
     final saved = await _preferences.setDouble('monthly_expense_budget', value);
     if (!saved) throw StateError('Could not save the monthly budget');
-  }
-
-  Future<void> setCardNumber(String value) {
-    return _preferences.setString(AppSettingsKey.cardNumber.value, value);
   }
 
   static const _smsImportSinceKey = 'sms_import_since';
