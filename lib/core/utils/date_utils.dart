@@ -51,6 +51,16 @@ DateTime onDayKeepingTime(DateTime day, DateTime time) => DateTime(
   time.millisecond,
 );
 
+/// Share of [month] gone by the end of today, for budget pace markers.
+/// Null unless [month] is the current month: past months are complete and
+/// future ones haven't started.
+double? monthPaceFraction(DateTime month, {DateTime? now}) {
+  final today = now ?? DateTime.now();
+  if (month.year != today.year || month.month != today.month) return null;
+  final daysInMonth = DateTime(today.year, today.month + 1, 0).day;
+  return today.day / daysInMonth;
+}
+
 bool _isSameDay(DateTime a, DateTime b) {
   return a.year == b.year && a.month == b.month && a.day == b.day;
 }

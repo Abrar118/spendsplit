@@ -526,6 +526,13 @@ void main() {
       );
     });
 
+    test('budget pace is the share of the current month gone', () {
+      final now = DateTime(2026, 10, 15, 9);
+      expect(monthPaceFraction(DateTime(2026, 10), now: now), 15 / 31);
+      expect(monthPaceFraction(DateTime(2026, 9), now: now), isNull);
+      expect(monthPaceFraction(DateTime(2026, 11), now: now), isNull);
+    });
+
     test('amounts that round to zero never print a minus sign', () {
       expect(formatBdtAmount(-0.3), '৳ 0');
       expect(formatBdtAmount(-0.0), '৳ 0');

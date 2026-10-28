@@ -124,8 +124,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-        child: const MaterialApp(
-          home: Scaffold(body: MonthlyBudgetCard(spent: 150)),
+        child: MaterialApp(
+          // A past month: no pace marker, so the text doesn't depend on today.
+          home: Scaffold(
+            body: MonthlyBudgetCard(spent: 150, month: DateTime(2020)),
+          ),
         ),
       ),
     );
