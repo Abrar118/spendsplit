@@ -39,6 +39,18 @@ int calendarDaysUntil(DateTime date, {DateTime? from}) {
   ).difference(DateTime.utc(now.year, now.month, now.day)).inDays;
 }
 
+/// [day]'s calendar date at [time]'s time of day. Date pickers return
+/// midnight; this keeps an entry's time when only its date changes.
+DateTime onDayKeepingTime(DateTime day, DateTime time) => DateTime(
+  day.year,
+  day.month,
+  day.day,
+  time.hour,
+  time.minute,
+  time.second,
+  time.millisecond,
+);
+
 bool _isSameDay(DateTime a, DateTime b) {
   return a.year == b.year && a.month == b.month && a.day == b.day;
 }

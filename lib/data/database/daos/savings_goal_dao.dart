@@ -55,10 +55,34 @@ class SavingsGoalDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Clears linked transaction references and deletes the goal atomically.
-  Future<int> deleteGoalWithReferenceCleanup(int id) {
-    return attachedDatabase.transaction(() async {
+  /// Returns the unlinked transaction IDs so [restoreGoal] can relink them.
+  Future<List<int>> deleteGoalWithReferenceCleanup(int id) {
+    final db = attachedDatabase;
+    return db.transaction(() async {
+      final linked =
+          await (db.selectOnly(db.transactionsTable)
+                ..addColumns([db.transactionsTable.id])
+                ..where(db.transactionsTable.savingsGoalId.equals(id)))
+              .map((row) => row.read(db.transactionsTable.id)!)
+              .get();
       await clearGoalReferencesOnTransactions(id);
-      return deleteGoalById(id);
+      await deleteGoalById(id);
+      return linked;
+    });
+  }
+
+  /// Undoes [deleteGoalWithReferenceCleanup]: the same goal row, relinked to
+  /// its transactions, so its amount still matches them.
+  Future<void> restoreGoal(
+    SavingsGoalsTableData goal,
+    List<int> linkedTransactionIds,
+  ) {
+    final db = attachedDatabase;
+    return db.transaction(() async {
+      await into(savingsGoalsTable).insert(goal);
+      await (db.update(db.transactionsTable)
+            ..where((t) => t.id.isIn(linkedTransactionIds)))
+          .write(TransactionsTableCompanion(savingsGoalId: Value(goal.id)));
     });
   }
 

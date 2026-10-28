@@ -252,7 +252,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
 
     if (!mounted || picked == null) return;
     setState(() {
-      _selectedDate = picked;
+      _selectedDate = onDayKeepingTime(picked, _selectedDate);
     });
   }
 

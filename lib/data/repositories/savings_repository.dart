@@ -29,8 +29,16 @@ class SavingsRepository {
   }
 
   /// Clears linked transaction references and deletes the goal atomically.
-  Future<int> deleteGoalById(int id) async {
+  /// Returns the IDs of the transactions that were linked to the goal.
+  Future<List<int>> deleteGoalById(int id) {
     return _savingsGoalDao.deleteGoalWithReferenceCleanup(id);
+  }
+
+  Future<void> restoreGoal(
+    SavingsGoalsTableData goal,
+    List<int> linkedTransactionIds,
+  ) {
+    return _savingsGoalDao.restoreGoal(goal, linkedTransactionIds);
   }
 
   Future<bool> adjustGoalAmountBy(int id, double delta) {

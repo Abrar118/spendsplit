@@ -613,7 +613,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     if (selected == null) return;
 
     setState(() {
-      _selectedDate = selected;
+      _selectedDate = onDayKeepingTime(selected, _selectedDate);
     });
   }
 
