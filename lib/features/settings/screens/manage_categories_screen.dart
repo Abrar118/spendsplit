@@ -66,7 +66,7 @@ class ManageCategoriesScreen extends ConsumerWidget {
                           _openEditor(context, existing: cat, isDollar: false),
                 onDelete: cat.isPredefined
                     ? null
-                    : () => _confirmDelete(context, ref, cat),
+                    : () => _confirmDelete(context, ref, cat, mainCategories),
               ),
             const SizedBox(height: 24),
             Row(
@@ -101,7 +101,8 @@ class ManageCategoriesScreen extends ConsumerWidget {
                             _openEditor(context, existing: cat, isDollar: true),
                   onDelete: cat.isPredefined
                       ? null
-                      : () => _confirmDelete(context, ref, cat),
+                      : () =>
+                            _confirmDelete(context, ref, cat, dollarCategories),
                 ),
             ],
           ],
@@ -128,33 +129,26 @@ class ManageCategoriesScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     CategoriesTableData category,
+    List<CategoriesTableData> sameTracker,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final db = ref.read(appDatabaseProvider);
+    final inUse = await db.categoryDao.usageCount(category.id);
+    if (!context.mounted) return;
+    final targets = sameTracker.where((c) => c.id != category.id).toList();
+
+    // `(true, id)`: delete, moving its rows to `id` (null = uncategorized).
+    final choice = await showDialog<(bool, int?)>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceLight,
-        title: const Text('Delete category?'),
-        content: Text(
-          'Remove "${category.name}"? Transactions using it will show as "Uncategorized".',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.coral),
-            child: const Text('Delete'),
-          ),
-        ],
+      builder: (ctx) => _DeleteCategoryDialog(
+        category: category,
+        inUse: inUse,
+        targets: targets,
       ),
     );
 
-    if (confirmed != true) return;
+    if (choice == null || !choice.$1) return;
 
-    final db = ref.read(appDatabaseProvider);
-    await db.categoryDao.deleteCategory(category.id);
+    await db.categoryDao.deleteCategory(category.id, moveTo: choice.$2);
 
     if (context.mounted) {
       ScaffoldMessenger.of(
@@ -410,6 +404,75 @@ class _CategoryEditorSheetState extends ConsumerState<_CategoryEditorSheet> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DeleteCategoryDialog extends StatefulWidget {
+  const _DeleteCategoryDialog({
+    required this.category,
+    required this.inUse,
+    required this.targets,
+  });
+
+  final CategoriesTableData category;
+  final int inUse;
+  final List<CategoriesTableData> targets;
+
+  @override
+  State<_DeleteCategoryDialog> createState() => _DeleteCategoryDialogState();
+}
+
+class _DeleteCategoryDialogState extends State<_DeleteCategoryDialog> {
+  int? _moveTo;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = widget.inUse;
+    return AlertDialog(
+      backgroundColor: AppColors.surfaceLight,
+      title: const Text('Delete category?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            n == 0
+                ? 'Remove "${widget.category.name}"? Nothing uses it.'
+                : 'Remove "${widget.category.name}"? $n '
+                      'entr${n == 1 ? 'y uses' : 'ies use'} it.',
+          ),
+          if (n > 0 && widget.targets.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            DropdownButtonFormField<int?>(
+              initialValue: _moveTo,
+              isExpanded: true,
+              dropdownColor: AppColors.surfaceLight,
+              decoration: const InputDecoration(labelText: 'Move them to'),
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('Leave uncategorized'),
+                ),
+                for (final target in widget.targets)
+                  DropdownMenuItem(value: target.id, child: Text(target.name)),
+              ],
+              onChanged: (value) => setState(() => _moveTo = value),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop((true, _moveTo)),
+          style: FilledButton.styleFrom(backgroundColor: AppColors.coral),
+          child: const Text('Delete'),
+        ),
+      ],
     );
   }
 }

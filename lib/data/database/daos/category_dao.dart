@@ -65,21 +65,37 @@ class CategoryDao extends DatabaseAccessor<AppDatabase>
     )..where((t) => t.id.equals(id))).write(companion);
   }
 
-  /// Deletes the category and its budget, and leaves the transactions and
-  /// templates that used it uncategorized. Dollar expenses can't be null,
-  /// so they keep the dead ID (shown as uncategorized). IDs are never reused
-  /// (AUTOINCREMENT, kept past restores by SnapshotService).
-  Future<void> deleteCategory(int id) {
+  /// How many transactions, templates and dollar expenses use [id].
+  Future<int> usageCount(int id) async {
+    final row = await customSelect(
+      'SELECT '
+      '(SELECT COUNT(*) FROM transactions_table WHERE category_id = ?1) + '
+      '(SELECT COUNT(*) FROM transaction_templates_table WHERE category_id = ?1) + '
+      '(SELECT COUNT(*) FROM dollar_expenses_table WHERE category_id = ?1) AS n',
+      variables: [Variable<int>(id)],
+    ).getSingle();
+    return row.read<int>('n');
+  }
+
+  /// Deletes the category and its budget. Rows that used it move to
+  /// [moveTo] when given; otherwise transactions and templates become
+  /// uncategorized and dollar expenses (non-null column) keep the dead ID,
+  /// shown as uncategorized. IDs are never reused (AUTOINCREMENT, kept past
+  /// restores by SnapshotService).
+  Future<void> deleteCategory(int id, {int? moveTo}) {
     final db = attachedDatabase;
     return transaction(() async {
       await (db.update(db.transactionsTable)
             ..where((t) => t.categoryId.equals(id)))
-          .write(const TransactionsTableCompanion(categoryId: Value(null)));
-      await (db.update(
-        db.transactionTemplatesTable,
-      )..where((t) => t.categoryId.equals(id))).write(
-        const TransactionTemplatesTableCompanion(categoryId: Value(null)),
-      );
+          .write(TransactionsTableCompanion(categoryId: Value(moveTo)));
+      await (db.update(db.transactionTemplatesTable)
+            ..where((t) => t.categoryId.equals(id)))
+          .write(TransactionTemplatesTableCompanion(categoryId: Value(moveTo)));
+      if (moveTo != null) {
+        await (db.update(db.dollarExpensesTable)
+              ..where((t) => t.categoryId.equals(id)))
+            .write(DollarExpensesTableCompanion(categoryId: Value(moveTo)));
+      }
       await (db.delete(
         db.categoryBudgetsTable,
       )..where((t) => t.categoryId.equals(id))).go();

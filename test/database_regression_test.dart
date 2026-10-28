@@ -256,4 +256,28 @@ void main() {
       goalId,
     );
   });
+
+  test('deleting a category can move its rows to another one', () async {
+    final gym = await db.categoryDao.insertCategory(category('Gym', false));
+    final health = await db.categoryDao.insertCategory(
+      category('Fitness', false),
+    );
+    await db.transactionDao.insertTransaction(
+      TransactionsTableCompanion.insert(
+        type: 'expense',
+        amount: 500,
+        date: DateTime(2026, 9, 3),
+        categoryId: Value(gym),
+      ),
+    );
+    expect(await db.categoryDao.usageCount(gym), 1);
+
+    await db.categoryDao.deleteCategory(gym, moveTo: health);
+
+    expect(
+      (await db.transactionDao.getTransactions()).single.categoryId,
+      health,
+    );
+    expect(await db.categoryDao.usageCount(gym), 0);
+  });
 }
