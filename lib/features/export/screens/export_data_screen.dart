@@ -24,6 +24,28 @@ import '../../auth/providers/auth_provider.dart';
 import '../../sms_import/providers/sms_providers.dart';
 import '../../sms_import/sms_import_runner.dart';
 
+// file_selector_ios ignores extensions/mimeTypes and throws without UTIs.
+const csvTypeGroup = fs.XTypeGroup(
+  label: 'CSV',
+  extensions: ['csv'],
+  mimeTypes: ['text/csv', 'text/plain', 'application/csv'],
+  uniformTypeIdentifiers: ['public.comma-separated-values-text', 'public.text'],
+);
+
+const jsonTypeGroup = fs.XTypeGroup(
+  label: 'JSON',
+  extensions: ['json'],
+  mimeTypes: ['application/json', 'text/plain'],
+  uniformTypeIdentifiers: ['public.json', 'public.text'],
+);
+
+/// share_plus on iOS rejects an empty origin (iOS 27 gives iPhones a popover
+/// controller too), so anchor the share sheet to the screen.
+Rect shareOrigin(BuildContext context) {
+  final box = context.findRenderObject()! as RenderBox;
+  return box.localToGlobal(Offset.zero) & box.size;
+}
+
 enum _ExportFormat { csv, pdf }
 
 enum _DateRange { allTime, thisMonth, custom }
@@ -458,6 +480,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
   }
 
   Future<void> _handleExport() async {
+    final origin = shareOrigin(context);
     final allTransactions = ref.read(transactionsProvider).valueOrNull;
     if (allTransactions == null || allTransactions.isEmpty) {
       if (mounted) {
@@ -507,9 +530,11 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
         exportedFile = await _generatePdf(filtered, catMap, dir, timestamp);
       }
 
-      await Share.shareXFiles([
-        XFile(exportedFile.path),
-      ], subject: 'SpendSplit Export — $timestamp');
+      await Share.shareXFiles(
+        [XFile(exportedFile.path)],
+        subject: 'SpendSplit Export — $timestamp',
+        sharePositionOrigin: origin,
+      );
     } on Exception catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -538,13 +563,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
         .read(appSessionUnlockedProvider.notifier)
         .stayUnlockedDuring(
           () => fs.openFile(
-            acceptedTypeGroups: const [
-              fs.XTypeGroup(
-                label: 'CSV',
-                extensions: ['csv'],
-                mimeTypes: ['text/csv', 'text/plain', 'application/csv'],
-              ),
-            ],
+            acceptedTypeGroups: const [csvTypeGroup],
             confirmButtonText: 'Import',
           ),
         );
@@ -593,6 +612,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
   bool get _busy => _exporting || _importing || _backingUp || _restoring;
 
   Future<void> _handleJsonExport() async {
+    final origin = shareOrigin(context);
     setState(() => _backingUp = true);
     File? file;
     try {
@@ -618,9 +638,11 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
       await file.writeAsString(
         const JsonEncoder.withIndent('  ').convert(payload),
       );
-      await Share.shareXFiles([
-        XFile(file.path),
-      ], subject: 'SpendSplit Backup — $timestamp');
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'SpendSplit Backup — $timestamp',
+        sharePositionOrigin: origin,
+      );
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -645,13 +667,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
         .read(appSessionUnlockedProvider.notifier)
         .stayUnlockedDuring(
           () => fs.openFile(
-            acceptedTypeGroups: const [
-              fs.XTypeGroup(
-                label: 'JSON',
-                extensions: ['json'],
-                mimeTypes: ['application/json', 'text/plain'],
-              ),
-            ],
+            acceptedTypeGroups: const [jsonTypeGroup],
             confirmButtonText: 'Restore',
           ),
         );
@@ -682,7 +698,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => const _HoldToConfirmDialog(),
+      builder: (_) => const HoldToConfirmDialog(),
     );
     if (confirmed != true || !mounted) return;
 
@@ -1371,14 +1387,14 @@ class _ParsedCsvTransaction {
   final String? note;
 }
 
-class _HoldToConfirmDialog extends StatefulWidget {
-  const _HoldToConfirmDialog();
+class HoldToConfirmDialog extends StatefulWidget {
+  const HoldToConfirmDialog({super.key});
 
   @override
-  State<_HoldToConfirmDialog> createState() => _HoldToConfirmDialogState();
+  State<HoldToConfirmDialog> createState() => _HoldToConfirmDialogState();
 }
 
-class _HoldToConfirmDialogState extends State<_HoldToConfirmDialog>
+class _HoldToConfirmDialogState extends State<HoldToConfirmDialog>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller =
       AnimationController(
@@ -1402,8 +1418,11 @@ class _HoldToConfirmDialogState extends State<_HoldToConfirmDialog>
     return AlertDialog(
       backgroundColor: AppColors.surfaceLight,
       title: const Text('Replace everything?'),
+      // Stretch (not `width: double.infinity`): AlertDialog measures its
+      // content with intrinsic widths, and an infinite one fails to lay out.
       content: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             'This wipes all current data and replaces it with the backup. '
@@ -1422,29 +1441,32 @@ class _HoldToConfirmDialogState extends State<_HoldToConfirmDialog>
               animation: _controller,
               builder: (context, _) => ClipRRect(
                 borderRadius: BorderRadius.circular(999),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      height: 48,
-                      width: double.infinity,
-                      color: AppColors.coral.withValues(alpha: 0.18),
-                    ),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: FractionallySizedBox(
-                        widthFactor: _controller.value,
-                        child: Container(height: 48, color: AppColors.coral),
+                child: SizedBox(
+                  height: 48,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Positioned.fill(
+                        child: ColoredBox(
+                          color: AppColors.coral.withValues(alpha: 0.18),
+                        ),
                       ),
-                    ),
-                    Text(
-                      'Hold to replace everything',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
+                      Positioned.fill(
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: _controller.value,
+                          child: const ColoredBox(color: AppColors.coral),
+                        ),
                       ),
-                    ),
-                  ],
+                      Text(
+                        'Hold to replace everything',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
