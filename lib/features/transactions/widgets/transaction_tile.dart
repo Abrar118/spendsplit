@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:intl/intl.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/constants/categories.dart';
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_decorations.dart';
+import '../../../core/utils/currency_formatter.dart';
+import '../../../core/widgets/coupon.dart';
 import '../../../data/database/app_database.dart';
 
+/// A History row: the entry as a coupon, time on the stub. Swipe left to
+/// delete, right to save as a template.
 class TransactionTile extends StatelessWidget {
   const TransactionTile({
     required this.transaction,
@@ -28,13 +32,11 @@ class TransactionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final presentation = _presentationFor(transaction, category);
-    final iconColor =
-        TransactionType.fromDbValue(transaction.type) ==
-                TransactionType.expense &&
-            category != null
-        ? Color(category!.color)
-        : presentation.amountColor;
+    final theme = Theme.of(context);
+    final p = _presentationFor(transaction, category);
+    final upcoming = transaction.date.isAfter(DateTime.now());
+    final time = DateFormat('h:mm').format(transaction.date);
+    final meridiem = DateFormat('a').format(transaction.date).toLowerCase();
 
     return Slidable(
       key: ValueKey(transaction.id),
@@ -42,194 +44,101 @@ class TransactionTile extends StatelessWidget {
           ? null
           : ActionPane(
               motion: const BehindMotion(),
-              extentRatio: 0.18,
+              extentRatio: 0.2,
               children: [
                 CustomSlidableAction(
                   onPressed: (_) => onSaveAsTemplate!(),
                   backgroundColor: Colors.transparent,
-                  foregroundColor: AppColors.purple,
+                  foregroundColor: AppColors.textPrimary,
                   padding: EdgeInsets.zero,
-                  child: const Icon(LucideIcons.bookmark, size: 22),
+                  child: const Icon(
+                    LucideIcons.bookmark,
+                    size: 22,
+                    semanticLabel: 'Save as template',
+                  ),
                 ),
               ],
             ),
       endActionPane: ActionPane(
         motion: const BehindMotion(),
-        extentRatio: 0.18,
+        extentRatio: 0.2,
         children: [
           CustomSlidableAction(
             onPressed: (_) => onDelete(),
             backgroundColor: Colors.transparent,
-            foregroundColor: AppColors.coral,
+            foregroundColor: AppColors.spend,
             padding: EdgeInsets.zero,
-            child: const Icon(LucideIcons.trash2, size: 22),
+            child: const Icon(
+              LucideIcons.trash2,
+              size: 22,
+              semanticLabel: 'Delete',
+            ),
           ),
         ],
       ),
-      child: Builder(
-        builder: (context) {
-          final animation =
-              Slidable.of(context)?.animation ??
-              const AlwaysStoppedAnimation<double>(0);
-          return AnimatedBuilder(
-            animation: animation,
-            builder: (context, _) => _TileBody(
-              presentation: presentation,
-              needsReview: transaction.needsReview,
-              iconColor: iconColor,
-              frosted: animation.value.abs() > 0.001,
-              onTap: onTap,
-              onLongPress: onLongPress,
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _TileBody extends StatelessWidget {
-  const _TileBody({
-    required this.presentation,
-    required this.needsReview,
-    required this.iconColor,
-    required this.frosted,
-    required this.onTap,
-    this.onLongPress,
-  });
-
-  final _TransactionPresentation presentation;
-  final bool needsReview;
-  final Color iconColor;
-  final bool frosted;
-  final VoidCallback onTap;
-  final VoidCallback? onLongPress;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final content = Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+      child: Coupon(
+        state: transaction.needsReview
+            ? CouponState.review
+            : upcoming
+            ? CouponState.upcoming
+            : CouponState.posted,
         onTap: onTap,
         onLongPress: onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 16, 12),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.14),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(presentation.icon, color: iconColor, size: 19),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+        semanticLabel:
+            '${p.title}, ${p.subtitle}, ${p.amountText}'
+            '${transaction.needsReview ? ', needs review' : ''}',
+        stub: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(time, style: theme.textTheme.labelLarge),
+            Text(meridiem, style: theme.textTheme.labelSmall),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    p.title,
+                    style: theme.textTheme.bodyLarge,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (p.subtitle != p.title) ...[
+                    const SizedBox(height: 2),
                     Row(
                       children: [
+                        if (p.marker != null) ...[
+                          Container(width: 8, height: 8, color: p.marker),
+                          const SizedBox(width: 6),
+                        ],
                         Flexible(
                           child: Text(
-                            presentation.title,
-                            style: theme.textTheme.titleMedium,
+                            p.subtitle,
+                            style: theme.textTheme.bodySmall,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (needsReview) ...[
-                          const SizedBox(width: 6),
-                          const _ReviewChip(),
-                        ],
                       ],
                     ),
-                    if (presentation.subtitle != presentation.title) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        presentation.subtitle,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
                   ],
-                ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Text(
-                presentation.amountText,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: presentation.amountColor,
-                ),
-                textAlign: TextAlign.right,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              p.amountText,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: p.amountColor,
               ),
-            ],
-          ),
+              textAlign: TextAlign.right,
+            ),
+          ],
         ),
-      ),
-    );
-
-    if (!frosted) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceRaised,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: content,
-      );
-    }
-
-    // Swiped-open: frost the row like the bottom nav pill so the revealed
-    // action icon reads through a glassy panel.
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: AppDecorations.navFrost(),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.navBar.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Stack(
-            children: [
-              const Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(gradient: AppDecorations.navSheen),
-                ),
-              ),
-              content,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ReviewChip extends StatelessWidget {
-  const _ReviewChip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.amber.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        'Review',
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(color: AppColors.amber),
       ),
     );
   }
@@ -241,24 +150,16 @@ class _TransactionPresentation {
     required this.subtitle,
     required this.amountText,
     required this.amountColor,
-    required this.icon,
+    this.marker,
   });
 
   final String title;
   final String subtitle;
   final String amountText;
   final Color amountColor;
-  final IconData icon;
-}
 
-/// Accent colour for a transaction, shared with the history timeline rail.
-Color transactionAccentColor(TransactionsTableData transaction) {
-  return switch (TransactionType.fromDbValue(transaction.type)) {
-    TransactionType.expense => AppColors.coral,
-    TransactionType.income => AppColors.green,
-    TransactionType.savingsDeposit => AppColors.purple,
-    TransactionType.savingsWithdrawal => AppColors.amber,
-  };
+  /// Category colour, drawn as a small square before the subtitle.
+  final Color? marker;
 }
 
 _TransactionPresentation _presentationFor(
@@ -268,16 +169,19 @@ _TransactionPresentation _presentationFor(
   final type = TransactionType.fromDbValue(transaction.type);
   final note = transaction.note?.trim();
   final hasNote = note != null && note.isNotEmpty;
+  final amount = formatBdtExact(transaction.amount);
+  // Imported rows name their source until the user writes a note.
+  final fromSms = transaction.smsRef != null;
 
   switch (type) {
     case TransactionType.expense:
       final categoryName = category?.name ?? 'Expense';
       return _TransactionPresentation(
-        title: hasNote ? note : categoryName,
-        subtitle: categoryName,
-        amountText: '- ৳${transaction.amount.toStringAsFixed(2)}',
-        amountColor: AppColors.coral,
-        icon: iconForCategoryKey(category?.icon ?? 'category'),
+        title: hasNote ? note : (fromSms ? 'Card debit' : categoryName),
+        subtitle: fromSms ? 'Trust Bank SMS · $categoryName' : categoryName,
+        amountText: '−$amount',
+        amountColor: AppColors.textPrimary,
+        marker: category == null ? null : categoryColor(category.color),
       );
     case TransactionType.income:
       final sourceLabel = switch (transaction.source) {
@@ -286,27 +190,24 @@ _TransactionPresentation _presentationFor(
         _ => 'Income',
       };
       return _TransactionPresentation(
-        title: hasNote ? note : sourceLabel,
-        subtitle: sourceLabel,
-        amountText: '+ ৳${transaction.amount.toStringAsFixed(2)}',
-        amountColor: AppColors.green,
-        icon: LucideIcons.trendingUp,
+        title: hasNote ? note : (fromSms ? 'Card credit' : sourceLabel),
+        subtitle: fromSms ? 'Trust Bank SMS · $sourceLabel' : sourceLabel,
+        amountText: '+$amount',
+        amountColor: AppColors.income,
       );
     case TransactionType.savingsDeposit:
       return _TransactionPresentation(
-        title: hasNote ? note : 'Savings Deposit',
+        title: hasNote ? note : 'Moved to savings',
         subtitle: 'Savings',
-        amountText: '↓ ৳${transaction.amount.toStringAsFixed(2)}',
-        amountColor: AppColors.purple,
-        icon: LucideIcons.arrowDownToLine,
+        amountText: amount,
+        amountColor: AppColors.savings,
       );
     case TransactionType.savingsWithdrawal:
       return _TransactionPresentation(
-        title: hasNote ? note : 'Savings Withdrawal',
+        title: hasNote ? note : 'Taken from savings',
         subtitle: 'Savings',
-        amountText: '↑ ৳${transaction.amount.toStringAsFixed(2)}',
-        amountColor: AppColors.amber,
-        icon: LucideIcons.arrowUpFromLine,
+        amountText: amount,
+        amountColor: AppColors.savingsDim,
       );
   }
 }

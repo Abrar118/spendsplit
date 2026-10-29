@@ -4,7 +4,7 @@ import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/panel.dart';
 import '../../../providers/providers.dart';
 import '../../sms_import/providers/sms_providers.dart';
 
@@ -19,16 +19,13 @@ class BankReconcileCard extends ConsumerWidget {
     final theme = Theme.of(context);
     String bdt(double v) => formatBdtAmount(v, fractionDigits: 0);
 
-    return GlassCard(
-      shadow: false,
-      glowColor: AppColors.coral,
-      radius: 20,
+    return Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(LucideIcons.scale, color: AppColors.coral, size: 18),
+              const Icon(LucideIcons.scale, color: AppColors.warning, size: 18),
               const SizedBox(width: 10),
               Text('Balance check', style: theme.textTheme.titleMedium),
             ],

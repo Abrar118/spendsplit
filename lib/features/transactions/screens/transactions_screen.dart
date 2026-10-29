@@ -2,9 +2,9 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
+import '../../../core/widgets/large_title_page.dart';
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -91,246 +91,235 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final transactionsAsync = ref.watch(transactionsProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
 
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, AppSpacing.navClearance),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return LargeTitlePage(
+      title: 'History',
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          BarIconButton(
+            icon: _showSearch ? LucideIcons.x : LucideIcons.search,
+            tooltip: _showSearch ? 'Close search' : 'Search',
+            color: _showSearch ? AppColors.textPrimary : null,
+            onPressed: () => setState(() {
+              _showSearch = !_showSearch;
+              if (!_showSearch) _searchController.clear();
+            }),
+          ),
+          BarIconButton(
+            icon: LucideIcons.listFilter,
+            tooltip: 'Filters',
+            color: _advancedFilters.hasActiveFilters
+                ? AppColors.textPrimary
+                : null,
+            onPressed: categoriesAsync.hasValue
+                ? () => _openFilters(categoriesAsync.value!)
+                : null,
+          ),
+        ],
+      ),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Transactions', style: theme.textTheme.titleLarge),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => setState(() {
-                    _showSearch = !_showSearch;
-                    if (!_showSearch) _searchController.clear();
-                  }),
-                  icon: Icon(
-                    _showSearch ? LucideIcons.x : LucideIcons.search,
-                    color: _showSearch ? AppColors.teal : null,
-                  ),
+                FilterChipsRow(
+                  selectedFilter: _quickFilter,
+                  showReview:
+                      ref.watch(needsReviewCountProvider) > 0 ||
+                      _quickFilter == TransactionQuickFilter.review,
+                  onSelected: (value) {
+                    setState(() {
+                      _quickFilter = value;
+                      _visibleCount = 40;
+                    });
+                  },
                 ),
-                IconButton(
-                  onPressed: categoriesAsync.hasValue
-                      ? () => _openFilters(categoriesAsync.value!)
-                      : null,
-                  icon: Icon(
-                    LucideIcons.listFilter,
-                    color: _advancedFilters.hasActiveFilters
-                        ? AppColors.teal
-                        : null,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            FilterChipsRow(
-              selectedFilter: _quickFilter,
-              showReview:
-                  ref.watch(needsReviewCountProvider) > 0 ||
-                  _quickFilter == TransactionQuickFilter.review,
-              onSelected: (value) {
-                setState(() {
-                  _quickFilter = value;
-                  _visibleCount = 40;
-                });
-              },
-            ),
-            if (_showSearch) ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search amount, note, category...',
-                  prefixIcon: const Icon(LucideIcons.search, size: 18),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(LucideIcons.x, size: 16),
-                          onPressed: _searchController.clear,
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: AppColors.surfaceLight.withValues(alpha: 0.6),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.08),
+                if (_showSearch) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Search amount, note, category…',
+                      prefixIcon: const Icon(LucideIcons.search, size: 18),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              tooltip: 'Clear search',
+                              icon: const Icon(LucideIcons.x, size: 16),
+                              onPressed: _searchController.clear,
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 20),
-            Expanded(
-              child: RefreshIndicator(
-                color: AppColors.teal,
-                onRefresh: _refreshTransactions,
-                child: transactionsAsync.when(
-                  data: (transactions) {
-                    final categoriesById = {
-                      for (final category
-                          in categoriesAsync.valueOrNull ??
-                              const <CategoriesTableData>[])
-                        category.id: category,
-                    };
-                    final filtered = _applyFilters(
-                      transactions,
-                      categoriesById,
-                    );
-
-                    if (filtered.isEmpty) {
-                      // Only "no transactions yet" when there really are none;
-                      // otherwise say a filter is hiding them.
-                      final reviewOnly =
-                          _quickFilter == TransactionQuickFilter.review;
-                      return ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          const SizedBox(height: 120),
-                          if (transactions.isEmpty)
-                            const EmptyState(
-                              icon: LucideIcons.wallet,
-                              title: 'No transactions yet.',
-                              message: 'Tap + to add your first one.',
-                            )
-                          else ...[
-                            EmptyState(
-                              icon: reviewOnly
-                                  ? LucideIcons.checkCircle
-                                  : LucideIcons.search,
-                              title: reviewOnly
-                                  ? 'Nothing to review.'
-                                  : 'No matches.',
-                              message: reviewOnly
-                                  ? 'Every imported transaction has been checked.'
-                                  : 'Nothing fits the current search or filters.',
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            Center(
-                              child: TextButton(
-                                onPressed: _clearFilters,
-                                child: const Text('Clear filters'),
-                              ),
-                            ),
-                          ],
-                        ],
-                      );
-                    }
-
-                    // Paginate: show only _visibleCount items
-                    final paginated = filtered.length > _visibleCount
-                        ? filtered.sublist(0, _visibleCount)
-                        : filtered;
-                    final hasMore = filtered.length > _visibleCount;
-                    final sections = _groupTransactions(paginated);
-
-                    // Flatten sections into a list of items
-                    final items = <_ListItem>[];
-                    for (final section in sections) {
-                      items.add(_ListItem.header(section.header));
-                      for (final t in section.transactions) {
-                        items.add(_ListItem.transaction(t));
-                      }
-                    }
-                    if (hasMore) {
-                      items.add(const _ListItem.loadMore());
-                    }
-
-                    return ListView.builder(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-
-                        if (item.isHeader) {
-                          return Padding(
-                            padding: const EdgeInsets.only(
-                              left: 78,
-                              bottom: 10,
-                              top: 8,
-                            ),
-                            child: Text(
-                              item.headerText!,
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          );
-                        }
-
-                        if (item.isLoadMore) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            child: Center(
-                              child: TextButton(
-                                onPressed: () =>
-                                    setState(() => _visibleCount += 40),
-                                child: Text(
-                                  'Load more (${filtered.length - _visibleCount} remaining)',
-                                  style: TextStyle(color: AppColors.teal),
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-
-                        final transaction = item.transaction!;
-                        final topLine =
-                            index > 0 && items[index - 1].transaction != null;
-                        final bottomLine =
-                            index + 1 < items.length &&
-                            items[index + 1].transaction != null;
-                        return _TimelineEntry(
-                          key: ValueKey(transaction.id),
-                          time: DateFormat(
-                            'h:mm a',
-                          ).format(transaction.date).toLowerCase(),
-                          accent: transactionAccentColor(transaction),
-                          topLine: topLine,
-                          bottomLine: bottomLine,
-                          child: TransactionTile(
-                            transaction: transaction,
-                            category: categoriesById[transaction.categoryId],
-                            onTap: () => showAddTransactionSheet(
-                              context,
-                              existingTransaction: transaction,
-                            ),
-                            onLongPress: () => _copyAmount(transaction),
-                            onSaveAsTemplate: () =>
-                                _saveTransactionAsTemplate(transaction),
-                            onDelete: () => _deleteTransaction(transaction),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                  loading: () => const _TransactionsSkeleton(),
-                  error: (error, _) => ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      const SizedBox(height: 180),
-                      Center(
-                        child: Text(
-                          'Could not load transactions',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: AppColors.coral,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        ...transactionsAsync.when(
+          loading: () => [
+            const SliverPadding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+              sliver: SliverToBoxAdapter(child: _TransactionsSkeleton()),
+            ),
+          ],
+          error: (error, _) => [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Text(
+                  "History couldn't load. Close and reopen the app to try again.",
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium,
                 ),
               ),
             ),
           ],
+          data: (transactions) {
+            final categoriesById = {
+              for (final category
+                  in categoriesAsync.valueOrNull ??
+                      const <CategoriesTableData>[])
+                category.id: category,
+            };
+            final filtered = _applyFilters(transactions, categoriesById);
+
+            if (filtered.isEmpty) {
+              // Only "no transactions yet" when there really are none;
+              // otherwise say a filter is hiding them.
+              final reviewOnly = _quickFilter == TransactionQuickFilter.review;
+              return [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 48, 16, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        if (transactions.isEmpty)
+                          const EmptyState(
+                            icon: LucideIcons.wallet,
+                            title: 'No transactions yet',
+                            message: 'Tap + to add your first one.',
+                          )
+                        else ...[
+                          EmptyState(
+                            icon: reviewOnly
+                                ? LucideIcons.checkCircle
+                                : LucideIcons.search,
+                            title: reviewOnly
+                                ? 'Nothing to review'
+                                : 'No matches',
+                            message: reviewOnly
+                                ? 'Every imported transaction has been checked.'
+                                : 'Nothing fits the current search or filters.',
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          TextButton(
+                            onPressed: _clearFilters,
+                            child: const Text('Clear filters'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ];
+            }
+
+            // Paginate: show only _visibleCount items
+            final paginated = filtered.length > _visibleCount
+                ? filtered.sublist(0, _visibleCount)
+                : filtered;
+            final hasMore = filtered.length > _visibleCount;
+            final sections = _groupTransactions(paginated);
+
+            // Flatten sections into a list of items
+            final items = <_ListItem>[];
+            for (final section in sections) {
+              items.add(_ListItem.header(section.header));
+              for (final t in section.transactions) {
+                items.add(_ListItem.transaction(t));
+              }
+            }
+            if (hasMore) {
+              items.add(const _ListItem.loadMore());
+            }
+
+            return [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  0,
+                  16,
+                  AppSpacing.navClearance,
+                ),
+                sliver: SliverList.builder(
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+
+                    if (item.isHeader) {
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: 8,
+                          top: index == 0 ? 12 : 20,
+                        ),
+                        child: Semantics(
+                          header: true,
+                          child: Text(
+                            item.headerText!,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (item.isLoadMore) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: TextButton(
+                            onPressed: () =>
+                                setState(() => _visibleCount += 40),
+                            child: Text(
+                              'Load more (${filtered.length - _visibleCount} remaining)',
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final transaction = item.transaction!;
+                    return Padding(
+                      key: ValueKey(transaction.id),
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: TransactionTile(
+                        transaction: transaction,
+                        category: categoriesById[transaction.categoryId],
+                        onTap: () => showAddTransactionSheet(
+                          context,
+                          existingTransaction: transaction,
+                        ),
+                        onLongPress: () => _copyAmount(transaction),
+                        onSaveAsTemplate: () =>
+                            _saveTransactionAsTemplate(transaction),
+                        onDelete: () => _deleteTransaction(transaction),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ];
+          },
         ),
-      ),
+      ],
     );
   }
 
@@ -649,15 +638,6 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       _ => 0,
     };
   }
-
-  Future<void> _refreshTransactions() async {
-    ref.invalidate(transactionsProvider);
-    ref.invalidate(categoriesProvider);
-    await Future.wait([
-      ref.refresh(transactionsProvider.future),
-      ref.refresh(categoriesProvider.future),
-    ]);
-  }
 }
 
 class _TransactionsSkeleton extends StatelessWidget {
@@ -665,19 +645,18 @@ class _TransactionsSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: const [
+    return const Column(
+      children: [
         ShimmerSkeleton(
           child: Column(
             children: [
-              SkeletonCard(height: 86, radius: 20),
+              SkeletonCard(height: 64, radius: 6),
               SizedBox(height: 12),
-              SkeletonCard(height: 86, radius: 20),
+              SkeletonCard(height: 64, radius: 6),
               SizedBox(height: 12),
-              SkeletonCard(height: 86, radius: 20),
+              SkeletonCard(height: 64, radius: 6),
               SizedBox(height: 12),
-              SkeletonCard(height: 86, radius: 20),
+              SkeletonCard(height: 64, radius: 6),
             ],
           ),
         ),
@@ -717,102 +696,4 @@ class _ListItem {
   final TransactionsTableData? transaction;
   final bool isHeader;
   final bool isLoadMore;
-}
-
-/// A history row hung off a left-hand timeline: a coloured node marks the
-/// entry on a vertical rail at the far left, the time of day sits in the
-/// gutter beside it, and the tile itself carries no time.
-class _TimelineEntry extends StatelessWidget {
-  const _TimelineEntry({
-    required this.time,
-    required this.accent,
-    required this.topLine,
-    required this.bottomLine,
-    required this.child,
-    super.key,
-  });
-
-  final String time;
-  final Color accent;
-  final bool topLine;
-  final bool bottomLine;
-  final Widget child;
-
-  // Distance from the row's top to the node's centre — lines up with the
-  // tile's icon.
-  static const double _nodeOffset = 32;
-
-  @override
-  Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            width: 20,
-            child: Column(
-              children: [
-                _RailSegment(visible: topLine, height: _nodeOffset - 5),
-                Container(
-                  width: 9,
-                  height: 9,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: accent,
-                  ),
-                ),
-                Expanded(child: _RailSegment(visible: bottomLine)),
-              ],
-            ),
-          ),
-          SizedBox(
-            width: 58,
-            child: Padding(
-              padding: const EdgeInsets.only(
-                left: 6,
-                right: 8,
-                top: _nodeOffset - 10,
-              ),
-              child: Text(
-                time,
-                maxLines: 1,
-                overflow: TextOverflow.clip,
-                softWrap: false,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.textTertiary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 10,
-                  letterSpacing: 0,
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: child,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RailSegment extends StatelessWidget {
-  const _RailSegment({required this.visible, this.height});
-
-  final bool visible;
-  final double? height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 2,
-      height: height,
-      color: visible
-          ? Colors.white.withValues(alpha: 0.22)
-          : Colors.transparent,
-    );
-  }
 }

@@ -80,7 +80,7 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: AppColors.surfaceLight,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
@@ -94,7 +94,7 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
                       height: 4,
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.zero,
                       ),
                     ),
                   ),
@@ -115,7 +115,7 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xl),
-                  _FieldLabel(label: 'GOAL NAME'),
+                  _FieldLabel(label: 'Goal name'),
                   const SizedBox(height: 10),
                   TextField(
                     controller: _nameController,
@@ -127,14 +127,14 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
                     children: [
                       Expanded(
                         child: _CurrencyField(
-                          label: 'CURRENT SAVED',
+                          label: 'Already saved',
                           controller: _currentAmountController,
                         ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
                         child: _CurrencyField(
-                          label: 'TARGET',
+                          label: 'Target',
                           controller: _targetAmountController,
                         ),
                       ),
@@ -143,11 +143,9 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
                   const SizedBox(height: AppSpacing.lg),
                   Row(
                     children: [
-                      Expanded(child: _FieldLabel(label: 'SET DEADLINE')),
+                      Expanded(child: _FieldLabel(label: 'Deadline')),
                       Switch.adaptive(
                         value: _hasDeadline,
-                        activeThumbColor: AppColors.teal,
-                        activeTrackColor: AppColors.teal.withValues(alpha: 0.4),
                         onChanged: _saving
                             ? null
                             : (value) {
@@ -165,7 +163,7 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
                     const SizedBox(height: 10),
                     InkWell(
                       onTap: _saving ? null : _pickDeadline,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.zero,
                       child: Ink(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -173,7 +171,7 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.04),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.zero,
                         ),
                         child: Row(
                           children: [
@@ -191,7 +189,7 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
                     ),
                   ],
                   const SizedBox(height: AppSpacing.lg),
-                  _FieldLabel(label: 'ICON'),
+                  _FieldLabel(label: 'Icon'),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 12,
@@ -215,7 +213,7 @@ class _CreateGoalSheetState extends ConsumerState<CreateGoalSheet> {
                     child: FilledButton(
                       onPressed: _saving ? null : _saveGoal,
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.purple,
+                        backgroundColor: AppColors.savings,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -406,7 +404,7 @@ class _GoalIconChip extends StatelessWidget {
         color: selected ? option.color : Colors.white.withValues(alpha: 0.08),
       ),
       padding: const EdgeInsets.all(14),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }

@@ -9,7 +9,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/input_formatters.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/panel.dart';
+import 'card_number_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../providers/providers.dart';
 import '../../sms_import/providers/sms_providers.dart';
@@ -37,205 +38,165 @@ class SettingsScreen extends ConsumerWidget {
             Row(
               children: [
                 IconButton(
+                  tooltip: 'Back',
                   onPressed: () => context.pop(),
                   icon: const Icon(LucideIcons.chevronLeft),
                 ),
                 const SizedBox(width: 4),
-                Text('Settings', style: theme.textTheme.titleLarge),
+                Text('Settings', style: theme.textTheme.headlineMedium),
               ],
             ),
-            const SizedBox(height: AppSpacing.xl),
-            GlassCard(
-              glowColor: AppColors.teal,
-              radius: 24,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'SECURITY',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  _SwitchRow(
-                    icon: LucideIcons.lock,
-                    title: 'Biometric Lock',
-                    subtitle: settings.biometricEnabled
-                        ? 'Unlock required when the app opens'
-                        : 'Keep the app open without biometric gate',
-                    value: settings.biometricEnabled,
-                    onChanged: (value) async {
-                      if (value) {
-                        final isSupported = await ref
-                            .read(authRepositoryProvider)
-                            .isDeviceSupported();
-                        if (!isSupported) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Local authentication is unavailable on this device.',
-                                ),
+            const SizedBox(height: AppSpacing.md),
+            _Group(
+              title: 'Security',
+              children: [
+                _SwitchRow(
+                  icon: LucideIcons.lock,
+                  title: 'Biometric lock',
+                  subtitle: settings.biometricEnabled
+                      ? 'Unlock required when the app opens'
+                      : 'Off: the app opens without Face ID or a fingerprint',
+                  value: settings.biometricEnabled,
+                  onChanged: (value) async {
+                    if (value) {
+                      final isSupported = await ref
+                          .read(authRepositoryProvider)
+                          .isDeviceSupported();
+                      if (!isSupported) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Local authentication is unavailable on this device.',
                               ),
-                            );
-                          }
-                          return;
-                        }
-                      }
-
-                      await controller.setBiometricEnabled(value);
-                      if (value) {
-                        ref.read(appSessionUnlockedProvider.notifier).unlock();
-                      } else {
-                        ref.read(appSessionUnlockedProvider.notifier).lock();
-                      }
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              value
-                                  ? 'Biometric lock enabled'
-                                  : 'Biometric lock disabled',
                             ),
-                          ),
-                        );
+                          );
+                        }
+                        return;
                       }
-                    },
-                  ),
-                ],
-              ),
+                    }
+
+                    await controller.setBiometricEnabled(value);
+                    if (value) {
+                      ref.read(appSessionUnlockedProvider.notifier).unlock();
+                    } else {
+                      ref.read(appSessionUnlockedProvider.notifier).lock();
+                    }
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            value
+                                ? 'Biometric lock enabled'
+                                : 'Biometric lock disabled',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ],
             ),
             // SMS reading is Android-only (iOS has no SMS API).
             if (defaultTargetPlatform == TargetPlatform.android) ...[
               const SizedBox(height: AppSpacing.section),
-              GlassCard(
-                glowColor: AppColors.amber,
-                radius: 24,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'BANK SMS',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    const _SmsImportRow(),
-                    const _SmsUnparsedRow(),
-                  ],
-                ),
+              _Group(
+                title: 'Bank SMS',
+                children: [
+                  const _SmsImportRow(),
+                  if (settings.smsUnparsedCount > 0) const _SmsUnparsedRow(),
+                ],
               ),
             ],
             const SizedBox(height: AppSpacing.section),
-            GlassCard(
-              glowColor: AppColors.purple,
-              radius: 24,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'FINANCIAL DEFAULTS',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+            _Group(
+              title: 'Money',
+              children: [
+                _ActionRow(
+                  icon: LucideIcons.wallet,
+                  title: 'Starting balance',
+                  subtitle: 'What the account held before your first entry',
+                  value: formatBdtAmount(
+                    settings.initialBalance,
+                    fractionDigits: 0,
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  onTap: () => _showAmountEditor(
+                    context: context,
+                    title: 'Starting balance',
+                    symbol: '৳',
+                    initialValue: settings.initialBalance,
+                    helperText: 'Used in total balance calculations.',
+                    onSave: controller.setInitialBalance,
+                  ),
+                ),
+                _ActionRow(
+                  icon: LucideIcons.badgeDollarSign,
+                  title: 'USD yearly allowance',
+                  subtitle: 'USD allowance for ${settings.dollarLimitYear}',
+                  value: formatUsdAmount(
+                    settings.dollarAnnualLimit,
+                    fractionDigits: 0,
+                  ),
+                  valueColor: settings.needsDollarLimitRefresh
+                      ? AppColors.warning
+                      : AppColors.usd,
+                  onTap: () => _showAmountEditor(
+                    context: context,
+                    title: 'USD yearly allowance',
+                    symbol: '\$',
+                    initialValue: settings.dollarAnnualLimit,
+                    helperText:
+                        'Tracked against ${settings.dollarLimitYear} spending.',
+                    onSave: controller.setDollarAnnualLimit,
+                  ),
+                ),
+                _ActionRow(
+                  icon: LucideIcons.creditCard,
+                  title: 'Card number',
+                  subtitle: 'Shown masked; only the first and last four digits',
+                  value: _maskCardNumber(settings.cardNumber),
+                  onTap: () => _showCardNumberEditor(context, ref),
+                ),
+                if (settings.needsDollarLimitRefresh) ...[
                   _ActionRow(
-                    icon: LucideIcons.wallet,
-                    title: 'Initial Balance',
-                    subtitle: 'Starting BDT balance used for totals',
-                    value: formatBdtAmount(
-                      settings.initialBalance,
-                      fractionDigits: 0,
-                    ),
-                    onTap: () => _showAmountEditor(
-                      context: context,
-                      title: 'Initial Balance',
-                      symbol: '৳',
-                      initialValue: settings.initialBalance,
-                      helperText: 'Used in total balance calculations.',
-                      onSave: controller.setInitialBalance,
-                    ),
+                    icon: LucideIcons.calendarDays,
+                    title: 'Allowance year',
+                    subtitle:
+                        'Your limit is still assigned to ${settings.dollarLimitYear}',
+                    value: DateTime.now().year.toString(),
+                    valueColor: AppColors.warning,
+                    onTap: () =>
+                        controller.setDollarLimitYear(DateTime.now().year),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _ActionRow(
-                    icon: LucideIcons.badgeDollarSign,
-                    title: 'Dollar Annual Limit',
-                    subtitle: 'USD allowance for ${settings.dollarLimitYear}',
-                    value: formatUsdAmount(
-                      settings.dollarAnnualLimit,
-                      fractionDigits: 0,
-                    ),
-                    accentColor: settings.needsDollarLimitRefresh
-                        ? AppColors.amber
-                        : AppColors.teal,
-                    onTap: () => _showAmountEditor(
-                      context: context,
-                      title: 'Dollar Annual Limit',
-                      symbol: '\$',
-                      initialValue: settings.dollarAnnualLimit,
-                      helperText:
-                          'Tracked against ${settings.dollarLimitYear} spending.',
-                      onSave: controller.setDollarAnnualLimit,
-                    ),
-                  ),
-                  if (settings.needsDollarLimitRefresh) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    _ActionRow(
-                      icon: LucideIcons.calendarDays,
-                      title: 'Allowance Year',
-                      subtitle:
-                          'Your limit is still assigned to ${settings.dollarLimitYear}',
-                      value: DateTime.now().year.toString(),
-                      accentColor: AppColors.amber,
-                      onTap: () =>
-                          controller.setDollarLimitYear(DateTime.now().year),
-                    ),
-                  ],
                 ],
-              ),
+              ],
             ),
             const SizedBox(height: AppSpacing.section),
-            GlassCard(
-              glowColor: AppColors.teal,
-              radius: 24,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'DATA',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  _ActionRow(
-                    icon: LucideIcons.layoutGrid,
-                    title: 'Manage Categories',
-                    subtitle: 'View and delete custom categories',
-                    value: '',
-                    onTap: () => context.push(AppRoute.manageCategories.path),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _ActionRow(
-                    icon: LucideIcons.bookmark,
-                    title: 'Manage Templates',
-                    subtitle: 'View and delete transaction templates',
-                    value: '',
-                    onTap: () => context.push(AppRoute.manageTemplates.path),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _ActionRow(
-                    icon: LucideIcons.download,
-                    title: 'Export Data',
-                    subtitle: 'CSV or PDF of your transactions',
-                    value: '',
-                    onTap: () => context.push(AppRoute.exportData.path),
-                  ),
-                ],
-              ),
+            _Group(
+              title: 'Data',
+              children: [
+                _ActionRow(
+                  icon: LucideIcons.layoutGrid,
+                  title: 'Categories',
+                  subtitle: 'Rename, recolour or remove your own',
+                  value: '',
+                  onTap: () => context.push(AppRoute.manageCategories.path),
+                ),
+                _ActionRow(
+                  icon: LucideIcons.bookmark,
+                  title: 'Templates',
+                  subtitle: 'Quick entries and expected monthly bills',
+                  value: '',
+                  onTap: () => context.push(AppRoute.manageTemplates.path),
+                ),
+                _ActionRow(
+                  icon: LucideIcons.download,
+                  title: 'Export and backup',
+                  subtitle: 'CSV or PDF, or a full backup to restore from',
+                  value: '',
+                  onTap: () => context.push(AppRoute.exportData.path),
+                ),
+              ],
             ),
           ],
         ),
@@ -277,6 +238,48 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
+/// A titled settings group: a sentence-case header above one flush module,
+/// rows separated by hairlines.
+class _Group extends StatelessWidget {
+  const _Group({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = children.where((w) => w is! SizedBox).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Semantics(
+            header: true,
+            child: Text(title, style: Theme.of(context).textTheme.titleSmall),
+          ),
+        ),
+        Panel(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (var i = 0; i < rows.length; i++) ...[
+                if (i > 0)
+                  Container(
+                    height: 0.5,
+                    margin: const EdgeInsets.only(left: 52),
+                    color: AppColors.hairline,
+                  ),
+                rows[i],
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SwitchRow extends StatelessWidget {
   const _SwitchRow({
     required this.icon,
@@ -297,39 +300,110 @@ class _SwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return InkWell(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.background.withValues(alpha: 0.42),
-          borderRadius: BorderRadius.circular(18),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
         child: Row(
           children: [
-            _LeadingIcon(icon: icon),
-            const SizedBox(width: AppSpacing.md),
+            Icon(icon, color: AppColors.textSecondary, size: 20),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: theme.textTheme.titleMedium),
+                  Text(title, style: theme.textTheme.bodyLarge),
                   const SizedBox(height: 2),
                   Text(subtitle, style: theme.textTheme.bodySmall),
                 ],
               ),
             ),
-            Switch.adaptive(
-              value: value,
-              activeThumbColor: AppColors.teal,
-              activeTrackColor: AppColors.teal.withValues(alpha: 0.4),
-              onChanged: onChanged,
+            Switch.adaptive(value: value, onChanged: onChanged),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onTap,
+    this.valueColor = AppColors.textSecondary,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String value;
+  final VoidCallback onTap;
+  final Color valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.textSecondary, size: 20),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: theme.textTheme.bodyLarge),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: theme.textTheme.bodySmall),
+                ],
+              ),
+            ),
+            if (value.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Text(
+                value,
+                style: theme.textTheme.bodyLarge?.copyWith(color: valueColor),
+              ),
+            ],
+            const SizedBox(width: 4),
+            const Icon(
+              LucideIcons.chevronRight,
+              size: 18,
+              color: AppColors.textTertiary,
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+String _maskCardNumber(String raw) {
+  final digits = raw.replaceAll(RegExp(r'\D'), '');
+  if (digits.length < 12) return raw;
+  return '${digits.substring(0, 4)} ···· ${digits.substring(digits.length - 4)}';
+}
+
+Future<void> _showCardNumberEditor(BuildContext context, WidgetRef ref) async {
+  final current = ref.read(appSettingsProvider).cardNumber;
+  final didSave = await showDialog<bool>(
+    context: context,
+    builder: (_) => CardNumberEditorDialog(
+      initialDigits: current.replaceAll(RegExp(r'\D'), ''),
+      onSave: (value) =>
+          ref.read(appSettingsProvider.notifier).setCardNumber(value),
+    ),
+  );
+  if (didSave == true && context.mounted) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Card number updated')));
   }
 }
 
@@ -380,83 +454,89 @@ class _AmountEditorSheetState extends State<_AmountEditorSheet> {
     final theme = Theme.of(context);
     return Padding(
       padding: EdgeInsets.only(
-        left: AppSpacing.md,
-        right: AppSpacing.md,
-        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
+        bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: GlassCard(
-        glowColor: AppColors.teal,
-        radius: 28,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Align(
-              child: Container(
-                width: 44,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 18),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-            Text(widget.title, style: theme.textTheme.headlineSmall),
-            const SizedBox(height: AppSpacing.xs),
-            Text(widget.helperText, style: theme.textTheme.bodyMedium),
-            const SizedBox(height: AppSpacing.xl),
-            TextField(
-              controller: _controller,
-              autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [DecimalTextInputFormatter(maxDecimalPlaces: 2)],
-              style: theme.textTheme.headlineMedium,
-              decoration: InputDecoration(
-                prefixText: '${widget.symbol} ',
-                hintText: '0',
-                errorText: _errorText,
-              ),
-              onChanged: (_) {
-                if (_errorText != null) {
-                  setState(() {
-                    _errorText = null;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _saving
-                        ? null
-                        : () => Navigator.of(context).pop(false),
-                    child: const Text('Cancel'),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: AppColors.surfaceLight,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+        ),
+        child: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Align(
+                child: Container(
+                  width: 36,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.outlineVariant,
+                    borderRadius: BorderRadius.circular(3),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _saving ? null : _save,
-                    child: _saving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Save'),
-                  ),
+              ),
+              Text(widget.title, style: theme.textTheme.titleLarge),
+              const SizedBox(height: AppSpacing.xs),
+              Text(widget.helperText, style: theme.textTheme.bodyMedium),
+              const SizedBox(height: AppSpacing.xl),
+              TextField(
+                controller: _controller,
+                autofocus: true,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
                 ),
-              ],
-            ),
-          ],
+                inputFormatters: [
+                  DecimalTextInputFormatter(maxDecimalPlaces: 2),
+                ],
+                style: theme.textTheme.headlineMedium,
+                decoration: InputDecoration(
+                  prefixText: '${widget.symbol} ',
+                  hintText: '0',
+                  errorText: _errorText,
+                ),
+                onChanged: (_) {
+                  if (_errorText != null) {
+                    setState(() {
+                      _errorText = null;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _saving
+                          ? null
+                          : () => Navigator.of(context).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _saving ? null : _save,
+                      child: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.onPrimary,
+                              ),
+                            )
+                          : const Text('Save'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -490,92 +570,6 @@ class _AmountEditorSheetState extends State<_AmountEditorSheet> {
   }
 }
 
-class _ActionRow extends StatelessWidget {
-  const _ActionRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onTap,
-    this.accentColor = AppColors.teal,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String value;
-  final VoidCallback onTap;
-  final Color accentColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.background.withValues(alpha: 0.42),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Row(
-          children: [
-            _LeadingIcon(icon: icon),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: theme.textTheme.bodySmall),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  value,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: accentColor,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Icon(
-                  LucideIcons.chevronRight,
-                  size: 16,
-                  color: Colors.white.withValues(alpha: 0.5),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LeadingIcon extends StatelessWidget {
-  const _LeadingIcon({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: AppColors.teal.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Icon(icon, color: AppColors.teal, size: 20),
-    );
-  }
-}
-
 /// Shown only after bank SMS failed to parse: a format change would
 /// otherwise skip messages silently and for good.
 class _SmsUnparsedRow extends ConsumerWidget {
@@ -588,16 +582,13 @@ class _SmsUnparsedRow extends ConsumerWidget {
     );
     if (count == 0) return const SizedBox.shrink();
 
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.sm),
-      child: _ActionRow(
-        icon: LucideIcons.info,
-        title: "Couldn't read $count bank SMS",
-        subtitle: 'They mention a debit or credit but no transaction was made',
-        value: 'View',
-        accentColor: AppColors.amber,
-        onTap: () => _show(context, ref),
-      ),
+    return _ActionRow(
+      icon: LucideIcons.info,
+      title: "Couldn't read $count bank SMS",
+      subtitle: 'They mention a debit or credit but no transaction was made',
+      value: 'View',
+      valueColor: AppColors.warning,
+      onTap: () => _show(context, ref),
     );
   }
 

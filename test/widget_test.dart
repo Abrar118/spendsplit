@@ -6,7 +6,7 @@ import 'package:spendsplit/core/widgets/bottom_nav_bar.dart';
 import 'package:spendsplit/data/database/app_database.dart';
 import 'package:spendsplit/data/models/financial_summaries.dart';
 import 'package:spendsplit/features/dashboard/widgets/monthly_snapshot_row.dart';
-import 'package:spendsplit/features/dashboard/widgets/spending_chart.dart';
+import 'package:spendsplit/features/graphs/widgets/spending_chart.dart';
 import 'package:spendsplit/features/monthly/widgets/monthly_budget_card.dart';
 import 'package:spendsplit/providers/providers.dart';
 
@@ -31,14 +31,19 @@ void main() {
       ),
     );
     expect(find.byType(BackdropFilter), findsOneWidget);
-    await tester.tap(find.text('Monthly'));
+    expect(find.text('Monthly'), findsNothing);
+    await tester.tap(find.bySemanticsLabel('Monthly'));
     expect(selected, 3);
+    await tester.tap(find.bySemanticsLabel('Graphs'));
+    expect(selected, 4);
+    await tester.tap(find.bySemanticsLabel('Goals'));
+    expect(selected, 5);
     await tester.tap(find.bySemanticsLabel('Add transaction'));
     expect(added, isTrue);
     expect(tester.takeException(), isNull);
   });
   testWidgets(
-    'MonthlySnapshotRow shows all three cards with no overflow at 320dp',
+    'MonthlySnapshotRow shows all three figures with no overflow at 320dp',
     (tester) async {
       tester.view.physicalSize = const Size(320, 640);
       tester.view.devicePixelRatio = 1;
@@ -57,11 +62,11 @@ void main() {
           ),
         ),
       );
-      expect(find.text('INCOME'), findsOneWidget);
-      expect(find.text('SPENT'), findsOneWidget);
-      expect(find.text('SAVED'), findsOneWidget);
+      expect(find.text('Income'), findsOneWidget);
+      expect(find.text('Spent'), findsOneWidget);
+      expect(find.text('To savings'), findsOneWidget);
       // The row must lay all three out at once — no horizontal scroll view that
-      // pushes SAVED off-screen.
+      // pushes the last row off-screen.
       expect(
         find.descendant(
           of: find.byType(MonthlySnapshotRow),
@@ -69,9 +74,9 @@ void main() {
         ),
         findsNothing,
       );
-      // SAVED's amount stays within the 320dp viewport.
+      // The savings amount stays within the 320dp viewport.
       expect(
-        tester.getBottomRight(find.text('SAVED')).dx,
+        tester.getBottomRight(find.text('৳ 5,000')).dx,
         lessThanOrEqualTo(320),
       );
       expect(tester.takeException(), isNull);
@@ -111,18 +116,18 @@ void main() {
         ),
       );
       final currentLabel = [
-        'JAN',
-        'FEB',
-        'MAR',
-        'APR',
-        'MAY',
-        'JUN',
-        'JUL',
-        'AUG',
-        'SEP',
-        'OCT',
-        'NOV',
-        'DEC',
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ][now.month - 1];
       expect(find.text(currentLabel), findsWidgets);
       expect(tester.takeException(), isNull);

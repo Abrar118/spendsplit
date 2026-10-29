@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../theme/app_colors.dart';
-import 'glass_card.dart';
+import 'panel.dart';
 
 class ShimmerSkeleton extends StatelessWidget {
   const ShimmerSkeleton({required this.child, super.key});
@@ -35,8 +35,7 @@ class SkeletonCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: height,
-      child: GlassCard(
-        radius: radius,
+      child: Panel(
         margin: margin,
         child: Container(color: Colors.white.withValues(alpha: 0.04)),
       ),

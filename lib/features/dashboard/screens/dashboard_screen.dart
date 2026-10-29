@@ -1,370 +1,122 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
-import 'package:shimmer/shimmer.dart';
 
+import '../../../core/widgets/large_title_page.dart';
 import '../../../core/constants/enums.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/panel.dart';
+import '../../../core/widgets/shimmer_skeleton.dart';
 import '../../../providers/providers.dart';
+import '../../sms_import/providers/sms_providers.dart';
 import '../widgets/active_goal_card.dart';
-import '../widgets/balance_card.dart';
+import '../widgets/available_hero.dart';
 import '../widgets/bank_reconcile_card.dart';
-import '../widgets/balance_trend_chart.dart';
 import '../widgets/dollar_summary_card.dart';
 import '../widgets/expected_this_month_card.dart';
-import '../widgets/upcoming_card.dart';
 import '../widgets/month_recap_card.dart';
 import '../widgets/monthly_snapshot_row.dart';
 import '../widgets/sms_review_card.dart';
-import '../../sms_import/providers/sms_providers.dart';
-import '../widgets/spending_chart.dart';
 
+/// Home answers one question first, "what can I spend?", then shows what
+/// needs attention and how the month is going.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+    ref.watch(clockTickProvider);
     final balanceSummary = ref.watch(balanceSummaryProvider);
     final currentMonthSummary = ref.watch(currentMonthSummaryProvider);
-    // Posted only: the spending chart shouldn't count future-dated entries.
-    final transactions = ref.watch(postedTransactionsProvider);
     final goals = ref.watch(savingsGoalsProvider);
     final dollarSummary = ref.watch(dollarTrackerSummaryProvider);
-    final settings = ref.watch(appSettingsProvider);
 
     final loading =
         balanceSummary.isLoading ||
         currentMonthSummary.isLoading ||
-        transactions.isLoading ||
         goals.isLoading ||
         dollarSummary.isLoading;
 
-    return SafeArea(
-      bottom: false,
-      child: RefreshIndicator(
-        color: AppColors.teal,
-        onRefresh: () async {
-          ref.invalidate(transactionsProvider);
-          ref.invalidate(balanceSummaryProvider);
-          ref.invalidate(currentMonthSummaryProvider);
-          ref.invalidate(savingsGoalsProvider);
-          ref.invalidate(dollarTrackerSummaryProvider);
-          ref.invalidate(dollarExpensesProvider);
-          await Future.wait([
-            ref.read(transactionsProvider.future),
-            ref.read(savingsGoalsProvider.future),
-            ref.read(dollarExpensesProvider.future),
-          ]);
-        },
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.md,
-            AppSpacing.md,
-            AppSpacing.navClearance,
-          ),
+    return LargeTitlePage(
+      title: 'Home',
+      trailing: BarIconButton(
+        icon: LucideIcons.settings,
+        tooltip: 'Settings',
+        onPressed: () => context.push(AppRoute.settings.path),
+      ),
+      slivers: [
+        PageBody(
           children: [
-            // --- Top bar ---
-            Row(
-              children: [
-                const SizedBox(width: 8),
-                RichText(
-                  text: TextSpan(
-                    style: theme.textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                    children: const [
-                      TextSpan(
-                        text: 'Spend',
-                        style: TextStyle(color: AppColors.purple),
-                      ),
-                      TextSpan(
-                        text: 'Split',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => context.push(AppRoute.settings.path),
-                  icon: const Icon(LucideIcons.settings),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
             if (loading)
               const _DashboardSkeleton()
             else ...[
-              const _MonthRecapSlot(),
-              const _SmsReviewSlot(),
-              const _BankReconcileSlot(),
               balanceSummary.when(
-                data: (summary) => BalanceCard(
-                  summary: summary,
-                  cardNumber: settings.cardNumber,
-                  onEditCardNumber: () =>
-                      _showCardNumberEditor(context: context, ref: ref),
-                ),
-                error: (error, stackTrace) => const _SectionError(),
-                loading: () => const _DashboardSkeleton(),
+                data: (summary) => AvailableHero(summary: summary),
+                error: (_, _) => const _SectionError(),
+                loading: () => const SizedBox.shrink(),
               ),
-              const SizedBox(height: AppSpacing.section),
-              const _UpcomingSlot(),
-              const _ExpectedThisMonthSlot(),
+              const _AttentionSlot(),
+              _gap,
               currentMonthSummary.when(
-                data: (summary) => MonthlySnapshotRow(summary: summary),
-                error: (error, stackTrace) => const _SectionError(),
-                loading: () => const _SnapshotSkeleton(),
-              ),
-              const SizedBox(height: AppSpacing.section),
-              transactions.when(
-                data: (entries) => SpendingChart(
-                  transactions: entries,
-                  onDetailsTap: () => context.go(AppRoute.monthly.path),
+                data: (summary) => MonthlySnapshotRow(
+                  summary: summary,
+                  onOpen: () => context.go(AppRoute.monthly.path),
                 ),
-                error: (error, stackTrace) => const _SectionError(),
-                loading: () => const _CardSkeleton(height: 280),
+                error: (_, _) => const _SectionError(),
+                loading: () => const SizedBox.shrink(),
               ),
-              const SizedBox(height: AppSpacing.section),
-              const BalanceTrendChart(),
-              const SizedBox(height: AppSpacing.section),
+              const _ExpectedThisMonthSlot(),
+              _gap,
               goals.when(
                 data: (goalsList) => ActiveGoalCard(goals: goalsList),
-                error: (error, stackTrace) => const _SectionError(),
-                loading: () => const _CardSkeleton(height: 126),
+                error: (_, _) => const _SectionError(),
+                loading: () => const SizedBox.shrink(),
               ),
-              const SizedBox(height: AppSpacing.section),
+              const SizedBox(height: AppSpacing.xs),
               dollarSummary.when(
                 data: (summary) => DollarSummaryCard(
                   summary: summary,
                   onTap: () => context.push(AppRoute.dollarTracker.path),
                 ),
-                error: (error, stackTrace) => const _SectionError(),
-                loading: () => const _CardSkeleton(height: 210),
+                error: (_, _) => const _SectionError(),
+                loading: () => const SizedBox.shrink(),
               ),
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  Future<void> _showCardNumberEditor({
-    required BuildContext context,
-    required WidgetRef ref,
-  }) async {
-    final currentCardNumber = ref.read(appSettingsProvider).cardNumber;
-    final didSave = await showDialog<bool>(
-      context: context,
-      builder: (_) => _CardNumberEditorDialog(
-        initialDigits: currentCardNumber.replaceAll(RegExp(r'\D'), ''),
-        onSave: (value) =>
-            ref.read(appSettingsProvider.notifier).setCardNumber(value),
-      ),
-    );
-
-    if (didSave != true || !context.mounted) return;
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Card number updated')));
-    }
-  }
-}
-
-class _CardNumberEditorDialog extends StatefulWidget {
-  const _CardNumberEditorDialog({
-    required this.initialDigits,
-    required this.onSave,
-  });
-
-  final String initialDigits;
-  final Future<void> Function(String value) onSave;
-
-  @override
-  State<_CardNumberEditorDialog> createState() =>
-      _CardNumberEditorDialogState();
-}
-
-class _CardNumberEditorDialogState extends State<_CardNumberEditorDialog> {
-  late final TextEditingController _controller;
-  String? _errorText;
-  bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialDigits);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: AppColors.surfaceLight,
-      title: const Text('Edit Card Number'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'Enter 12–19 digits. Only the first and last four will be visible.',
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            maxLength: 19,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              hintText: '4532756028418291',
-              counterText: '',
-              errorText: _errorText,
-            ),
-            onChanged: (_) {
-              if (_errorText != null) {
-                setState(() => _errorText = null);
-              }
-            },
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: _saving ? null : () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _saving ? null : _save,
-          child: _saving
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text('Save'),
-        ),
       ],
     );
   }
-
-  Future<void> _save() async {
-    final value = _controller.text.trim();
-    if (value.length < 12) {
-      setState(() => _errorText = 'Enter at least 12 digits.');
-      return;
-    }
-
-    setState(() => _saving = true);
-    try {
-      await widget.onSave(value);
-      if (!mounted) {
-        return;
-      }
-      Navigator.of(context).pop(true);
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _saving = false;
-        _errorText = 'Failed to update card number';
-      });
-    }
-  }
 }
 
-class _DashboardSkeleton extends StatelessWidget {
-  const _DashboardSkeleton();
+const _gap = SizedBox(height: AppSpacing.section);
 
-  @override
-  Widget build(BuildContext context) {
-    return Shimmer.fromColors(
-      baseColor: AppColors.surfaceLight,
-      highlightColor: AppColors.surfaceContainerHighest,
-      child: const Column(
-        children: [
-          _CardSkeleton(height: 250),
-          SizedBox(height: 28),
-          _SnapshotSkeleton(),
-          SizedBox(height: 28),
-          _CardSkeleton(height: 280),
-          SizedBox(height: 28),
-          _CardSkeleton(height: 126),
-          SizedBox(height: 28),
-          _CardSkeleton(height: 210),
-        ],
-      ),
-    );
-  }
-}
-
-class _SnapshotSkeleton extends StatelessWidget {
-  const _SnapshotSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 112,
-      child: Row(
-        children: [
-          Expanded(child: _CardSkeleton(height: 112)),
-          SizedBox(width: 14),
-          Expanded(child: _CardSkeleton(height: 112)),
-          SizedBox(width: 14),
-          Expanded(child: _CardSkeleton(height: 112)),
-        ],
-      ),
-    );
-  }
-}
-
-class _CardSkeleton extends StatelessWidget {
-  const _CardSkeleton({required this.height});
-
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      child: GlassCard(
-        shadow: false,
-        child: Container(color: Colors.white.withValues(alpha: 0.04)),
-      ),
-    );
-  }
-}
-
-class _UpcomingSlot extends ConsumerWidget {
-  const _UpcomingSlot();
+/// Everything that asks for the user's attention, stacked tightly: SMS
+/// entries to review, a bank balance mismatch, and the month recap (days 1–5).
+class _AttentionSlot extends ConsumerWidget {
+  const _AttentionSlot();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final upcoming = ref.watch(upcomingProvider);
-    if (upcoming == null || upcoming.entries.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return const Column(
-      children: [
-        UpcomingCard(),
-        SizedBox(height: AppSpacing.section),
-      ],
+    final items = [
+      if (ref.watch(needsReviewCountProvider) > 0) const SmsReviewCard(),
+      if (ref.watch(bankReconciliationProvider) != null)
+        const BankReconcileCard(),
+      if (ref.watch(monthRecapVisibleProvider)) const MonthRecapCard(),
+    ];
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) const SizedBox(height: AppSpacing.sm),
+            items[i],
+          ],
+        ],
+      ),
     );
   }
 }
@@ -374,62 +126,31 @@ class _ExpectedThisMonthSlot extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final expected = ref.watch(expectedThisMonthProvider);
-    if (expected.isEmpty) return const SizedBox.shrink();
-    return const Column(
-      children: [
-        ExpectedThisMonthCard(),
-        SizedBox(height: AppSpacing.section),
-      ],
-    );
-  }
-}
-
-class _MonthRecapSlot extends ConsumerWidget {
-  const _MonthRecapSlot();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!ref.watch(monthRecapVisibleProvider)) return const SizedBox.shrink();
-    return const Column(
-      children: [
-        MonthRecapCard(),
-        SizedBox(height: AppSpacing.section),
-      ],
-    );
-  }
-}
-
-class _SmsReviewSlot extends ConsumerWidget {
-  const _SmsReviewSlot();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(needsReviewCountProvider) == 0) {
+    if (ref.watch(expectedThisMonthProvider).isEmpty) {
       return const SizedBox.shrink();
     }
-    return const Column(
-      children: [
-        SmsReviewCard(),
-        SizedBox(height: AppSpacing.section),
-      ],
+    return const Padding(
+      padding: EdgeInsets.only(top: AppSpacing.section),
+      child: ExpectedThisMonthCard(),
     );
   }
 }
 
-class _BankReconcileSlot extends ConsumerWidget {
-  const _BankReconcileSlot();
+class _DashboardSkeleton extends StatelessWidget {
+  const _DashboardSkeleton();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(bankReconciliationProvider) == null) {
-      return const SizedBox.shrink();
-    }
-    return const Column(
-      children: [
-        BankReconcileCard(),
-        SizedBox(height: AppSpacing.section),
-      ],
+  Widget build(BuildContext context) {
+    return const ShimmerSkeleton(
+      child: Column(
+        children: [
+          SkeletonCard(height: 150, radius: 6),
+          SizedBox(height: AppSpacing.section),
+          SkeletonCard(height: 150, radius: 6),
+          SizedBox(height: AppSpacing.section),
+          SkeletonCard(height: 90, radius: 6),
+        ],
+      ),
     );
   }
 }
@@ -439,11 +160,10 @@ class _SectionError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const GlassCard(
-      shadow: false,
-      child: SizedBox(
-        height: 120,
-        child: Center(child: Text('Could not load this section')),
+    return Panel(
+      child: Text(
+        "This section couldn't load. Close and reopen the app to try again.",
+        style: Theme.of(context).textTheme.bodyMedium,
       ),
     );
   }

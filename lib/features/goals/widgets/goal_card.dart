@@ -1,14 +1,16 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/constants/goal_icons.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_decorations.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/widgets/flat_bar.dart';
 import '../../../data/database/app_database.dart';
 
+/// One goal as a module: name and deadline, amount against target, and a
+/// bone progress bar (green once completed).
 class GoalCard extends StatelessWidget {
   const GoalCard({
     required this.goal,
@@ -31,234 +33,120 @@ class GoalCard extends StatelessWidget {
         ? 0.0
         : (goal.currentAmount / goal.targetAmount).clamp(0.0, 1.0);
     final percentage = (progress * 100).round();
-    final subtitle = _buildSubtitle(goal.deadline);
-    final displayCurrent = completed ? goal.targetAmount : goal.currentAmount;
+    final color = completed ? AppColors.income : AppColors.savings;
 
-    return Opacity(
-      opacity: completed ? 0.72 : 1,
-      child: GestureDetector(
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(AppDecorations.radius),
+      child: InkWell(
         onTap: onTap,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Row(
+        borderRadius: BorderRadius.circular(AppDecorations.radius),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 4, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon.icon, color: AppColors.textSecondary, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 3,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: completed ? AppColors.green : icon.color,
-                            borderRadius: BorderRadius.circular(999),
+                        const SizedBox(height: 8),
+                        Text(
+                          goal.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            decoration: completed
+                                ? TextDecoration.lineThrough
+                                : null,
                           ),
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                goal.name,
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.92),
-                                  decoration: completed
-                                      ? TextDecoration.lineThrough
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    goal.deadline == null
-                                        ? LucideIcons.calendarDays
-                                        : LucideIcons.clock3,
-                                    size: 14,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      subtitle,
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color: AppColors.textSecondary,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        if (onMenuSelected != null)
-                          PopupMenuButton<GoalMenuAction>(
-                            onSelected: onMenuSelected,
-                            itemBuilder: (context) => [
-                              if (!completed)
-                                const PopupMenuItem(
-                                  value: GoalMenuAction.contribute,
-                                  child: Text('Add Contribution'),
-                                ),
-                              const PopupMenuItem(
-                                value: GoalMenuAction.edit,
-                                child: Text('Edit'),
-                              ),
-                              if (!completed)
-                                const PopupMenuItem(
-                                  value: GoalMenuAction.complete,
-                                  child: Text('Mark Complete'),
-                                ),
-                              const PopupMenuItem(
-                                value: GoalMenuAction.delete,
-                                child: Text('Delete'),
-                              ),
-                            ],
-                            icon: const Icon(LucideIcons.moreVertical),
-                          ),
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: completed ? AppColors.green : icon.color,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    (completed ? AppColors.green : icon.color)
-                                        .withValues(alpha: 0.28),
-                                blurRadius: 18,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: Icon(icon.icon, color: Colors.white, size: 19),
-                        ),
+                        Text(_subtitle(), style: theme.textTheme.bodySmall),
                       ],
                     ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: RichText(
-                            text: TextSpan(
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: formatBdtAmount(
-                                    displayCurrent,
-                                    fractionDigits: 0,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text:
-                                      ' / ${formatBdtAmount(goal.targetAmount, fractionDigits: 0)}',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
+                  ),
+                  if (onMenuSelected != null)
+                    PopupMenuButton<GoalMenuAction>(
+                      tooltip: 'Goal actions',
+                      onSelected: onMenuSelected,
+                      itemBuilder: (context) => [
+                        if (!completed)
+                          const PopupMenuItem(
+                            value: GoalMenuAction.contribute,
+                            child: Text('Add contribution'),
                           ),
+                        const PopupMenuItem(
+                          value: GoalMenuAction.edit,
+                          child: Text('Edit'),
                         ),
+                        if (!completed)
+                          const PopupMenuItem(
+                            value: GoalMenuAction.complete,
+                            child: Text('Mark complete'),
+                          ),
+                        const PopupMenuItem(
+                          value: GoalMenuAction.delete,
+                          child: Text('Delete'),
+                        ),
+                      ],
+                      icon: const Icon(LucideIcons.moreHorizontal),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          formatBdtAmount(goal.currentAmount),
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        Text(
+                          '  of ${formatBdtAmount(goal.targetAmount)}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                        const Spacer(),
                         Text(
                           '$percentage%',
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: AppColors.teal,
-                            fontWeight: FontWeight.w800,
+                            color: color,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: completed ? 1 : progress),
-                        duration: const Duration(milliseconds: 700),
-                        curve: Curves.easeOutCubic,
-                        builder: (context, value, _) {
-                          return SizedBox(
-                            height: 8,
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: ColoredBox(
-                                    color: Colors.white.withValues(alpha: 0.06),
-                                  ),
-                                ),
-                                FractionallySizedBox(
-                                  widthFactor: value,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: completed
-                                            ? const [
-                                                AppColors.green,
-                                                AppColors.teal,
-                                              ]
-                                            : const [
-                                                AppColors.teal,
-                                                AppColors.blue,
-                                              ],
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color:
-                                              (completed
-                                                      ? AppColors.green
-                                                      : AppColors.teal)
-                                                  .withValues(alpha: 0.35),
-                                          blurRadius: 12,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                    const SizedBox(height: 10),
+                    FlatBar(value: progress, color: color),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  String _buildSubtitle(DateTime? deadline) {
-    if (completed && goal.completedAt != null) {
-      return 'Completed ${goal.completedAt!.day}/${goal.completedAt!.month}/${goal.completedAt!.year}';
+  String _subtitle() {
+    final completedAt = goal.completedAt;
+    if (completed && completedAt != null) {
+      return 'Completed ${formatShortDate(completedAt)}';
     }
-
-    if (deadline == null) {
-      return 'No deadline';
-    }
-
-    final difference = calendarDaysUntil(deadline);
-    if (difference <= 0) {
-      return 'Due now';
-    }
-    return '$difference day${difference == 1 ? '' : 's'} remaining';
+    final deadline = goal.deadline;
+    if (deadline == null) return 'No deadline';
+    final days = calendarDaysUntil(deadline);
+    if (days < 0) return 'Deadline passed ${formatShortDate(deadline)}';
+    if (days == 0) return 'Due today';
+    return '$days day${days == 1 ? '' : 's'} left · ${formatShortDate(deadline)}';
   }
 }
 

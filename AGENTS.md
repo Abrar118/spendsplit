@@ -57,6 +57,7 @@ lib/
 │   ├── dashboard/
 │   ├── transactions/     # list, filters, add/edit sheet
 │   ├── monthly/
+│   ├── graphs/           # spending and balance-trend charts
 │   ├── goals/
 │   ├── dollar_tracker/   # isolated USD tracker
 │   ├── export/           # CSV/PDF export, CSV import, JSON snapshot
@@ -83,46 +84,39 @@ on both platforms).
 
 ## Design System (MUST follow)
 
-Source of truth is `lib/core/theme/` (`app_colors.dart`, `app_typography.dart`,
-`app_decorations.dart`, `app_spacing.dart`). Reuse `AppColors`,
-`AppDecorations`, `AppSpacing`, `AppTypography` — never hand-roll colors.
+The visual system is **Grid Numerals**, documented in `DESIGN.md` at the repo
+root (tokens in `.impeccable/design.json`); product context is in
+`PRODUCT.md`. Code is the source of truth: `lib/core/theme/` (`AppColors`,
+`AppTypography`, `AppDecorations`, `AppSpacing`) and the world's components in
+`lib/core/widgets/`. Never hand-roll colours, radii or type.
 
-- **Dark theme only.** Base void is charcoal `#1D1D20` (`AppColors.background`,
-  the owner's Kitty "Adwaita dark" background; it replaced the earlier OLED
-  black `#000000`). Card surfaces `#15131F`
-  (`AppColors.surface`), elevated `#1E1A2C` (`AppColors.surfaceLight`).
-- **Glassmorphism** on floating UI (sheets, nav pill): backdrop blur over a
-  low-opacity tint. The nav composes a saturation matrix onto the blur
-  (`AppDecorations.navFrost()`).
-- **No 1px borders or dividers.** Separate with surface layering, a faint top
-  highlight, soft drop shadows, and 16px vertical spacing. Cards carry no stroke.
-- **Accents** (`app_colors.dart`):
-  - Gold `#ECBB7E` (`AppColors.teal` — legacy name) — primary actions, available balance, active nav, chart bars
-  - Coral `#F26D3D` (`AppColors.coral`) — expenses, negative amounts, delete
-  - Green `#34D89C` (`AppColors.green`) — income, positive amounts
-  - Purple `#9B8BFF` (`AppColors.purple`) — savings, goal progress
-  - Amber `#ECB877` (`AppColors.amber`) — warnings, deadlines, dollar ring
-  - Violet `#7A46E0` (`AppColors.blue` — legacy name) — charts, secondary highlights, links
-- **Typography:** Google Fonts **Manrope**. Large balances bold with a subtle
-  glow; labels all-caps with tracked spacing ("TOTAL BALANCE"); muted text
-  `AppColors.textSecondary` / `textTertiary`.
-- **Components:** hero cards 16–24dp radius with soft glow, no border. Bottom
-  nav is a floating frosted pill (radius 28, tint `#16121F`, faint white sheen,
-  soft outer shadow); content scrolls behind it, so pages reserve
-  `AppSpacing.navClearance` at the bottom. Progress bars: gradient fill on a dark
-  track, rounded ends.
-- **Motion:** `flutter_animate` for count-ups, shimmer loading, progress fills,
-  chart bar staggers. Empty states: centered illustration + message with
-  fade-in + slide-up.
-- **Haptics** on FAB tap, save button, and swipe-delete confirm.
+- **Dark only**, near-black ground (`AppColors.background`). Square modules
+  (`AppDecorations.radius` is 0), hairline rules, no glows or gradients. The only
+  glass is the floating frosted tab bar.
+- **Colour is a legend; each hue has one job.** Orange `accent` = Available and
+  the primary action only. Bone `savings` = Savings. `income` green, `spend`
+  magenta-red (spending totals, delete, the review stamp), `warning` yellow,
+  `usd` blue = Dollar Tracker only. Controls (chips, segmented controls, tabs)
+  are neutral. Category colours are a muted ramp kept clear of the legend:
+  draw them with `categoryColor(stored)` (`core/constants/categories.dart`),
+  which also remaps colours older builds stored.
+- **Type:** the platform sans (SF Pro / Roboto) with tabular figures, in
+  sentence case. Doto dot-grid numerals only for a screen's one hero figure,
+  via `DotFigure`, which draws the construction grid at the figure's dot pitch
+  (cell = size / 10). Doto has no ৳; the sign is set in the sans.
+- **Entries are coupons** (`Coupon`): stub (time or date), perforation, body.
+  Posted solid, upcoming dashed, unchecked SMS stamped.
+- **Tabs** use `LargeTitlePage` (iOS large title that collapses on scroll) and
+  `PageBody`; pages reserve `AppSpacing.navClearance` under the tab bar.
+- **Motion:** one count-up per hero figure and ease-out fills; both respect
+  Reduce Motion. **Haptics** on +, save and swipe-delete.
 
 ### Design references (historical)
 
 `asset/DESIGN.md`, `asset/stitch_add_transaction_sheet/*/{screen.png,code.html}`
-and `lucid_obsidian/DESIGN.md` predate the live design (charcoal, frosted
-glass, Manrope). Treat them as directional only; match the current in-app style.
-`asset/SpendSplit_Flutter_Guide.md` is still useful for screen specs and
-calculated-value definitions.
+and `lucid_obsidian/DESIGN.md` describe discarded looks (glass, gold, Manrope).
+Don't follow them. `asset/SpendSplit_Flutter_Guide.md` is still useful for
+screen specs and calculated-value definitions.
 
 ---
 
@@ -133,7 +127,8 @@ ShellRoute (BottomNavBar)
 ├── /                    → DashboardScreen (tab 0)
 ├── /transactions        → TransactionsScreen (tab 1; ?month=, ?categoryId=, ?review=1)
 ├── /monthly             → MonthlyScreen (tab 3)
-└── /goals               → GoalsScreen (tab 4)
+├── /graphs              → GraphsScreen (tab 4)
+└── /goals               → GoalsScreen (tab 5)
 
 Pushed on root navigator:
 /dollar-tracker, /goal/:id, /settings, /export, /manage-categories,
@@ -202,8 +197,15 @@ or reverse the full amount; never cap at the target.
 ## Features
 
 - **Future-dated entries** are excluded from balances.
-- **Balance trend** — 6-month reconstructed Available/Savings chart.
-- **Spending Velocity** — rolling 12-month expense bars with income overlay.
+- **Balance trend** — 6-month reconstructed Available/Savings chart (Graphs).
+- **Spending chart** — rolling 12-month expense bars with income overlay
+  (Graphs).
+- **Month pace** — this month's running spend against last month's, day by
+  day (Graphs).
+- **Daily spending heatmap** — 13 weeks of days shaded by spend quartile;
+  tap a day for its total (Graphs). Series maths in `graphs/graph_series.dart`.
+- **Card number** — stored in the keystore, edited and shown masked in
+  Settings.
 - **Category budgets** — per-category monthly limits, edited inline on Monthly's
   Category Details rows.
 - **Category editor** — rename/re-icon/recolour custom categories
@@ -211,8 +213,6 @@ or reverse the full amount; never cap at the target.
 - **Goal contributions** — "Add Contribution" logs a linked `savings_deposit`
   and bumps the goal; tapping a goal opens `/goal/:id` with history and a
   completion projection.
-- **Upcoming** — a dashboard card listing future-dated entries, plus
-  "Available after scheduled" (`upcomingProvider`).
 - **Budget pace** — on the current month, `BudgetProgressBar` shows a tick at
   the share of the month gone. Bars turn amber when spending is ahead of pace.
 - **Dollar pacing** — projected year-end USD spend vs. the annual limit,

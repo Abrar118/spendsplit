@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
@@ -5,6 +7,9 @@ import 'package:spendsplit/core/icons/lucide_icons.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_decorations.dart';
 
+/// A floating tab bar: a frosted-glass strip inset from the screen edges,
+/// icon-only tabs (labels go to VoiceOver), and the add action as an orange
+/// square.
 class BottomNavBar extends StatelessWidget {
   const BottomNavBar({
     required this.currentIndex,
@@ -21,55 +26,49 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, 10 + bottomInset),
-      child: DecoratedBox(
-        // Shadow on an outer box so it isn't clipped by the blur below.
-        decoration: const BoxDecoration(
-          borderRadius: BorderRadius.all(Radius.circular(28)),
-          boxShadow: AppDecorations.navShadow,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: BackdropFilter(
-            filter: AppDecorations.navFrost(),
-            child: Container(
-              height: 62 + MediaQuery.textScalerOf(context).scale(10),
-              decoration: const BoxDecoration(gradient: AppDecorations.navSheen),
-              padding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, math.max(bottomInset, 12)),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: AppDecorations.glassBlur(),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.navGlass,
+              border: Border.all(color: AppColors.navGlassEdge, width: 0.5),
+            ),
+            child: SizedBox(
+              height: 60,
               child: Row(
                 children: [
-                  Expanded(
-                    child: _NavItem(
-                      icon: LucideIcons.home,
-                      label: 'Home',
-                      active: currentIndex == 0,
-                      onTap: () => onDestinationSelected(0),
-                    ),
+                  _NavItem(
+                    icon: LucideIcons.home,
+                    label: 'Home',
+                    active: currentIndex == 0,
+                    onTap: () => onDestinationSelected(0),
                   ),
-                  Expanded(
-                    child: _NavItem(
-                      icon: LucideIcons.receipt,
-                      label: 'History',
-                      active: currentIndex == 1,
-                      onTap: () => onDestinationSelected(1),
-                    ),
+                  _NavItem(
+                    icon: LucideIcons.receipt,
+                    label: 'History',
+                    active: currentIndex == 1,
+                    onTap: () => onDestinationSelected(1),
                   ),
                   Expanded(child: _AddNavItem(onTap: onAddPressed)),
-                  Expanded(
-                    child: _NavItem(
-                      icon: LucideIcons.calendarDays,
-                      label: 'Monthly',
-                      active: currentIndex == 3,
-                      onTap: () => onDestinationSelected(3),
-                    ),
+                  _NavItem(
+                    icon: LucideIcons.calendarDays,
+                    label: 'Monthly',
+                    active: currentIndex == 3,
+                    onTap: () => onDestinationSelected(3),
                   ),
-                  Expanded(
-                    child: _NavItem(
-                      icon: LucideIcons.flag,
-                      label: 'Goals',
-                      active: currentIndex == 4,
-                      onTap: () => onDestinationSelected(4),
-                    ),
+                  _NavItem(
+                    icon: LucideIcons.barChart3,
+                    label: 'Graphs',
+                    active: currentIndex == 4,
+                    onTap: () => onDestinationSelected(4),
+                  ),
+                  _NavItem(
+                    icon: LucideIcons.flag,
+                    label: 'Goals',
+                    active: currentIndex == 5,
+                    onTap: () => onDestinationSelected(5),
                   ),
                 ],
               ),
@@ -96,48 +95,23 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final foreground = active ? AppColors.teal : AppColors.textSecondary;
-    return Semantics(
-      selected: active,
-      button: true,
-      label: label,
-      child: GestureDetector(
-        onTap: () {
-          if (active) return;
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        behavior: HitTestBehavior.opaque,
-        child: Center(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: BoxDecoration(
-              color: active
-                  ? AppColors.teal.withValues(alpha: 0.14)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, color: foreground, size: 21),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: foreground,
-                    fontSize: 10.5,
-                    fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                    letterSpacing: 0.1,
-                  ),
-                ),
-              ],
-            ),
+    final foreground = active ? AppColors.textPrimary : AppColors.textTertiary;
+    return Expanded(
+      child: Semantics(
+        selected: active,
+        button: true,
+        label: label,
+        excludeSemantics: true,
+        child: InkResponse(
+          onTap: () {
+            if (active) return;
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          radius: 32,
+          child: SizedBox(
+            height: 60,
+            child: Center(child: Icon(icon, color: foreground, size: 24)),
           ),
         ),
       ),
@@ -152,32 +126,29 @@ class _AddNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        onTap();
-      },
-      behavior: HitTestBehavior.opaque,
+    return Semantics(
+      button: true,
+      label: 'Add transaction',
+      excludeSemantics: true,
       child: Center(
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: AppColors.primaryActionGradient,
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x59ECBB7E),
-                blurRadius: 16,
-                spreadRadius: -2,
+        child: Material(
+          color: AppColors.accent,
+          borderRadius: BorderRadius.circular(AppDecorations.radius),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppDecorations.radius),
+            onTap: () {
+              HapticFeedback.lightImpact();
+              onTap();
+            },
+            child: const SizedBox(
+              width: 52,
+              height: 44,
+              child: Icon(
+                LucideIcons.plus,
+                color: AppColors.onPrimary,
+                size: 24,
               ),
-            ],
-          ),
-          child: const Icon(
-            LucideIcons.plus,
-            semanticLabel: 'Add transaction',
-            color: AppColors.onPrimary,
-            size: 24,
+            ),
           ),
         ),
       ),

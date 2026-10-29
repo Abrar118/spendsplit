@@ -17,7 +17,7 @@ Future<TransactionTemplatesTableData?> showTemplatePickerSheet(
     backgroundColor: AppColors.surfaceLight,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
     ),
     builder: (context) => _TemplatePickerBody(
       templates: templates,
@@ -67,7 +67,7 @@ class _TemplatePickerBodyState extends State<_TemplatePickerBody> {
                 height: 4,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.zero,
                 ),
               ),
             ),
@@ -105,14 +105,14 @@ class _TemplatePickerBodyState extends State<_TemplatePickerBody> {
                         : null;
 
                     return InkWell(
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.zero,
                       onTap: () => Navigator.of(context).pop(t),
                       onLongPress: () => _confirmDelete(context, t),
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceContainer,
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.zero,
                         ),
                         child: Row(
                           children: [
@@ -121,7 +121,7 @@ class _TemplatePickerBodyState extends State<_TemplatePickerBody> {
                               height: 44,
                               decoration: BoxDecoration(
                                 color: color,
-                                borderRadius: BorderRadius.circular(999),
+                                borderRadius: BorderRadius.zero,
                               ),
                             ),
                             const SizedBox(width: 14),
@@ -197,10 +197,10 @@ class _TemplatePickerBodyState extends State<_TemplatePickerBody> {
   }
 
   Color _colorForType(TransactionType type) => switch (type) {
-    TransactionType.expense => AppColors.coral,
-    TransactionType.income => AppColors.green,
-    TransactionType.savingsDeposit => AppColors.purple,
-    TransactionType.savingsWithdrawal => AppColors.amber,
+    TransactionType.expense => AppColors.spend,
+    TransactionType.income => AppColors.income,
+    TransactionType.savingsDeposit => AppColors.savings,
+    TransactionType.savingsWithdrawal => AppColors.warning,
   };
 
   String _readableType(TransactionType type) => switch (type) {

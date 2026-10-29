@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../theme/app_colors.dart';
-import 'glass_card.dart';
+import 'panel.dart';
 
 class EmptyState extends StatelessWidget {
   const EmptyState({
@@ -19,9 +19,8 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return GlassCard(
+    return Panel(
           padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
-          glowColor: AppColors.blue,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -37,7 +36,7 @@ class EmptyState extends StatelessWidget {
                     ),
                   ),
                 ),
-                child: Icon(icon, color: AppColors.teal, size: 28),
+                child: Icon(icon, color: AppColors.textPrimary, size: 28),
               ),
               const SizedBox(height: 18),
               Text(title, style: theme.textTheme.titleLarge),

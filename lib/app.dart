@@ -18,6 +18,7 @@ import 'features/dollar_tracker/screens/dollar_tracker_screen.dart';
 import 'features/export/screens/export_data_screen.dart';
 import 'features/goals/screens/goal_detail_screen.dart';
 import 'features/goals/screens/goals_screen.dart';
+import 'features/graphs/screens/graphs_screen.dart';
 import 'features/monthly/screens/monthly_screen.dart';
 import 'features/settings/screens/manage_categories_screen.dart';
 import 'features/settings/screens/manage_templates_screen.dart';
@@ -97,6 +98,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: AppRoute.monthly.path,
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: MonthlyScreen()),
+          ),
+          GoRoute(
+            path: AppRoute.graphs.path,
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: GraphsScreen()),
           ),
           GoRoute(
             path: AppRoute.goals.path,
@@ -309,6 +315,7 @@ class AppShell extends StatelessWidget {
   int get currentIndex => switch (AppRoute.fromLocation(currentLocation)) {
     AppRoute.transactions => AppTab.transactions.pageIndex,
     AppRoute.monthly => AppTab.monthly.pageIndex,
+    AppRoute.graphs => AppTab.graphs.pageIndex,
     AppRoute.goals => AppTab.goals.pageIndex,
     _ => AppTab.dashboard.pageIndex,
   };

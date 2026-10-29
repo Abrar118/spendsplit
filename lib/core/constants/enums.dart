@@ -3,7 +3,8 @@ enum AppTab {
   transactions(1),
   add(2),
   monthly(3),
-  goals(4);
+  graphs(4),
+  goals(5);
 
   const AppTab(this.pageIndex);
 
@@ -21,6 +22,7 @@ enum AppTab {
     AppTab.transactions => AppRoute.transactions,
     AppTab.add => null,
     AppTab.monthly => AppRoute.monthly,
+    AppTab.graphs => AppRoute.graphs,
     AppTab.goals => AppRoute.goals,
   };
 }
@@ -29,6 +31,7 @@ enum AppRoute {
   dashboard('/'),
   transactions('/transactions'),
   monthly('/monthly'),
+  graphs('/graphs'),
   goals('/goals'),
   dollarTracker('/dollar-tracker'),
   goalDetail('/goal'),

@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
+import '../../../core/constants/categories.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/panel.dart';
 import '../../../providers/providers.dart';
 
 String _monthKey(DateTime month) =>
@@ -41,10 +42,7 @@ class MonthRecapCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final ratePct = (recap.savingsRate * 100).round();
 
-    return GlassCard(
-      shadow: false,
-      glowColor: AppColors.purple,
-      radius: 20,
+    return Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -56,7 +54,7 @@ class MonthRecapCard extends ConsumerWidget {
               ),
               const Spacer(),
               InkWell(
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.zero,
                 onTap: () => ref
                     .read(appSettingsProvider.notifier)
                     .dismissRecapForMonth(key),
@@ -87,8 +85,8 @@ class MonthRecapCard extends ConsumerWidget {
                   : '${formatBdtAmount(-recap.budgetDelta!, fractionDigits: 0)} over budget.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: recap.budgetDelta! >= 0
-                    ? AppColors.green
-                    : AppColors.coral,
+                    ? AppColors.income
+                    : AppColors.spend,
               ),
             ),
           ],
@@ -105,13 +103,15 @@ class MonthRecapCard extends ConsumerWidget {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: Color(c.colorValue).withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(999),
+                      color: categoryColor(
+                        c.colorValue,
+                      ).withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.zero,
                     ),
                     child: Text(
                       '${c.name} · ${formatBdtAmount(c.amount, fractionDigits: 0)}',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: Color(c.colorValue),
+                        color: categoryColor(c.colorValue),
                       ),
                     ),
                   ),
@@ -126,7 +126,7 @@ class MonthRecapCard extends ConsumerWidget {
                 '${(c.change.abs() * 100).round()}% vs usual '
                 '(${formatBdtAmount(c.usual, fractionDigits: 0)}/month)',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: c.change > 0 ? AppColors.coral : AppColors.green,
+                  color: c.change > 0 ? AppColors.spend : AppColors.income,
                 ),
               ),
           ],

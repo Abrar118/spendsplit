@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/panel.dart';
 import '../../../data/models/financial_summaries.dart';
 import '../../../providers/providers.dart';
 
@@ -17,33 +17,19 @@ class BalanceTrendChart extends ConsumerWidget {
     final theme = Theme.of(context);
     final trend = ref.watch(balanceTrendProvider);
 
-    return GlassCard(
-      shadow: false,
-      glowColor: AppColors.purple,
-      radius: 24,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+    return Panel(
+      color: AppColors.surfaceRaised,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Balance Trend',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '6-month history',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
+          Text('Balance, last 6 months', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           Row(
             children: [
-              _LegendDot(color: AppColors.teal, label: 'Available'),
+              _LegendDot(color: AppColors.accent, label: 'Available'),
               const SizedBox(width: 16),
-              _LegendDot(color: AppColors.purple, label: 'Savings'),
+              _LegendDot(color: AppColors.savings, label: 'Savings'),
             ],
           ),
           const SizedBox(height: 16),
@@ -73,18 +59,9 @@ class _LegendDot extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
+        Container(width: 8, height: 8, color: color),
         const SizedBox(width: 6),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
+        Text(label, style: Theme.of(context).textTheme.labelMedium),
       ],
     );
   }
@@ -112,10 +89,8 @@ class _TrendBarChart extends StatelessWidget {
           show: true,
           drawVerticalLine: false,
           horizontalInterval: normalizedMax / 4,
-          getDrawingHorizontalLine: (_) => FlLine(
-            color: Colors.white.withValues(alpha: 0.06),
-            strokeWidth: 1,
-          ),
+          getDrawingHorizontalLine: (_) =>
+              const FlLine(color: AppColors.gridLine, strokeWidth: 1),
         ),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
@@ -139,13 +114,12 @@ class _TrendBarChart extends StatelessWidget {
                 return Padding(
                   padding: const EdgeInsets.only(top: 10),
                   child: Text(
-                    DateFormat('MMM').format(points[i].month).toUpperCase(),
+                    DateFormat('MMM').format(points[i].month),
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: isLast
-                          ? AppColors.teal
-                          : AppColors.textSecondary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 9,
+                          ? AppColors.textPrimary
+                          : AppColors.textTertiary,
+                      fontWeight: isLast ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 );
@@ -156,8 +130,8 @@ class _TrendBarChart extends StatelessWidget {
         barTouchData: BarTouchData(
           enabled: true,
           touchTooltipData: BarTouchTooltipData(
-            getTooltipColor: (_) => AppColors.surfaceLight,
-            tooltipRoundedRadius: 10,
+            getTooltipColor: (_) => AppColors.outlineVariant,
+            tooltipRoundedRadius: 6,
             fitInsideHorizontally: true,
             fitInsideVertically: true,
             tooltipPadding: const EdgeInsets.symmetric(
@@ -174,27 +148,24 @@ class _TrendBarChart extends StatelessWidget {
                 const TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w800,
-                  fontSize: 11,
+                  fontSize: 13,
                 ),
                 children: [
                   TextSpan(
                     text: 'Available ${formatBdtAmount(available)}',
                     style: const TextStyle(
-                      color: AppColors.teal,
+                      color: AppColors.accent,
                       fontWeight: FontWeight.w600,
-                      fontSize: 11,
+                      fontSize: 13,
                     ),
                   ),
-                  const TextSpan(
-                    text: '   ',
-                    style: TextStyle(fontSize: 11),
-                  ),
+                  const TextSpan(text: '   ', style: TextStyle(fontSize: 11)),
                   TextSpan(
                     text: 'Savings ${formatBdtAmount(savings)}',
                     style: const TextStyle(
-                      color: AppColors.purple,
+                      color: AppColors.savings,
                       fontWeight: FontWeight.w600,
-                      fontSize: 11,
+                      fontSize: 13,
                     ),
                   ),
                 ],
@@ -224,17 +195,19 @@ class _TrendBarChart extends StatelessWidget {
         BarChartRodData(
           toY: top <= 0 ? 0.0001 : top,
           width: isCurrent ? 30 : 26,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
+          borderRadius: BorderRadius.zero,
+          // Explicit: with no stack items fl_chart falls back to its own cyan.
+          color: AppColors.hairline,
           rodStackItems: [
             BarChartRodStackItem(
               0,
               available,
-              AppColors.teal.withValues(alpha: dim),
+              AppColors.accent.withValues(alpha: dim),
             ),
             BarChartRodStackItem(
               available,
               top,
-              AppColors.purple.withValues(alpha: dim),
+              AppColors.savings.withValues(alpha: dim),
             ),
           ],
         ),
