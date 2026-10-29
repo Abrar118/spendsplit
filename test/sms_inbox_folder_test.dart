@@ -103,9 +103,11 @@ void main() {
   // hands back this plain text, trailing promo line included.
   test('imports the real Trust Bank alert text', () async {
     final (container, db, dir) = await setup();
+    // Shortcuts names it "…10:46 PM", but ':' isn't a valid filename on
+    // Windows, and the runner never reads the name.
     drop(
       dir,
-      'Oct 28, 2026 at 10:46 PM',
+      'Oct 28, 2026 at 10.46 PM',
       'POS Txn\nTK 699.00 DEBIT\nAC No 031***492\n28/10/2026 10:47 AM\n'
           'Balance TK 371096.22\n'
           'Call Center at your fingertips: t.tblbd.com/SIVR',
