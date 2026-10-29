@@ -45,15 +45,14 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "asset/app-icon.png"
-  adaptive_icon_background: "#0A0E1A"
-  adaptive_icon_foreground: "asset/app-icon.png"
+  adaptive_icon_background: "#101113"
+  adaptive_icon_foreground: "asset/app-icon-foreground.png"
   remove_alpha_ios: true
 
 flutter:
   uses-material-design: true
   assets:
     - asset/app-icon.png
-    - asset/chip.png
     - asset/fonts/
 
   fonts:
