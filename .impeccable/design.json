@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-29T00:00:00Z",
+  "title": "Design System: SpendSplit",
+  "extensions": {
+    "colorMeta": {
+      "ground": { "role": "neutral", "displayName": "Ground", "canonical": "oklch(17.7% 0.004 264.5)", "tonalRamp": ["#0B0B0C", "#242526", "#414244", "#606164", "#818285", "#A4A5A7", "#C8C9CB", "#EEEEF0"] },
+      "surface": { "role": "neutral", "displayName": "Surface Module", "canonical": "oklch(20.9% 0.006 271.1)", "tonalRamp": ["#101113", "#141517", "#17181B", "#1F2024", "#26272C", "#2C2D33", "#3A3C42", "#A2A6AD"] },
+      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "oklch(29.3% 0.010 268.3)", "tonalRamp": ["#0A0B0D", "#242528", "#404246", "#5F6166", "#808288", "#A3A5AA", "#C7C9CD", "#EDEEF2"] },
+      "grid-line": { "role": "neutral", "displayName": "Construction Grid", "canonical": "#1C1E22" },
+      "nav-bar": { "role": "neutral", "displayName": "Bar Material (94% Ground)", "canonical": "#101113F0" },
+      "signal-orange": { "role": "primary", "displayName": "Signal Orange (Available)", "canonical": "oklch(68.2% 0.211 37.7)", "tonalRamp": ["#290000", "#540000", "#830000", "#B51900", "#DE480C", "#FA7B54", "#FFA989", "#FFD7BD"] },
+      "on-signal": { "role": "primary", "displayName": "On-Signal Ink", "canonical": "#140A05" },
+      "savings-bone": { "role": "secondary", "displayName": "Savings Bone", "canonical": "oklch(92.0% 0.012 84.6)", "tonalRamp": ["#0C0B09", "#272521", "#44423D", "#64615A", "#85827B", "#A8A59F", "#CBC9C4", "#F0EEEA"] },
+      "spend-magenta": { "role": "tertiary", "displayName": "Spend Magenta-Red", "canonical": "oklch(66.5% 0.228 11.9)", "tonalRamp": ["#2A0002", "#570011", "#870028", "#BA0040", "#E33260", "#FF6E87", "#FF9FB0", "#FFCFDB"] },
+      "income-green": { "role": "tertiary", "displayName": "Income Green", "canonical": "oklch(79.7% 0.164 159.7)", "tonalRamp": ["#001401", "#003311", "#005528", "#007941", "#009D61", "#4FBD89", "#8ADEB1", "#C0FFDC"] },
+      "warning-yellow": { "role": "tertiary", "displayName": "Warning Yellow", "canonical": "oklch(85.4% 0.157 84.1)", "tonalRamp": ["#190500", "#3B1D00", "#603900", "#875600", "#AB7800", "#C99E3E", "#E8C47B", "#FFEBB3"] },
+      "usd-blue": { "role": "tertiary", "displayName": "USD Blue (Dollar Tracker only)", "canonical": "oklch(62.6% 0.201 265.4)", "tonalRamp": ["#010134", "#071A62", "#183794", "#2D55C9", "#4B79F0", "#75A0FF", "#A1C7FF", "#CFEEFF"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "oklch(96.1% 0.003 106.4)", "tonalRamp": ["#0B0B0B", "#252524", "#424241", "#616160", "#828281", "#A5A5A4", "#C9C9C8", "#EEEEED"] },
+      "category-rosewood": { "role": "data", "displayName": "Category Rosewood", "canonical": "oklch(60.8% 0.103 1.7)", "tonalRamp": ["#1B020A", "#3E1523", "#642E3F", "#8D485D", "#B2697E", "#D090A1", "#EFB8C6", "#FFE1EC"] },
+      "category-teal": { "role": "data", "displayName": "Category Teal", "canonical": "oklch(71.7% 0.100 185.2)", "tonalRamp": ["#00110E", "#002E29", "#004F47", "#007268", "#2F948A", "#69B5AB", "#9AD7CF", "#CBFAF3"] }
+    },
+    "typographyMeta": {
+      "figure": { "displayName": "Dot-Grid Figure (Doto)", "purpose": "The one hero number per screen, on its construction grid (cell = size/10). Max 88px on Home, 72px on Goals and Dollar Tracker; sized down to fit the final value." },
+      "large-title": { "displayName": "Large Title", "purpose": "Collapsing iOS large title on each top-level tab." },
+      "headline-row": { "displayName": "Headline Row", "purpose": "Section headers, row amounts, stat-strip values." },
+      "body": { "displayName": "Body", "purpose": "Row titles and primary copy." },
+      "label": { "displayName": "Label", "purpose": "Stat labels and split percentages, sentence case, Ink Secondary." }
+    },
+    "shadows": [
+      { "name": "none", "value": "none", "purpose": "The system has no shadows; depth is value layering plus platform bar blur." }
+    ],
+    "materials": [
+      { "name": "bar-blur", "value": "backdrop-filter: blur(24px); background: rgba(16,17,19,0.94); border-top: 0.5px solid #2A2C31", "purpose": "Tab bar and collapsed title bar." }
+    ],
+    "motion": [
+      { "name": "figure-count-up", "value": "650ms", "purpose": "Dot-grid figure counts to its value; grid size fixed from the final value." },
+      { "name": "fill-once", "value": "700ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Split bar and flat progress bars fill once, ease-out-expo; zero duration under Reduce Motion." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Square full-width Signal Orange action; one per screen or sheet.",
+      "html": "<button class=\"ds-btn-primary\">Save</button>",
+      "css": ".ds-btn-primary { width: 100%; height: 52px; background: #FF5A1F; color: #140A05; border: none; border-radius: 0; font: 600 15px system-ui, -apple-system, Roboto, sans-serif; font-variant-numeric: tabular-nums; cursor: pointer; transition: background 0.15s; } .ds-btn-primary:hover { background: #FF8452; } .ds-btn-primary:focus-visible { outline: 1.5px solid #F2F2F0; outline-offset: 2px; } .ds-btn-primary:disabled { background: #26272C; color: #7C8088; }"
+    },
+    {
+      "name": "Outlined Button",
+      "kind": "button",
+      "refersTo": "button-outlined",
+      "description": "Secondary full-width action with a 1.5px outline.",
+      "html": "<button class=\"ds-btn-outlined\">Export CSV</button>",
+      "css": ".ds-btn-outlined { width: 100%; height: 52px; background: transparent; color: #F2F2F0; border: 1.5px solid #3A3C42; border-radius: 0; font: 600 15px system-ui, -apple-system, Roboto, sans-serif; cursor: pointer; transition: background 0.15s; } .ds-btn-outlined:hover { background: #17181B; } .ds-btn-outlined:focus-visible { outline: 1.5px solid #F2F2F0; outline-offset: 2px; }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip-filter",
+      "description": "Square module; selected inverts to ink. No legend colour.",
+      "html": "<div style=\"display:flex;gap:8px;background:#101113;padding:12px\"><button class=\"ds-chip ds-chip-on\">All</button><button class=\"ds-chip\">Expenses</button><button class=\"ds-chip\">Income</button></div>",
+      "css": ".ds-chip { min-height: 36px; padding: 8px 14px; background: #17181B; color: #A2A6AD; border: none; border-radius: 0; font: 600 15px system-ui, -apple-system, Roboto, sans-serif; cursor: pointer; } .ds-chip:hover { background: #1F2024; } .ds-chip:focus-visible { outline: 1.5px solid #F2F2F0; } .ds-chip-on, .ds-chip-on:hover { background: #F2F2F0; color: #101113; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Filled square field; ink 1.5px outline on focus.",
+      "html": "<input class=\"ds-input\" placeholder=\"Note (optional): what was this for?\">",
+      "css": ".ds-input { width: 100%; padding: 14px 16px; background: #1F2024; color: #F2F2F0; border: 1.5px solid transparent; border-radius: 0; font: 400 17px system-ui, -apple-system, Roboto, sans-serif; caret-color: #F2F2F0; } .ds-input::placeholder { color: #7C8088; } .ds-input:focus, .ds-input:focus-visible { outline: none; border-color: #F2F2F0; }"
+    },
+    {
+      "name": "Tab Bar",
+      "kind": "nav",
+      "refersTo": "tab-bar",
+      "description": "Floating frosted-glass bar inset from the edges, icon-only tabs (names go to VoiceOver), square orange add block.",
+      "html": "<nav class=\"ds-tabbar\"><a class=\"ds-tab ds-tab-on\">Home</a><a class=\"ds-tab\">History</a><button class=\"ds-tab-add\" aria-label=\"Add transaction\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#140A05\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg></button><a class=\"ds-tab\">Monthly</a><a class=\"ds-tab\">Goals</a></nav>",
+      "css": ".ds-tabbar { display: flex; align-items: center; height: 49px; padding-top: 6px; background: rgba(16,17,19,0.94); backdrop-filter: blur(24px); border-top: 0.5px solid #2A2C31; } .ds-tab { flex: 1; text-align: center; color: #7C8088; font: 500 10px system-ui, -apple-system, Roboto, sans-serif; cursor: pointer; } .ds-tab:hover { color: #A2A6AD; } .ds-tab-on { color: #F2F2F0; font-weight: 600; } .ds-tab-add { flex: none; margin: 0 22px; width: 52px; height: 44px; display: grid; place-items: center; background: #FF5A1F; border: none; border-radius: 0; cursor: pointer; } .ds-tab-add:hover { background: #FF8452; } .ds-tab-add:focus-visible { outline: 1.5px solid #F2F2F0; outline-offset: 2px; }"
+    },
+    {
+      "name": "Dot Figure",
+      "kind": "custom",
+      "refersTo": "figure",
+      "description": "The one hero number: dot-grid numerals on a construction grid whose cell is a tenth of the figure size.",
+      "html": "<div class=\"ds-figure\"><div class=\"ds-figure-label\">Available</div><div class=\"ds-figure-row\"><span class=\"ds-figure-sign\">৳</span><span class=\"ds-figure-num\">149,930</span></div></div>",
+      "css": ".ds-figure { --cell: 8.8px; padding: var(--cell) 0; background-color: #101113; background-image: linear-gradient(#1C1E22 1px, transparent 1px), linear-gradient(90deg, #1C1E22 1px, transparent 1px); background-size: var(--cell) var(--cell); } .ds-figure-label { height: calc(var(--cell) * 3); display: flex; align-items: flex-end; margin-bottom: var(--cell); color: #A2A6AD; font: 600 15px system-ui, -apple-system, Roboto, sans-serif; } .ds-figure-row { display: flex; align-items: flex-start; } .ds-figure-sign { width: calc(var(--cell) * 4); padding-top: var(--cell); color: #FF5A1F; font: 600 calc(var(--cell) * 3.4)/1 system-ui, sans-serif; } .ds-figure-num { color: #FF5A1F; font-family: 'Doto', monospace; font-size: 88px; line-height: 0.9; font-variation-settings: 'wght' 900; font-variant-numeric: tabular-nums; letter-spacing: 0; }"
+    },
+    {
+      "name": "Coupon (posted / upcoming / review)",
+      "kind": "card",
+      "refersTo": "coupon-posted",
+      "description": "An entry as a ticket: date stub, perforation with notches, body; state drawn as form.",
+      "html": "<div style=\"display:grid;gap:14px;background:#101113;padding:14px\"><div class=\"ds-coupon\"><div class=\"ds-coupon-stub\">29<br>Oct</div><div class=\"ds-coupon-body\"><span>Groceries<small>Food</small></span><b class=\"ds-neg\">−৳ 380</b></div></div><div class=\"ds-coupon ds-coupon-upcoming\"><div class=\"ds-coupon-stub\">3<br>Nov</div><div class=\"ds-coupon-body\"><span>Rent<small>Utilities</small></span><b>−৳ 18,000</b></div></div><div class=\"ds-coupon ds-coupon-review\"><i class=\"ds-stamp\">UNCHECKED</i><div class=\"ds-coupon-stub\">28<br>Oct</div><div class=\"ds-coupon-body\"><span>Card debit<small>Trust Bank SMS · Other</small></span><b class=\"ds-neg\">−৳ 5,000</b></div></div></div>",
+      "css": ".ds-coupon { position: relative; display: flex; min-height: 60px; background: #26272C; border-radius: 0; color: #F2F2F0; font: 400 17px system-ui, -apple-system, Roboto, sans-serif; cursor: pointer; -webkit-mask: radial-gradient(circle 6px at 64px 0, transparent 6px, #000 6.5px) top / 100% 51% no-repeat, radial-gradient(circle 6px at 64px 100%, transparent 6px, #000 6.5px) bottom / 100% 51% no-repeat; } .ds-coupon:hover { background: #2C2D33; } .ds-coupon:focus-visible { outline: 1.5px solid #F2F2F0; } .ds-coupon-stub { width: 64px; flex: none; display: grid; place-items: center; text-align: center; color: #A2A6AD; font-size: 15px; border-right: 1.5px dashed #3A3C42; } .ds-coupon-body { flex: 1; display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; } .ds-coupon-body small { display: block; color: #A2A6AD; font-size: 15px; } .ds-coupon-body b { font-weight: 600; font-variant-numeric: tabular-nums; } .ds-neg { color: #FF3D6E; } .ds-coupon-upcoming { background: transparent; outline: 1.5px dashed #7C8088; outline-offset: -1.5px; -webkit-mask: none; } .ds-coupon-upcoming:hover { background: transparent; } .ds-coupon-upcoming .ds-coupon-stub { color: #7C8088; border-right-color: #7C8088; } .ds-coupon-review { overflow: visible; -webkit-mask: none; } .ds-stamp { position: absolute; right: 10px; top: -7px; transform: rotate(-4deg); background: #101113; border: 1.5px solid #FF3D6E; border-radius: 3px; padding: 1px 6px; color: #FF3D6E; font: normal 800 11px system-ui, sans-serif; letter-spacing: 0.8px; }"
+    },
+    {
+      "name": "Split Bar",
+      "kind": "custom",
+      "refersTo": "split-bar",
+      "description": "Available (orange) meets Savings (bone) at true proportion on one diagonal cut.",
+      "html": "<div class=\"ds-split\"><div class=\"ds-split-bar\" style=\"--share:80%\"></div><div class=\"ds-split-legend\"><span>Available 80%</span><span>Savings 20%</span></div></div>",
+      "css": ".ds-split-bar { height: 44px; background: linear-gradient(105deg, #FF5A1F calc(var(--share) - 1px), #101113 calc(var(--share) - 1px), #101113 calc(var(--share) + 2px), #E8E4DC calc(var(--share) + 2px)); transition: background 0.7s cubic-bezier(0.16, 1, 0.3, 1); } .ds-split-legend { display: flex; justify-content: space-between; margin-top: 8px; color: #A2A6AD; font: 500 13px system-ui, -apple-system, Roboto, sans-serif; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Stat Strip",
+      "kind": "custom",
+      "refersTo": "panel",
+      "description": "Related figures side by side, divided by 0.5px vertical hairlines; label above value.",
+      "html": "<div class=\"ds-stats\"><div><span>Income</span><b style=\"color:#3DDC97\">+৳ 62,000</b></div><div><span>Spent</span><b style=\"color:#FF3D6E\">−৳ 34,830</b></div><div><span>To savings</span><b>৳ 13,000</b></div></div>",
+      "css": ".ds-stats { display: flex; background: #101113; padding: 12px 0; font-family: system-ui, -apple-system, Roboto, sans-serif; font-variant-numeric: tabular-nums; } .ds-stats > div { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 0 12px; } .ds-stats > div + div { border-left: 0.5px solid #2A2C31; } .ds-stats > div:first-child { padding-left: 0; } .ds-stats span { color: #A2A6AD; font: 500 13px inherit; } .ds-stats b { color: #F2F2F0; font-weight: 600; font-size: 17px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Grid Numerals Ticket Wallet",
+    "overview": "A Crouwel-style gridded type specimen, fused with a jet-age ticket wallet. Each screen may carry one monumental figure, built from Doto dot-grid numerals on a faint square construction grid whose cell is exactly one tenth of the figure size, so every dot lands in a cell. Everything else is small, exact and tabular: the platform sans (SF Pro on iOS, Roboto on Android) in iOS text-style sizes, with tabular figures throughout. Home's figure is Available; Goals and a goal's detail use a bone Savings figure; the Dollar Tracker uses a blue USD figure. The add sheet sets its amount entry as a dot-grid figure.\n\nColour works as a legend, not as decoration. Each saturated hue has one meaning and appears only where that meaning applies. Surfaces are square, flat modules one value step above a near-black ground; edges come from layering and hairlines, never from glow, gradient or shadow. Entries are coupons: a date stub, a perforation with two half-round notches, then the body. Their state is drawn as form: posted entries are solid, upcoming ones are dashed outlines, and SMS entries awaiting review carry a red rubber stamp.\n\nNavigation is native iOS: large titles that collapse to inline titles on scroll, a floating frosted-glass icon-only tab bar, and the add action as a square orange block. Dark appearance only.",
+    "keyCharacteristics": [
+      "At most one dot-grid figure per screen, always on its construction grid.",
+      "A strict colour legend: orange Available, bone Savings, green income, magenta-red spending, yellow warnings, blue USD.",
+      "Square corners on every module; the only softness comes from coupon notches, the stamp and the platform sheet.",
+      "Hairlines (0.5px) and flat value layering replace borders, glows and shadows.",
+      "Entries are coupons whose state shows in their form.",
+      "Platform sans with tabular figures, sentence case, no tracking."
+    ],
+    "rules": [
+      { "name": "The Legend Rule", "body": "Every saturated hue has one meaning. If a colour would appear somewhere its meaning does not apply, use Ink or a neutral instead.", "section": "colors" },
+      { "name": "The Orange Is Available Rule", "body": "Signal Orange marks the Available balance and the single primary action on a screen. Nothing else: not selected filters, not icons, not decoration.", "section": "colors" },
+      { "name": "The Controls Are Ink Rule", "body": "Selection states for filters, segmented controls and active tabs invert to Ink on Ground or brighten to Ink. Controls are not data, so they carry no legend colour. A selected category tile takes its own ramp colour as an outline.", "section": "colors" },
+      { "name": "The One Figure Rule", "body": "Doto appears at most once per screen, always over its construction grid (cell = size / 10), with no letter spacing and the 0.9 even leading, so each dot sits in a whole cell. Don't use it for row amounts or labels.", "section": "typography" },
+      { "name": "The Sentence Case Rule", "body": "Labels and section titles use sentence case with no tracking (\"Available\", \"This month\"). The only uppercase, tracked text in the system is the UNCHECKED review stamp, which is a stamped object rather than a label.", "section": "typography" },
+      { "name": "The No-Glow Rule", "body": "No shadows, glows, gradients or orbs. If something needs to stand apart, raise its value one step or rule it with a hairline.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do give a screen at most one Doto figure, on its construction grid with cell = size / 10.",
+      "Do colour by the legend: orange for Available and the primary action, bone for Savings, green for income, magenta-red for spending and stamps, yellow for warnings, blue for USD.",
+      "Do draw entries as coupons and show their state as form: solid, dashed, or stamped.",
+      "Do keep every module square and separate modules with value steps and 0.5px Hairlines.",
+      "Do use the platform sans with tabular figures, in sentence case.",
+      "Do use native iOS structure: collapsing large titles, a floating frosted icon-only tab bar, 44pt targets, and VoiceOver labels on figures and bars.",
+      "Do honour Reduce Motion by setting fills and count-ups to zero duration."
+    ],
+    "donts": [
+      "Don't use Signal Orange for selection states, icons, filters or decoration.",
+      "Don't use USD Blue for anything taka, or the legend hues for categories.",
+      "Don't add shadows, glows, gradients, glass orbs or rounded cards.",
+      "Don't set row amounts, labels or titles in Doto, or track or letter-space Doto.",
+      "Don't add uppercase tracked eyebrow labels above titles or figures.",
+      "Don't add 1px borders around posted modules; outlines belong only to state (upcoming, focus, stamp, selected tile)."
+    ]
+  }
+}

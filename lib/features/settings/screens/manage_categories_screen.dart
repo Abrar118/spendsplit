@@ -43,17 +43,19 @@ class ManageCategoriesScreen extends ConsumerWidget {
                 const Spacer(),
                 IconButton(
                   onPressed: () => _openEditor(context, isDollar: false),
-                  icon: const Icon(LucideIcons.plus, color: AppColors.teal),
+                  icon: const Icon(
+                    LucideIcons.plus,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
             Text(
-              'EXPENSE CATEGORIES',
+              'Expense categories',
               style: theme.textTheme.labelSmall?.copyWith(
                 color: AppColors.textTertiary,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 2,
               ),
             ),
             const SizedBox(height: 12),
@@ -72,11 +74,10 @@ class ManageCategoriesScreen extends ConsumerWidget {
             Row(
               children: [
                 Text(
-                  'DOLLAR CATEGORIES',
+                  'Dollar categories',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: AppColors.textTertiary,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: 2,
                   ),
                 ),
                 const Spacer(),
@@ -84,7 +85,7 @@ class ManageCategoriesScreen extends ConsumerWidget {
                   onPressed: () => _openEditor(context, isDollar: true),
                   icon: const Icon(
                     LucideIcons.plus,
-                    color: AppColors.teal,
+                    color: AppColors.textPrimary,
                     size: 20,
                   ),
                 ),
@@ -168,19 +169,19 @@ class _CategoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = Color(category.color);
+    final color = categoryColor(category.color);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.zero,
           child: Ink(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: AppColors.surfaceLight.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.zero,
             ),
             child: Row(
               children: [
@@ -217,7 +218,7 @@ class _CategoryTile extends StatelessWidget {
                   IconButton(
                     onPressed: onDelete,
                     icon: const Icon(LucideIcons.trash2, size: 18),
-                    color: AppColors.coral,
+                    color: AppColors.spend,
                   )
                 else
                   Icon(
@@ -330,10 +331,9 @@ class _CategoryEditorSheetState extends ConsumerState<_CategoryEditorSheet> {
           ),
           const SizedBox(height: 20),
           Text(
-            'ICON',
+            'Icon',
             style: theme.textTheme.labelSmall?.copyWith(
               color: AppColors.textTertiary,
-              letterSpacing: 2,
             ),
           ),
           const SizedBox(height: 10),
@@ -366,10 +366,9 @@ class _CategoryEditorSheetState extends ConsumerState<_CategoryEditorSheet> {
           ),
           const SizedBox(height: 20),
           Text(
-            'COLOUR',
+            'Colour',
             style: theme.textTheme.labelSmall?.copyWith(
               color: AppColors.textTertiary,
-              letterSpacing: 2,
             ),
           ),
           const SizedBox(height: 10),
@@ -469,7 +468,7 @@ class _DeleteCategoryDialogState extends State<_DeleteCategoryDialog> {
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop((true, _moveTo)),
-          style: FilledButton.styleFrom(backgroundColor: AppColors.coral),
+          style: FilledButton.styleFrom(backgroundColor: AppColors.spend),
           child: const Text('Delete'),
         ),
       ],

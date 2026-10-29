@@ -55,3 +55,8 @@ flutter:
     - asset/app-icon.png
     - asset/chip.png
     - asset/fonts/
+
+  fonts:
+    - family: Doto
+      fonts:
+        - asset: asset/fonts/doto/Doto-Variable.ttf

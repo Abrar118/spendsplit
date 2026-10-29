@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/enums.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/accent_chip.dart';
 
 class FilterChipsRow extends StatelessWidget {
@@ -20,6 +19,7 @@ class FilterChipsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      clipBehavior: Clip.none,
       child: Row(
         children: [
           AccentChip(
@@ -27,33 +27,29 @@ class FilterChipsRow extends StatelessWidget {
             selected: selectedFilter == TransactionQuickFilter.all,
             onTap: () => onSelected(TransactionQuickFilter.all),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           AccentChip(
             label: 'Income',
             selected: selectedFilter == TransactionQuickFilter.income,
-            color: AppColors.green,
             onTap: () => onSelected(TransactionQuickFilter.income),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           AccentChip(
             label: 'Expense',
             selected: selectedFilter == TransactionQuickFilter.expense,
-            color: AppColors.coral,
             onTap: () => onSelected(TransactionQuickFilter.expense),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           AccentChip(
             label: 'Savings',
             selected: selectedFilter == TransactionQuickFilter.savings,
-            color: AppColors.purple,
             onTap: () => onSelected(TransactionQuickFilter.savings),
           ),
           if (showReview) ...[
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             AccentChip(
               label: 'Review',
               selected: selectedFilter == TransactionQuickFilter.review,
-              color: AppColors.amber,
               onTap: () => onSelected(TransactionQuickFilter.review),
             ),
           ],

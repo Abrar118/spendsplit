@@ -7,8 +7,8 @@ import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/panel.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/shimmer_skeleton.dart';
 import '../../../data/database/app_database.dart';
 import '../../../data/models/app_settings.dart';
@@ -57,7 +57,7 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
-          color: AppColors.teal,
+          color: AppColors.usd,
           onRefresh: () async {
             ref.invalidate(dollarExpensesForYearProvider(year));
             final _ = await ref.refresh(
@@ -87,40 +87,15 @@ class _DollarTrackerScreenState extends ConsumerState<DollarTrackerScreen> {
                 data: (summary) => DollarHeaderCard(summary: summary),
               ),
               const SizedBox(height: AppSpacing.lg),
-              OutlinedButton.icon(
+              FilledButton.icon(
                 onPressed: () async {
                   await showAddDollarExpenseSheet(context);
                 },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.teal,
-                  side: const BorderSide(color: AppColors.teal),
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                ),
                 icon: const Icon(LucideIcons.plus, size: 18),
-                label: const Text('+ ADD EXPENSE'),
+                label: const Text('Add USD expense'),
               ),
               const SizedBox(height: AppSpacing.section),
-              Row(
-                children: [
-                  Text(
-                    'Recent Expenses',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Spacer(),
-                  summaryAsync.when(
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, _) => const SizedBox.shrink(),
-                    data: (summary) => _YearPill(
-                      spentYtd: summary.spentYtd,
-                      year: summary.year,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
+              SectionHeader('Expenses in $year'),
               expensesAsync.when(
                 loading: () => const _ExpenseListSkeleton(),
                 error: (error, _) => _ErrorCard(
@@ -338,53 +313,13 @@ class _TopBar extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: IconButton(
+              tooltip: 'Back',
               onPressed: () => context.pop(),
               icon: const Icon(LucideIcons.chevronLeft),
             ),
           ),
-          Text('Dollar Tracker', style: theme.textTheme.titleLarge),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                year.toString(),
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-          ),
+          Text('Dollar Tracker', style: theme.textTheme.titleMedium),
         ],
-      ),
-    );
-  }
-}
-
-class _YearPill extends StatelessWidget {
-  const _YearPill({required this.spentYtd, required this.year});
-
-  final double spentYtd;
-  final int year;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.blue.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.blue.withValues(alpha: 0.25)),
-      ),
-      child: Text(
-        '${formatUsdAmount(spentYtd, fractionDigits: 0)} in $year',
-        style: Theme.of(
-          context,
-        ).textTheme.labelMedium?.copyWith(color: AppColors.blue),
       ),
     );
   }
@@ -396,9 +331,7 @@ class _EmptyDollarExpensesState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return GlassCard(
-      glowColor: AppColors.blue,
-      radius: 24,
+    return Panel(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
@@ -408,18 +341,18 @@ class _EmptyDollarExpensesState extends StatelessWidget {
               height: 88,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.blue.withValues(alpha: 0.12),
+                color: AppColors.usd.withValues(alpha: 0.12),
               ),
               child: Stack(
                 alignment: Alignment.center,
                 children: const [
-                  Icon(LucideIcons.globe2, color: AppColors.blue, size: 36),
+                  Icon(LucideIcons.globe2, color: AppColors.usd, size: 36),
                   Positioned(
                     right: 18,
                     bottom: 22,
                     child: Icon(
                       LucideIcons.badgeDollarSign,
-                      color: AppColors.amber,
+                      color: AppColors.warning,
                       size: 18,
                     ),
                   ),
@@ -485,9 +418,7 @@ class _ErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      glowColor: AppColors.coral,
-      radius: 24,
+    return Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -503,7 +434,7 @@ class _ErrorCard extends StatelessWidget {
           FilledButton(
             onPressed: onRetry,
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.coral,
+              backgroundColor: AppColors.spend,
               foregroundColor: Colors.white,
             ),
             child: const Text('Retry'),

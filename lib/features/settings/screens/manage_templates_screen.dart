@@ -25,7 +25,7 @@ class ManageTemplatesScreen extends ConsumerWidget {
         bottom: false,
         child: templatesAsync.when(
           loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.teal),
+            child: CircularProgressIndicator(color: AppColors.textPrimary),
           ),
           error: (_, _) =>
               const Center(child: Text('Could not load templates')),
@@ -48,7 +48,10 @@ class ManageTemplatesScreen extends ConsumerWidget {
                   const Spacer(),
                   IconButton(
                     onPressed: () => _createTemplate(context, ref, categories),
-                    icon: const Icon(LucideIcons.plus, color: AppColors.teal),
+                    icon: const Icon(
+                      LucideIcons.plus,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ],
               ),
@@ -316,7 +319,7 @@ class ManageTemplatesScreen extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.coral),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.spend),
             child: const Text('Delete'),
           ),
         ],
@@ -362,7 +365,7 @@ class _TemplateTile extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
         decoration: BoxDecoration(
           color: AppColors.surfaceLight.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.zero,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,7 +377,7 @@ class _TemplateTile extends StatelessWidget {
                   height: 40,
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.zero,
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -406,7 +409,7 @@ class _TemplateTile extends StatelessWidget {
                 IconButton(
                   onPressed: onDelete,
                   icon: const Icon(LucideIcons.trash2, size: 18),
-                  color: AppColors.coral,
+                  color: AppColors.spend,
                 ),
               ],
             ),
@@ -420,11 +423,7 @@ class _TemplateTile extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                Switch(
-                  value: template.isMonthly,
-                  onChanged: onToggleMonthly,
-                  activeThumbColor: AppColors.teal,
-                ),
+                Switch(value: template.isMonthly, onChanged: onToggleMonthly),
               ],
             ),
           ],
@@ -434,10 +433,10 @@ class _TemplateTile extends StatelessWidget {
   }
 
   Color _colorForType(TransactionType type) => switch (type) {
-    TransactionType.expense => AppColors.coral,
-    TransactionType.income => AppColors.green,
-    TransactionType.savingsDeposit => AppColors.purple,
-    TransactionType.savingsWithdrawal => AppColors.amber,
+    TransactionType.expense => AppColors.spend,
+    TransactionType.income => AppColors.income,
+    TransactionType.savingsDeposit => AppColors.savings,
+    TransactionType.savingsWithdrawal => AppColors.warning,
   };
 
   String _readableType(TransactionType type) => switch (type) {

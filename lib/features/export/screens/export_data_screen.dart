@@ -17,7 +17,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/panel.dart';
 import '../../../data/database/app_database.dart';
 import '../../../providers/providers.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -96,11 +96,10 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
             ),
             const SizedBox(height: 32),
             Text(
-              'SYSTEM EXPORT',
+              'Export',
               style: theme.textTheme.labelMedium?.copyWith(
-                color: AppColors.teal,
+                color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 2,
               ),
             ),
             const SizedBox(height: 8),
@@ -109,9 +108,6 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
               style: theme.textTheme.displaySmall?.copyWith(
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
-                shadows: const [
-                  Shadow(color: Color(0x33FFFFFF), blurRadius: 12),
-                ],
               ),
             ),
             const SizedBox(height: 8),
@@ -124,16 +120,14 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
             const SizedBox(height: 36),
 
             Text(
-              'IMPORT CSV',
+              'Import CSV',
               style: theme.textTheme.labelSmall?.copyWith(
                 color: AppColors.textTertiary,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 2,
               ),
             ),
             const SizedBox(height: 16),
-            GlassCard(
-              radius: 24,
+            Panel(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,16 +153,16 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                         ? null
                         : _handleImportCsv,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.teal,
+                      foregroundColor: AppColors.textPrimary,
                       side: BorderSide(
-                        color: AppColors.teal.withValues(alpha: 0.35),
+                        color: AppColors.textPrimary.withValues(alpha: 0.35),
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 18,
                         vertical: 14,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.zero,
                       ),
                     ),
                     icon: _importing
@@ -177,11 +171,11 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppColors.teal,
+                              color: AppColors.textPrimary,
                             ),
                           )
                         : const Icon(LucideIcons.upload, size: 18),
-                    label: Text(_importing ? 'IMPORTING...' : 'IMPORT CSV'),
+                    label: Text(_importing ? 'Importing…' : 'import CSV'),
                   ),
                 ],
               ),
@@ -189,16 +183,14 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
             const SizedBox(height: 36),
 
             Text(
-              'FULL BACKUP',
+              'Full backup',
               style: theme.textTheme.labelSmall?.copyWith(
                 color: AppColors.textTertiary,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 2,
               ),
             ),
             const SizedBox(height: 16),
-            GlassCard(
-              radius: 24,
+            Panel(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,16 +208,16 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _handleJsonExport,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.purple,
+                      foregroundColor: AppColors.savings,
                       side: BorderSide(
-                        color: AppColors.purple.withValues(alpha: 0.35),
+                        color: AppColors.savings.withValues(alpha: 0.35),
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 18,
                         vertical: 14,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.zero,
                       ),
                     ),
                     icon: _backingUp
@@ -234,12 +226,12 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppColors.purple,
+                              color: AppColors.savings,
                             ),
                           )
                         : const Icon(LucideIcons.download, size: 18),
                     label: Text(
-                      _backingUp ? 'EXPORTING...' : 'EXPORT BACKUP (.JSON)',
+                      _backingUp ? 'Exporting…' : 'EXPORT BACKUP (.JSON)',
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -251,14 +243,14 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppColors.coral,
+                              color: AppColors.spend,
                             ),
                           )
                         : const Icon(LucideIcons.upload, size: 18),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.coral,
+                      foregroundColor: AppColors.spend,
                     ),
-                    label: Text(_restoring ? 'RESTORING...' : 'RESTORE BACKUP'),
+                    label: Text(_restoring ? 'Restoring…' : 'restore backup'),
                   ),
                 ],
               ),
@@ -267,11 +259,10 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
 
             // --- Format ---
             Text(
-              'SELECT FORMAT',
+              'Format',
               style: theme.textTheme.labelSmall?.copyWith(
                 color: AppColors.textTertiary,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 2,
               ),
             ),
             const SizedBox(height: 16),
@@ -282,7 +273,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                     icon: LucideIcons.fileSpreadsheet,
                     title: 'CSV',
                     description: 'Best for Excel, Sheets, or scripts.',
-                    accentColor: AppColors.teal,
+                    accentColor: AppColors.textPrimary,
                     selected: _selectedFormat == _ExportFormat.csv,
                     onTap: () =>
                         setState(() => _selectedFormat = _ExportFormat.csv),
@@ -294,7 +285,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                     icon: LucideIcons.fileText,
                     title: 'PDF',
                     description: 'Best for printing or sharing.',
-                    accentColor: AppColors.purple,
+                    accentColor: AppColors.savings,
                     selected: _selectedFormat == _ExportFormat.pdf,
                     onTap: () =>
                         setState(() => _selectedFormat = _ExportFormat.pdf),
@@ -306,11 +297,10 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
 
             // --- Date Range ---
             Text(
-              'DATE RANGE',
+              'Date range',
               style: theme.textTheme.labelSmall?.copyWith(
                 color: AppColors.textTertiary,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 2,
               ),
             ),
             const SizedBox(height: 16),
@@ -345,7 +335,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
               Text(
                 '${DateFormat('MMM d, yyyy').format(_customStart!)} — ${DateFormat('MMM d, yyyy').format(_customEnd!)}',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.teal,
+                  color: AppColors.textPrimary,
                 ),
               ),
             ],
@@ -356,7 +346,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.zero,
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,7 +354,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                   Icon(
                     LucideIcons.info,
                     size: 18,
-                    color: AppColors.teal.withValues(alpha: 0.6),
+                    color: AppColors.textPrimary.withValues(alpha: 0.6),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -384,31 +374,21 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
             // --- Export Button ---
             Center(
               child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(999),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.teal.withValues(alpha: 0.2),
-                      blurRadius: 50,
-                      offset: const Offset(0, 20),
-                    ),
-                  ],
-                ),
+                decoration: BoxDecoration(borderRadius: BorderRadius.zero),
                 child: FilledButton.icon(
                   onPressed: _exporting ? null : _handleExport,
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.teal,
+                    backgroundColor: AppColors.accent,
                     foregroundColor: AppColors.onPrimary,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 40,
                       vertical: 20,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.zero,
                     ),
                     textStyle: theme.textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w800,
-                      letterSpacing: 2,
                     ),
                   ),
                   icon: _exporting
@@ -421,7 +401,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                           ),
                         )
                       : const Icon(LucideIcons.download, size: 20),
-                  label: Text(_exporting ? 'EXPORTING...' : 'EXPORT NOW'),
+                  label: Text(_exporting ? 'Exporting…' : 'export now'),
                 ),
               ),
             ),
@@ -1231,10 +1211,8 @@ class _FormatCard extends StatelessWidget {
     final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
-      child: GlassCard(
-        radius: 24,
+      child: Panel(
         padding: const EdgeInsets.all(20),
-        glowColor: selected ? accentColor : null,
         child: Stack(
           children: [
             if (selected)
@@ -1259,7 +1237,7 @@ class _FormatCard extends StatelessWidget {
                   height: 52,
                   decoration: BoxDecoration(
                     color: AppColors.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.zero,
                     border: Border.all(
                       color: selected
                           ? accentColor.withValues(alpha: 0.5)
@@ -1320,10 +1298,10 @@ class _RangeChip extends StatelessWidget {
           color: selected
               ? AppColors.surfaceContainerHighest
               : AppColors.surfaceContainer,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.zero,
           border: Border.all(
             color: selected
-                ? AppColors.teal.withValues(alpha: 0.2)
+                ? AppColors.textPrimary.withValues(alpha: 0.2)
                 : Colors.white.withValues(alpha: 0.05),
           ),
         ),
@@ -1334,14 +1312,18 @@ class _RangeChip extends StatelessWidget {
               Icon(
                 icon,
                 size: 16,
-                color: selected ? AppColors.teal : AppColors.textSecondary,
+                color: selected
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
               ),
               const SizedBox(width: 8),
             ],
             Text(
               label,
               style: TextStyle(
-                color: selected ? AppColors.teal : AppColors.textSecondary,
+                color: selected
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 fontSize: 13,
               ),
@@ -1440,7 +1422,7 @@ class _HoldToConfirmDialogState extends State<HoldToConfirmDialog>
             child: AnimatedBuilder(
               animation: _controller,
               builder: (context, _) => ClipRRect(
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.zero,
                 child: SizedBox(
                   height: 48,
                   child: Stack(
@@ -1448,14 +1430,14 @@ class _HoldToConfirmDialogState extends State<HoldToConfirmDialog>
                     children: [
                       Positioned.fill(
                         child: ColoredBox(
-                          color: AppColors.coral.withValues(alpha: 0.18),
+                          color: AppColors.spend.withValues(alpha: 0.18),
                         ),
                       ),
                       Positioned.fill(
                         child: FractionallySizedBox(
                           alignment: Alignment.centerLeft,
                           widthFactor: _controller.value,
-                          child: const ColoredBox(color: AppColors.coral),
+                          child: const ColoredBox(color: AppColors.spend),
                         ),
                       ),
                       Text(

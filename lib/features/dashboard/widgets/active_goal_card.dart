@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
-import '../../../core/constants/goal_icons.dart';
+import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_decorations.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/goal_utils.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/flat_bar.dart';
 import '../../../data/database/app_database.dart';
+import '../../goals/screens/goal_detail_screen.dart';
 
+/// The top-priority active goal as one row with a bone progress bar; an
+/// invitation to set one when there is none.
 class ActiveGoalCard extends StatelessWidget {
   const ActiveGoalCard({required this.goals, super.key});
 
@@ -16,247 +21,112 @@ class ActiveGoalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final activeGoals = sortGoalsByPriority(
       goals.where((goal) => !goal.isCompleted),
     );
 
     if (activeGoals.isEmpty) {
-      return _EmptyGoalCard();
+      return _Row(
+        onTap: () => context.go(AppRoute.goals.path),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Set a savings goal', style: theme.textTheme.bodyLarge),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Give your savings something to aim at.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              LucideIcons.chevronRight,
+              color: AppColors.textTertiary,
+              size: 20,
+            ),
+          ],
+        ),
+      );
     }
 
-    return _ActiveGoalDisplay(goal: activeGoals.first);
-  }
-}
-
-class _EmptyGoalCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      shadow: false,
-      glowColor: AppColors.purple,
-      radius: 24,
-      opacity: 0.8,
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 96,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              color: AppColors.purple,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.purple.withValues(alpha: 0.45),
-                  blurRadius: 10,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Savings Goal',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Set your first savings goal to see progress here.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Icon(LucideIcons.flag, color: AppColors.purple),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActiveGoalDisplay extends StatelessWidget {
-  const _ActiveGoalDisplay({required this.goal});
-
-  final SavingsGoalsTableData goal;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final resolvedIcon = GoalIcons.resolve(goal.icon);
+    final goal = activeGoals.first;
     final progress = goal.targetAmount <= 0
         ? 0.0
         : (goal.currentAmount / goal.targetAmount).clamp(0.0, 1.0);
     final percentage = (progress * 100).round();
-    final daysRemaining = _daysRemaining(goal.deadline);
+    final deadline = goal.deadline;
+    final daysLeft = deadline == null ? null : calendarDaysUntil(deadline);
+    final when = switch (daysLeft) {
+      null => 'No deadline',
+      < 0 => 'Past deadline',
+      0 => 'Due today',
+      1 => '1 day left',
+      _ => '$daysLeft days left',
+    };
 
-    return GlassCard(
-      shadow: false,
-      glowColor: AppColors.purple,
-      radius: 24,
-      opacity: 0.8,
-      child: Row(
+    return _Row(
+      onTap: () => context.push(goalDetailPath(goal.id)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 4,
-            height: 110,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              color: AppColors.purple,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.purple.withValues(alpha: 0.45),
-                  blurRadius: 10,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  goal.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyLarge,
                 ),
-              ],
-            ),
+              ),
+              Text(
+                '$percentage%',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: AppColors.savings,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        goal.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: resolvedIcon.color.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        resolvedIcon.icon,
-                        color: resolvedIcon.color,
-                        size: 18,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(
-                      goal.deadline == null
-                          ? LucideIcons.calendarDays
-                          : LucideIcons.clock3,
-                      size: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      daysRemaining != null
-                          ? '$daysRemaining DAYS LEFT'
-                          : 'No deadline',
-                      style: theme.textTheme.labelMedium,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: formatBdtAmount(
-                                goal.currentAmount,
-                                fractionDigits: 0,
-                              ),
-                            ),
-                            TextSpan(
-                              text:
-                                  ' / ${formatBdtAmount(goal.targetAmount, fractionDigits: 0)}',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '$percentage%',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: AppColors.purple,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: progress),
-                  duration: const Duration(milliseconds: 700),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, animatedValue, _) {
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: SizedBox(
-                        height: 8,
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: ColoredBox(
-                                color: Colors.white.withValues(alpha: 0.06),
-                              ),
-                            ),
-                            FractionallySizedBox(
-                              widthFactor: animatedValue,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      AppColors.purple,
-                                      AppColors.softPurple,
-                                    ],
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.purple.withValues(
-                                        alpha: 0.32,
-                                      ),
-                                      blurRadius: 12,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
+          const SizedBox(height: 10),
+          FlatBar(value: progress, color: AppColors.savings),
+          const SizedBox(height: 8),
+          Text(
+            '${formatBdtAmount(goal.currentAmount)} of '
+            '${formatBdtAmount(goal.targetAmount)} · $when',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: daysLeft != null && daysLeft < 0
+                  ? AppColors.warning
+                  : null,
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  int? _daysRemaining(DateTime? deadline) {
-    if (deadline == null) return null;
-    final diff = calendarDaysUntil(deadline);
-    return diff < 0 ? 0 : diff;
+/// A tappable module row.
+class _Row extends StatelessWidget {
+  const _Row({required this.child, required this.onTap});
+
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(AppDecorations.radius),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppDecorations.radius),
+        onTap: onTap,
+        child: Padding(padding: const EdgeInsets.all(16), child: child),
+      ),
+    );
   }
 }

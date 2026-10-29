@@ -83,7 +83,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final finder = find.ancestor(
-      of: find.text('UPDATE'),
+      of: find.text('Update'),
       matching: find.byType(FilledButton),
     );
     final dynamic save = tester.widget<FilledButton>(finder).onPressed;

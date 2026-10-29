@@ -1,68 +1,85 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
+/// The platform sans (SF Pro on iOS, Roboto on Android) carries the UI, in
+/// iOS text-style sizes with tabular figures so amounts line up. Doto, the
+/// dot-grid face, is reserved for hero figures via [figure].
 abstract final class AppTypography {
-  static TextTheme textTheme() {
-    final base = ThemeData.dark().textTheme;
-    final manrope = GoogleFonts.manropeTextTheme(base);
+  static const _tabular = [FontFeature.tabularFigures()];
 
-    return manrope.copyWith(
-      displayLarge: GoogleFonts.manrope(
-        fontSize: 56,
-        fontWeight: FontWeight.w800,
-        height: 0.94,
-        letterSpacing: -1.6,
-        color: AppColors.textPrimary,
+  static TextTheme textTheme() {
+    // Keep the platform's own font family; only size, weight and colour change.
+    final base = ThemeData.dark().textTheme;
+    TextStyle style(
+      TextStyle? from,
+      double size,
+      FontWeight weight, {
+      Color color = AppColors.textPrimary,
+      double? height,
+      double letterSpacing = 0,
+    }) => (from ?? const TextStyle()).copyWith(
+      fontSize: size,
+      fontWeight: weight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+      fontFeatures: _tabular,
+    );
+
+    return base.copyWith(
+      displayLarge: style(base.displayLarge, 34, FontWeight.w700, height: 1.1),
+      displayMedium: style(base.displayMedium, 28, FontWeight.w700),
+      displaySmall: style(base.displaySmall, 24, FontWeight.w700),
+      headlineLarge: style(base.headlineLarge, 34, FontWeight.w700),
+      headlineMedium: style(base.headlineMedium, 22, FontWeight.w700),
+      headlineSmall: style(base.headlineSmall, 20, FontWeight.w600),
+      titleLarge: style(base.titleLarge, 20, FontWeight.w600),
+      titleMedium: style(base.titleMedium, 17, FontWeight.w600),
+      titleSmall: style(base.titleSmall, 15, FontWeight.w600),
+      bodyLarge: style(base.bodyLarge, 17, FontWeight.w400, height: 1.35),
+      bodyMedium: style(
+        base.bodyMedium,
+        15,
+        FontWeight.w400,
+        color: AppColors.textSecondary,
+        height: 1.4,
       ),
-      headlineLarge: GoogleFonts.manrope(
-        fontSize: 30,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.7,
-        color: AppColors.textPrimary,
+      bodySmall: style(
+        base.bodySmall,
+        13,
+        FontWeight.w400,
+        color: AppColors.textSecondary,
+        height: 1.35,
       ),
-      headlineMedium: GoogleFonts.manrope(
-        fontSize: 24,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.5,
-        color: AppColors.textPrimary,
-      ),
-      titleLarge: GoogleFonts.manrope(
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.2,
-        color: AppColors.textPrimary,
-      ),
-      titleMedium: GoogleFonts.manrope(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
-      ),
-      bodyLarge: GoogleFonts.manrope(
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
-        height: 1.45,
-        color: AppColors.textPrimary,
-      ),
-      bodyMedium: GoogleFonts.manrope(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        height: 1.5,
+      labelLarge: style(base.labelLarge, 15, FontWeight.w600),
+      labelMedium: style(
+        base.labelMedium,
+        13,
+        FontWeight.w500,
         color: AppColors.textSecondary,
       ),
-      labelLarge: GoogleFonts.manrope(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.4,
-        color: AppColors.textSecondary,
-      ),
-      labelMedium: GoogleFonts.manrope(
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.8,
+      labelSmall: style(
+        base.labelSmall,
+        12,
+        FontWeight.w500,
         color: AppColors.textSecondary,
       ),
     );
   }
+
+  /// Dot-grid numerals for the one hero figure on a screen. Doto has no ৳
+  /// glyph, so callers set the currency sign in the platform sans beside it.
+  /// Even 0.9 leading puts the baseline exactly eight dot cells down and no
+  /// letter spacing keeps every glyph on whole cells (see DotFigure).
+  static TextStyle figure(double size, {Color color = AppColors.textPrimary}) =>
+      TextStyle(
+        fontFamily: 'Doto',
+        fontSize: size,
+        height: 0.9,
+        leadingDistribution: TextLeadingDistribution.even,
+        color: color,
+        fontVariations: const [FontVariation('wght', 900)],
+        fontFeatures: _tabular,
+      );
 }

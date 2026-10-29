@@ -1,13 +1,14 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/dot_figure.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/widgets/amount_text.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/flat_bar.dart';
 import '../../../data/models/financial_summaries.dart';
 
+/// The Dollar Tracker's hero: USD left this year as a blue dot-grid figure
+/// over the construction grid, then the allowance bar and pace. Blue is the
+/// tracker's own colour, so it never reads as part of the taka balance.
 class DollarHeaderCard extends StatelessWidget {
   const DollarHeaderCard({required this.summary, super.key});
 
@@ -16,178 +17,45 @@ class DollarHeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final utilized = summary.annualLimit <= 0
+    final used = summary.annualLimit <= 0
         ? 0.0
-        : (summary.spentYtd / summary.annualLimit).clamp(0.0, 1.0);
+        : summary.spentYtd / summary.annualLimit;
+    final over = summary.remaining < 0;
+    final figureColor = over ? AppColors.spend : AppColors.usd;
 
-    return GlassCard(
-      glowColor: AppColors.amber,
-      radius: 30,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [const Color(0xFF25175A), const Color(0xFF0E223E)],
-          ),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(22),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'REMAINING BALANCE',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    AnimatedAmountText(
-                      value: summary.remaining,
-                      formatter: (value) =>
-                          formatUsdAmount(value, fractionDigits: 0),
-                      textStyle: theme.textTheme.displaySmall?.copyWith(
-                        color: summary.remaining < 0
-                            ? AppColors.coral
-                            : Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Container(
-                      height: 1,
-                      color: Colors.white.withValues(alpha: 0.08),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _MetricColumn(
-                            label: 'ANNUAL LIMIT',
-                            value: formatUsdAmount(
-                              summary.annualLimit,
-                              fractionDigits: 0,
-                            ),
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-                        Expanded(
-                          child: _MetricColumn(
-                            label: 'SPENT YTD',
-                            value: formatUsdAmount(
-                              summary.spentYtd,
-                              fractionDigits: 0,
-                            ),
-                            color: AppColors.teal,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      _paceText(summary),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: summary.projectedOver
-                            ? AppColors.amber
-                            : AppColors.green,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              SizedBox(
-                width: 128,
-                height: 128,
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: utilized),
-                  duration: const Duration(milliseconds: 800),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, animatedValue, _) {
-                    return CustomPaint(
-                      painter: _UtilizationRingPainter(progress: animatedValue),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${(utilized * 100).toStringAsFixed(0)}%',
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                color: AppColors.amber,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'UTILIZED',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-String _paceText(DollarTrackerSummary s) {
-  if (s.spentYtd <= 0) return 'No spending yet this year';
-  if (!s.hasPace) {
-    return 'Year-end pace shows after ${FinanceCalculators.minPaceDays} days';
-  }
-  final projected = formatUsdAmount(s.projectedYearEnd, fractionDigits: 0);
-  final diff = formatUsdAmount(s.projectedVsLimit.abs(), fractionDigits: 0);
-  final verb = s.projectedVsLimit > 0 ? 'over' : 'under';
-  return 'On pace for $projected by Dec · $diff $verb limit';
-}
-
-class _MetricColumn extends StatelessWidget {
-  const _MetricColumn({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: AppColors.textSecondary,
-          ),
+        DotFigure(
+          label: over ? 'Over this year’s allowance' : 'Left this year',
+          value: summary.remaining.abs(),
+          prefix: r'$',
+          color: figureColor,
+          maxSize: 72,
+          semanticLabel: over
+              ? '${formatUsdAmount(-summary.remaining)} over the allowance'
+              : '${formatUsdAmount(summary.remaining)} left this year',
         ),
-        const SizedBox(height: 6),
+        FlatBar(value: used, color: figureColor, height: 8),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Text(
+              '${formatUsdAmount(summary.spentYtd)} spent',
+              style: theme.textTheme.labelMedium,
+            ),
+            const Spacer(),
+            Text(
+              'of ${formatUsdAmount(summary.annualLimit)}',
+              style: theme.textTheme.labelMedium,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
         Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: color,
-            fontWeight: FontWeight.w700,
+          _paceText(summary),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: summary.projectedOver ? AppColors.warning : null,
           ),
         ),
       ],
@@ -195,64 +63,13 @@ class _MetricColumn extends StatelessWidget {
   }
 }
 
-class _UtilizationRingPainter extends CustomPainter {
-  const _UtilizationRingPainter({required this.progress});
-
-  final double progress;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const strokeWidth = 15.0;
-    final radius = (size.width - strokeWidth) / 2;
-    final center = size.center(Offset.zero);
-
-    final trackPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round
-      ..color = Colors.white.withValues(alpha: 0.05);
-    canvas.drawCircle(center, radius, trackPaint);
-
-    if (progress <= 0) {
-      return;
-    }
-
-    final rect = Rect.fromCircle(center: center, radius: radius);
-    final glowPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth + 8
-      ..strokeCap = StrokeCap.round
-      ..color = AppColors.amber.withValues(alpha: 0.18)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
-    canvas.drawArc(
-      rect,
-      -math.pi / 2,
-      (math.pi * 2) * progress,
-      false,
-      glowPaint,
-    );
-
-    final progressPaint = Paint()
-      ..shader = const SweepGradient(
-        startAngle: -math.pi / 2,
-        endAngle: (math.pi * 2) - (math.pi / 2),
-        colors: [Color(0xFFFFC72C), Color(0xFFFFD54F)],
-      ).createShader(rect)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawArc(
-      rect,
-      -math.pi / 2,
-      (math.pi * 2) * progress,
-      false,
-      progressPaint,
-    );
+String _paceText(DollarTrackerSummary s) {
+  if (s.spentYtd <= 0) return 'No USD spending yet this year.';
+  if (!s.hasPace) {
+    return 'Year-end pace shows after ${FinanceCalculators.minPaceDays} days.';
   }
-
-  @override
-  bool shouldRepaint(covariant _UtilizationRingPainter oldDelegate) {
-    return oldDelegate.progress != progress;
-  }
+  final projected = formatUsdAmount(s.projectedYearEnd, fractionDigits: 0);
+  final diff = formatUsdAmount(s.projectedVsLimit.abs(), fractionDigits: 0);
+  final verb = s.projectedVsLimit > 0 ? 'over' : 'under';
+  return 'On pace for $projected by December, $diff $verb the allowance.';
 }

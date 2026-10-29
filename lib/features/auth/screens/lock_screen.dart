@@ -8,7 +8,7 @@ import 'package:spendsplit/core/icons/lucide_icons.dart';
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/panel.dart';
 import '../providers/auth_provider.dart';
 
 class LockScreen extends ConsumerStatefulWidget {
@@ -46,33 +46,6 @@ class _LockScreenState extends ConsumerState<LockScreen> {
         backgroundColor: AppColors.background,
         body: Stack(
           children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [AppColors.surfaceDim, AppColors.background],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: -120,
-              right: -80,
-              child: _GlowOrb(
-                color: AppColors.teal.withValues(alpha: 0.06),
-                size: 240,
-              ),
-            ),
-            Positioned(
-              bottom: -140,
-              left: -90,
-              child: _GlowOrb(
-                color: AppColors.purple.withValues(alpha: 0.05),
-                size: 280,
-              ),
-            ),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -86,16 +59,13 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                           const Spacer(flex: 2),
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 360),
-                            child: GlassCard(
-                              glowColor: AppColors.teal,
-                              radius: 32,
+                            child: Panel(
                               padding: const EdgeInsets.fromLTRB(
                                 24,
                                 30,
                                 24,
                                 28,
                               ),
-                              opacity: 0.74,
                               child: Column(
                                 children: [
                                   GestureDetector(
@@ -109,7 +79,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                                   ),
                                   const SizedBox(height: 28),
                                   Text(
-                                    'BIOMETRIC AUTHENTICATION',
+                                    'Biometric authentication',
                                     style: theme.textTheme.labelLarge?.copyWith(
                                       color: AppColors.onSurfaceVariant,
                                     ),
@@ -153,7 +123,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                                   ? null
                                   : () => _authenticate(biometricOnly: false),
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.teal,
+                                backgroundColor: AppColors.accent,
                                 foregroundColor: AppColors.onPrimary,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 20,
@@ -176,17 +146,8 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                             onPressed: _authenticating
                                 ? null
                                 : () => _authenticate(biometricOnly: false),
-                            icon: const Icon(
-                              LucideIcons.grid,
-                              size: 16,
-                              color: AppColors.teal,
-                            ),
-                            label: Text(
-                              'Use ${_copy.credential}',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: AppColors.teal,
-                              ),
-                            ),
+                            icon: const Icon(LucideIcons.grid, size: 16),
+                            label: Text('Use ${_copy.credential}'),
                           ),
                         ],
                       ),
@@ -304,21 +265,15 @@ class _LockTopBar extends StatelessWidget {
           Expanded(
             child: Center(
               child: Text(
-                'SPENDSPLIT',
+                'Spendsplit',
                 style: theme.textTheme.labelLarge?.copyWith(
-                  color: AppColors.teal,
+                  color: AppColors.accent,
                   fontWeight: FontWeight.w800,
-                  shadows: [
-                    Shadow(
-                      color: AppColors.teal.withValues(alpha: 0.3),
-                      blurRadius: 10,
-                    ),
-                  ],
                 ),
               ),
             ),
           ),
-          const Icon(LucideIcons.lock, color: AppColors.teal, size: 20),
+          const Icon(LucideIcons.lock, color: AppColors.accent, size: 20),
         ],
       ),
     );
@@ -348,7 +303,7 @@ class _FingerprintHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = dimmed ? AppColors.textSecondary : AppColors.teal;
+    final iconColor = dimmed ? AppColors.textSecondary : AppColors.accent;
 
     return SizedBox(
       width: 132,
@@ -377,17 +332,7 @@ class _FingerprintHero extends StatelessWidget {
               ),
               color: AppColors.surfaceLight.withValues(alpha: 0.26),
             ),
-            child: Icon(
-              LucideIcons.fingerprint,
-              color: iconColor,
-              size: 46,
-              shadows: [
-                Shadow(
-                  color: iconColor.withValues(alpha: 0.32),
-                  blurRadius: 12,
-                ),
-              ],
-            ),
+            child: Icon(LucideIcons.fingerprint, color: iconColor, size: 46),
           ),
         ],
       ),
@@ -449,29 +394,6 @@ class _PatternGrid extends StatelessWidget {
               shape: BoxShape.circle,
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlowOrb extends StatelessWidget {
-  const _GlowOrb({required this.color, required this.size});
-
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(color: color, blurRadius: 120, spreadRadius: 30),
-          ],
         ),
       ),
     );

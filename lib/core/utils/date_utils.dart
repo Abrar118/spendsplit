@@ -22,9 +22,10 @@ String formatTransactionHeader(DateTime date, {DateTime? reference}) {
   final target = DateTime(date.year, date.month, date.day);
   final yesterday = today.subtract(const Duration(days: 1));
 
-  if (target == today) return 'TODAY';
-  if (target == yesterday) return 'YESTERDAY';
-  return DateFormat('MMMM d, yyyy').format(date).toUpperCase();
+  if (target == today) return 'Today';
+  if (target == yesterday) return 'Yesterday';
+  if (target.year == today.year) return DateFormat('EEEE, d MMMM').format(date);
+  return DateFormat('d MMMM yyyy').format(date);
 }
 
 /// Whole calendar days from [from] (default now) to [date], ignoring time of

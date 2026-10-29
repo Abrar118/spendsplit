@@ -35,7 +35,7 @@ class BudgetProgressBar extends StatelessWidget {
             LinearProgressIndicator(
               value: used.clamp(0.0, 1.0),
               minHeight: height,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.zero,
               color: color,
               backgroundColor: backgroundColor,
               semanticsLabel: semanticsLabel,
@@ -45,13 +45,7 @@ class BudgetProgressBar extends StatelessWidget {
                 left: (box.maxWidth * pace.clamp(0.0, 1.0)) - 1,
                 top: 0,
                 bottom: 0,
-                child: Container(
-                  width: 2,
-                  decoration: BoxDecoration(
-                    color: AppColors.textPrimary.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(1),
-                  ),
-                ),
+                child: Container(width: 2, color: AppColors.textPrimary),
               ),
           ],
         ),

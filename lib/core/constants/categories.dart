@@ -24,27 +24,27 @@ abstract final class DefaultCategories {
   static const all = [food, transport, utilities, health, shopping, other];
 
   static const seeds = [
-    DefaultCategorySeed(name: food, icon: 'restaurant', colorValue: 0xFFFF6B6B),
+    DefaultCategorySeed(name: food, icon: 'restaurant', colorValue: 0xFFB5677E),
     DefaultCategorySeed(
       name: transport,
       icon: 'directions_car',
-      colorValue: 0xFF60A5FA,
+      colorValue: 0xFF7F93B0,
     ),
-    DefaultCategorySeed(name: utilities, icon: 'bolt', colorValue: 0xFFFBBF24),
+    DefaultCategorySeed(name: utilities, icon: 'bolt', colorValue: 0xFFC9B48A),
     DefaultCategorySeed(
       name: health,
       icon: 'local_hospital',
-      colorValue: 0xFFF472B6,
+      colorValue: 0xFF4DB8AC,
     ),
     DefaultCategorySeed(
       name: shopping,
       icon: 'shopping_bag',
-      colorValue: 0xFF9C7CFF,
+      colorValue: 0xFF9C8CFF,
     ),
     DefaultCategorySeed(
       name: other,
       icon: 'more_horiz',
-      colorValue: 0xFF8892A7,
+      colorValue: 0xFF62676F,
     ),
   ];
 }
@@ -55,16 +55,16 @@ abstract final class DefaultDollarCategories {
   static const education = 'Education';
 
   static const seeds = [
-    DefaultCategorySeed(name: games, icon: 'gamepad_2', colorValue: 0xFF60A5FA),
+    DefaultCategorySeed(name: games, icon: 'gamepad_2', colorValue: 0xFF7F93B0),
     DefaultCategorySeed(
       name: subscription,
       icon: 'repeat',
-      colorValue: 0xFF00E5BF,
+      colorValue: 0xFF4DB8AC,
     ),
     DefaultCategorySeed(
       name: education,
       icon: 'graduation_cap',
-      colorValue: 0xFFA78BFA,
+      colorValue: 0xFF9C8CFF,
     ),
   ];
 }
@@ -100,20 +100,54 @@ abstract final class CategoryIcons {
   ];
 }
 
-/// Accent swatches offered in the category editor. Stored as ARGB ints in
-/// `categories_table.color`.
+/// Category colours: a muted data series, kept apart from the saturated
+/// legend colours (Available orange, Savings bone, income green, spending
+/// red, warning yellow, USD blue) so a category never reads as one of those.
+/// Stored as ARGB ints in `categories_table.color`.
 abstract final class CategoryColors {
   static const swatches = <int>[
-    0xFFF26D3D, // coral
-    0xFF34D89C, // green
-    0xFF9B8BFF, // purple
-    0xFF7A46E0, // deep violet
-    0xFFECB877, // amber
-    0xFFECBB7E, // gold
-    0xFFF472B6, // pink
-    0xFFA6A0B8, // neutral
+    0xFFB5677E, // rosewood
+    0xFF7F93B0, // slate
+    0xFFC9B48A, // sand
+    0xFF4DB8AC, // teal
+    0xFF9C8CFF, // violet
+    0xFFA3B35C, // olive
+    0xFFB98A6E, // clay
+    0xFF62676F, // grey
   ];
 }
+
+/// Older builds stored colours that now collide with the legend; draw them
+/// as their nearest ramp colour. Stored values are left untouched.
+const _legacyCategoryColors = <int, int>{
+  0xFFFF6B6B: 0xFFB5677E, // -> rosewood
+  0xFF60A5FA: 0xFF7F93B0, // -> slate
+  0xFFFBBF24: 0xFFC9B48A, // -> sand
+  0xFFF472B6: 0xFFB5677E, // -> rosewood
+  0xFF9C7CFF: 0xFF9C8CFF, // -> violet
+  0xFF8892A7: 0xFF62676F, // -> grey
+  0xFF00E5BF: 0xFF4DB8AC, // -> teal
+  0xFFA78BFA: 0xFF9C8CFF, // -> violet
+  0xFF34D399: 0xFFA3B35C, // -> olive
+  0xFFF26D3D: 0xFFB98A6E, // -> clay
+  0xFF34D89C: 0xFFA3B35C, // -> olive
+  0xFF9B8BFF: 0xFF9C8CFF, // -> violet
+  0xFF7A46E0: 0xFF9C8CFF, // -> violet
+  0xFFECB877: 0xFFC9B48A, // -> sand
+  0xFFECBB7E: 0xFFC9B48A, // -> sand
+  0xFFA6A0B8: 0xFF62676F, // -> grey
+  0xFFE86A92: 0xFFB5677E, // -> rosewood
+  0xFF5BB8D9: 0xFF7F93B0, // -> slate
+  0xFFF2C14E: 0xFFC9B48A, // -> sand
+  0xFF8FCB6B: 0xFFA3B35C, // -> olive
+  0xFFD98C5F: 0xFFB98A6E, // -> clay
+  0xFF4DD0C1: 0xFF4DB8AC, // -> teal
+  0xFFA3A8B0: 0xFF62676F, // -> grey
+};
+
+/// The colour to draw a category with, given its stored ARGB value.
+Color categoryColor(int stored) =>
+    Color(_legacyCategoryColors[stored] ?? stored);
 
 IconData iconForCategoryKey(String iconName) {
   for (final option in CategoryIcons.all) {

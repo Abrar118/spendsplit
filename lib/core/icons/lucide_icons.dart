@@ -3,6 +3,16 @@
 import 'package:flutter/widgets.dart';
 
 abstract final class LucideIcons {
+  static const barChart3 = IconData(
+    0xf187,
+    fontFamily: 'Lucide',
+    fontPackage: 'lucide_icons',
+  );
+  static const creditCard = IconData(
+    0xf264,
+    fontFamily: 'Lucide',
+    fontPackage: 'lucide_icons',
+  );
   static const arrowDownToLine = IconData(
     0xf14b,
     fontFamily: 'Lucide',

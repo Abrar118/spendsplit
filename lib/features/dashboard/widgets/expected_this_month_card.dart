@@ -4,7 +4,7 @@ import 'package:spendsplit/core/icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/panel.dart';
 import '../../../providers/providers.dart';
 import '../../transactions/widgets/add_transaction_sheet.dart';
 
@@ -17,10 +17,7 @@ class ExpectedThisMonthCard extends ConsumerWidget {
     final expected = ref.watch(expectedThisMonthProvider);
     if (expected.isEmpty) return const SizedBox.shrink();
 
-    return GlassCard(
-      shadow: false,
-      glowColor: AppColors.amber,
-      radius: 20,
+    return Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -29,7 +26,7 @@ class ExpectedThisMonthCard extends ConsumerWidget {
               const Icon(
                 LucideIcons.calendarDays,
                 size: 18,
-                color: AppColors.amber,
+                color: AppColors.textSecondary,
               ),
               const SizedBox(width: 8),
               Text('Expected this month', style: theme.textTheme.titleMedium),
@@ -72,8 +69,7 @@ class ExpectedThisMonthCard extends ConsumerWidget {
                 ),
               ],
             ),
-            if (i != expected.length - 1)
-              Divider(color: Colors.white.withValues(alpha: 0.06), height: 8),
+            if (i != expected.length - 1) const Divider(height: 8),
           ],
         ],
       ),

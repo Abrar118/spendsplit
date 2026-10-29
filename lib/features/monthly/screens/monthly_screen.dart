@@ -1,19 +1,20 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
+import '../../../core/widgets/large_title_page.dart';
+import '../../../core/constants/categories.dart';
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_utils.dart';
-import '../../../core/widgets/amount_text.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/budget_progress_bar.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/panel.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/shimmer_skeleton.dart';
 import '../../../data/models/financial_summaries.dart';
 import '../../../providers/providers.dart';
@@ -49,245 +50,130 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
         if (velocity < 0 && _isCurrentMonth) return;
         _changeMonth(velocity < 0 ? 1 : -1);
       },
-      child: SafeArea(
-        bottom: false,
-        child: RefreshIndicator(
-          color: AppColors.teal,
-          onRefresh: _refreshMonthlyAnalytics,
-          child: analyticsAsync.when(
-            loading: () => const _MonthlySkeleton(),
-            error: (error, stackTrace) => ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                const SizedBox(height: 180),
-                Center(
-                  child: Text(
-                    'Could not load monthly analytics',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.coral,
-                    ),
-                  ),
-                ),
-              ],
+      child: analyticsAsync.when(
+        loading: () => const _MonthlySkeleton(),
+        error: (error, stackTrace) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Text(
+              "This month couldn't load. Close and reopen the app to try again.",
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium,
             ),
-            data: (analytics) {
-              return CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md,
-                      AppSpacing.md,
-                      AppSpacing.md,
-                      AppSpacing.navClearance,
+          ),
+        ),
+        data: (analytics) {
+          final monthQuery = _formatMonthQuery(_visibleMonth);
+          return LargeTitlePage(
+            title: 'Monthly',
+            trailing: BarIconButton(
+              icon: LucideIcons.settings,
+              tooltip: 'Settings',
+              onPressed: () => context.push(AppRoute.settings.path),
+            ),
+            slivers: [
+              PageBody(
+                children: [
+                  _MonthNavigator(
+                    month: _visibleMonth,
+                    onPrevious: () => _changeMonth(-1),
+                    onNext: _isCurrentMonth ? null : () => _changeMonth(1),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  if (analytics.transactionCount == 0) ...[
+                    const EmptyState(
+                      icon: LucideIcons.calendarDays,
+                      title: 'Nothing recorded this month',
+                      message:
+                          'Swipe sideways or use the arrows to see another month.',
                     ),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        _TopBar(
-                          onSettingsTap: () =>
-                              context.push(AppRoute.settings.path),
+                    const SizedBox(height: AppSpacing.section),
+                    MonthlyBudgetCard(
+                      spent: analytics.summary.expenses,
+                      month: _visibleMonth,
+                    ),
+                  ] else ...[
+                    _FiguresTable(
+                      analytics: analytics,
+                      previousMonth: DateTime(
+                        _visibleMonth.year,
+                        _visibleMonth.month - 1,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    MonthlyBudgetCard(
+                      spent: analytics.summary.expenses,
+                      month: _visibleMonth,
+                    ),
+                    const SizedBox(height: AppSpacing.section),
+                    SectionHeader(
+                      'Where it went',
+                      action: 'All entries',
+                      onAction: () => context.go(
+                        '${AppRoute.transactions.path}?month=$monthQuery',
+                      ),
+                    ),
+                    if (analytics.categories.isEmpty)
+                      Panel(
+                        color: AppColors.surfaceRaised,
+                        child: Text(
+                          'No spending recorded this month.',
+                          style: theme.textTheme.bodyMedium,
                         ),
-                        const SizedBox(height: AppSpacing.xl),
-                        _MonthNavigator(
-                          month: _visibleMonth,
-                          onPrevious: () => _changeMonth(-1),
-                          onNext: _isCurrentMonth
-                              ? null
-                              : () => _changeMonth(1),
-                        ),
-                        const SizedBox(height: AppSpacing.section),
-                        MonthlyBudgetCard(
-                          spent: analytics.summary.expenses,
-                          month: _visibleMonth,
-                        ),
-                        const SizedBox(height: AppSpacing.section),
-                        if (analytics.transactionCount == 0)
-                          const SizedBox.shrink()
-                        else ...[
-                          _MonthlyMetricCard(
-                                title: 'TOTAL INCOME',
-                                amount: analytics.summary.income,
-                                gradient: AppColors.incomeCardGradient,
-                                accentColor: AppColors.teal,
-                                borderColor: AppColors.teal.withValues(
-                                  alpha: 0.2,
-                                ),
-                                chipLabel: _formatDeltaLabel(
-                                  analytics.incomeDelta,
-                                ),
-                                chipIcon: analytics.incomeDelta >= 0
-                                    ? LucideIcons.trendingUp
-                                    : LucideIcons.trendingDown,
-                              )
-                              .animate()
-                              .fadeIn(duration: 240.ms)
-                              .slideY(
-                                begin: 0.08,
-                                end: 0,
-                                duration: 240.ms,
-                                curve: Curves.easeOutCubic,
-                              ),
-                          const SizedBox(height: 14),
-                          _MonthlyMetricCard(
-                                title: 'TOTAL EXPENSES',
-                                amount: analytics.summary.expenses,
-                                gradient: AppColors.expenseCardGradient,
-                                accentColor: Colors.white,
-                                borderColor: Colors.white.withValues(
-                                  alpha: 0.2,
-                                ),
-                                chipLabel: _formatDeltaLabel(
-                                  analytics.expenseDelta,
-                                ),
-                                chipIcon: analytics.expenseDelta >= 0
-                                    ? LucideIcons.trendingUp
-                                    : LucideIcons.trendingDown,
-                              )
-                              .animate()
-                              .fadeIn(duration: 240.ms, delay: 60.ms)
-                              .slideY(
-                                begin: 0.08,
-                                end: 0,
-                                duration: 240.ms,
-                                delay: 60.ms,
-                                curve: Curves.easeOutCubic,
-                              ),
-                          const SizedBox(height: 14),
-                          _MonthlyMetricCard(
-                                title: 'AMOUNT SAVED',
-                                amount: analytics.summary.saved,
-                                gradient: AppColors.savingsCardGradient,
-                                accentColor: AppColors.softPurple,
-                                borderColor: AppColors.softPurple.withValues(
-                                  alpha: 0.2,
-                                ),
-                                chipLabel: _formatSavingsRateLabel(
-                                  analytics.savingsRate,
-                                ),
-                                chipIcon: analytics.savingsRate < 0
-                                    ? LucideIcons.trendingDown
-                                    : LucideIcons.shield,
-                                chipColor: analytics.savingsRate < 0
-                                    ? AppColors.coral
-                                    : Colors.white,
-                              )
-                              .animate()
-                              .fadeIn(duration: 240.ms, delay: 120.ms)
-                              .slideY(
-                                begin: 0.08,
-                                end: 0,
-                                duration: 240.ms,
-                                delay: 120.ms,
-                                curve: Curves.easeOutCubic,
-                              ),
-                          const SizedBox(height: AppSpacing.section),
-                          _SectionTitle(
-                            title: 'Where your money went',
-                            trailing: null,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          _CategoryDonutCard(
-                                analytics: analytics,
-                                onViewAll: () => context.go(
-                                  '${AppRoute.transactions.path}?month=${_formatMonthQuery(_visibleMonth)}',
-                                ),
-                                onCategoryTap: (item) {
-                                  final monthParam = _formatMonthQuery(
-                                    _visibleMonth,
-                                  );
-                                  final catParam = item.categoryId != null
-                                      ? '&categoryId=${item.categoryId}'
-                                      : '';
-                                  context.go(
-                                    '${AppRoute.transactions.path}?month=$monthParam$catParam',
-                                  );
-                                },
-                              )
-                              .animate()
-                              .fadeIn(duration: 260.ms, delay: 180.ms)
-                              .slideY(
-                                begin: 0.08,
-                                end: 0,
-                                duration: 260.ms,
-                                delay: 180.ms,
-                                curve: Curves.easeOutCubic,
-                              ),
-                          const SizedBox(height: AppSpacing.section),
-                          _SectionTitle(
-                            title: 'Category Details',
-                            trailing: 'SORTED BY VOLUME',
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          if (analytics.categories.isEmpty)
-                            const GlassCard(
-                              shadow: false,
-                              radius: 20,
-                              child: Text(
-                                'No expense categories in this month.',
-                              ),
-                            )
-                          else
+                      )
+                    else ...[
+                      _CategoryShareBar(categories: analytics.categories),
+                      const SizedBox(height: AppSpacing.sm),
+                      Panel(
+                        color: AppColors.surfaceRaised,
+                        padding: EdgeInsets.zero,
+                        child: Column(
+                          children: [
                             for (
                               var i = 0;
                               i < analytics.categories.length;
                               i++
                             ) ...[
-                              _CategoryDetailTile(
-                                    item: analytics.categories[i],
-                                    pace: monthPaceFraction(_visibleMonth),
-                                    highlightAsTop: i == 0,
-                                    onEditBudget:
-                                        analytics.categories[i].categoryId ==
-                                            null
-                                        ? null
-                                        : () => _editCategoryBudget(
-                                            analytics.categories[i],
-                                          ),
-                                  )
-                                  .animate()
-                                  .fadeIn(
-                                    duration: 220.ms,
-                                    delay: (220 + (i * 40)).ms,
-                                  )
-                                  .slideX(
-                                    begin: 0.04,
-                                    end: 0,
-                                    duration: 220.ms,
-                                    delay: (220 + (i * 40)).ms,
-                                    curve: Curves.easeOutCubic,
-                                  ),
-                              if (i != analytics.categories.length - 1)
-                                const SizedBox(height: 12),
+                              if (i > 0)
+                                Container(
+                                  height: 0.5,
+                                  margin: const EdgeInsets.only(left: 36),
+                                  color: AppColors.outlineVariant,
+                                ),
+                              _CategoryRow(
+                                item: analytics.categories[i],
+                                pace: monthPaceFraction(_visibleMonth),
+                                onTap:
+                                    analytics.categories[i].categoryId == null
+                                    ? null
+                                    : () => _editCategoryBudget(
+                                        analytics.categories[i],
+                                      ),
+                                onLongPress: () {
+                                  final id = analytics.categories[i].categoryId;
+                                  context.go(
+                                    '${AppRoute.transactions.path}?month=$monthQuery'
+                                    '${id == null ? '' : '&categoryId=$id'}',
+                                  );
+                                },
+                              ),
                             ],
-                        ],
-                      ]),
-                    ),
-                  ),
-                  if (analytics.transactionCount == 0)
-                    const SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          AppSpacing.md,
-                          0,
-                          AppSpacing.md,
-                          132,
-                        ),
-                        child: Center(
-                          child: EmptyState(
-                            icon: LucideIcons.calendarDays,
-                            title: 'No data for this month.',
-                            message:
-                                'Swipe or tap the arrows to explore another month.',
-                          ),
+                          ],
                         ),
                       ),
-                    ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Tap a category to set its monthly budget. '
+                        'Press and hold to see its entries.',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
                 ],
-              );
-            },
-          ),
-        ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -304,27 +190,6 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
         _visibleMonth.month + monthOffset,
       );
     });
-  }
-
-  String _formatDeltaLabel(double value) {
-    final sign = value > 0
-        ? '+'
-        : value < 0
-        ? '-'
-        : '';
-    final capped = value.abs().clamp(0.0, 9.99);
-    final percent = (capped * 100).toStringAsFixed(0);
-    final overflow = value.abs() > 9.99 ? '>' : '';
-    return '$sign$overflow$percent% FROM LAST MONTH';
-  }
-
-  String _formatSavingsRateLabel(double value) {
-    final percent = (value.abs() * 100).toStringAsFixed(0);
-    if (value < 0) {
-      return '$percent% NET WITHDRAWAL';
-    }
-
-    return '$percent% SAVINGS RATE';
   }
 
   String _formatMonthQuery(DateTime month) {
@@ -382,15 +247,6 @@ class _MonthlyScreenState extends ConsumerState<MonthlyScreen> {
       await dao.setBudget(id, result);
     }
   }
-
-  Future<void> _refreshMonthlyAnalytics() async {
-    ref.invalidate(transactionsProvider);
-    ref.invalidate(categoriesProvider);
-    await Future.wait([
-      ref.refresh(transactionsProvider.future),
-      ref.refresh(categoriesProvider.future),
-    ]);
-  }
 }
 
 class _MonthlySkeleton extends StatelessWidget {
@@ -410,7 +266,7 @@ class _MonthlySkeleton extends StatelessWidget {
         ShimmerSkeleton(
           child: Column(
             children: [
-              SkeletonCard(height: 64, radius: 20),
+              SkeletonCard(height: 64, radius: 6),
               SizedBox(height: 24),
               SkeletonCard(height: 76, radius: 20),
               SizedBox(height: 28),
@@ -433,44 +289,6 @@ class _MonthlySkeleton extends StatelessWidget {
   }
 }
 
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.onSettingsTap});
-
-  final VoidCallback onSettingsTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        const SizedBox(width: 8),
-        RichText(
-          text: TextSpan(
-            style: theme.textTheme.headlineLarge?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
-            children: const [
-              TextSpan(
-                text: 'Spend',
-                style: TextStyle(color: AppColors.purple),
-              ),
-              TextSpan(
-                text: 'Split',
-                style: TextStyle(color: Colors.white),
-              ),
-            ],
-          ),
-        ),
-        const Spacer(),
-        IconButton(
-          onPressed: onSettingsTap,
-          icon: const Icon(LucideIcons.settings),
-        ),
-      ],
-    );
-  }
-}
-
 class _MonthNavigator extends StatelessWidget {
   const _MonthNavigator({
     required this.month,
@@ -485,483 +303,253 @@ class _MonthNavigator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      children: [
-        Text(
-          'FISCAL PERIOD',
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: AppColors.textSecondary,
+    return Panel(
+      color: AppColors.surfaceRaised,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Previous month',
+            onPressed: onPrevious,
+            icon: const Icon(LucideIcons.chevronLeft),
           ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton(
-              onPressed: onPrevious,
-              icon: const Icon(LucideIcons.chevronLeft, color: AppColors.teal),
+          Expanded(
+            child: Text(
+              formatMonthYear(month),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium,
             ),
-            const SizedBox(width: 8),
-            Text(
-              formatMonthYear(month).toUpperCase(),
-              style: theme.textTheme.headlineMedium,
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: onNext,
-              icon: const Icon(LucideIcons.chevronRight, color: AppColors.teal),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _MonthlyMetricCard extends StatelessWidget {
-  const _MonthlyMetricCard({
-    required this.title,
-    required this.amount,
-    required this.gradient,
-    required this.accentColor,
-    required this.borderColor,
-    required this.chipLabel,
-    required this.chipIcon,
-    this.chipColor = Colors.white,
-  });
-
-  final String title;
-  final double amount;
-  final Gradient gradient;
-  final Color accentColor;
-  final Color borderColor;
-  final String chipLabel;
-  final IconData chipIcon;
-  final Color chipColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: accentColor.withValues(alpha: 0.72),
-              ),
-            ),
-            const SizedBox(height: 10),
-            AnimatedAmountText(
-              value: amount,
-              formatter: (value) => formatBdtAmount(value, fractionDigits: 0),
-              textStyle: theme.textTheme.displaySmall?.copyWith(
-                color: accentColor,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(chipIcon, size: 14, color: chipColor),
-                const SizedBox(width: 8),
-                Text(
-                  chipLabel,
-                  style: theme.textTheme.labelSmall?.copyWith(color: chipColor),
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+          IconButton(
+            tooltip: 'Next month',
+            onPressed: onNext,
+            icon: const Icon(LucideIcons.chevronRight),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.trailing});
-
-  final String title;
-  final String? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 20,
-          decoration: BoxDecoration(
-            color: AppColors.teal,
-            borderRadius: BorderRadius.circular(999),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(title, style: theme.textTheme.titleMedium),
-        const Spacer(),
-        if (trailing != null)
-          Text(
-            trailing!,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _CategoryDonutCard extends StatelessWidget {
-  const _CategoryDonutCard({
-    required this.analytics,
-    required this.onViewAll,
-    this.onCategoryTap,
-  });
+/// Income, spending and savings for the month, each with how it moved
+/// against the month before.
+class _FiguresTable extends StatelessWidget {
+  const _FiguresTable({required this.analytics, required this.previousMonth});
 
   final MonthlyAnalytics analytics;
-  final VoidCallback onViewAll;
-  final void Function(MonthlyCategoryBreakdown)? onCategoryTap;
+  final DateTime previousMonth;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = analytics.summary;
+    final prev = DateFormat('MMMM').format(previousMonth);
+    final rate = analytics.savingsRate;
+    return Panel(
+      color: AppColors.surfaceRaised,
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          _FigureRow(
+            label: 'Income',
+            value: '+${formatBdtAmount(summary.income)}',
+            color: AppColors.income,
+            caption: _delta(analytics.incomeDelta, prev),
+          ),
+          const _Hairline(),
+          _FigureRow(
+            label: 'Spent',
+            value: '−${formatBdtAmount(summary.expenses)}',
+            color: AppColors.spend,
+            caption: _delta(analytics.expenseDelta, prev),
+          ),
+          const _Hairline(),
+          _FigureRow(
+            label: 'Saved',
+            value: formatBdtAmount(summary.saved),
+            color: AppColors.savings,
+            caption: rate < 0
+                ? 'More taken out of savings than put in'
+                : '${(rate * 100).round()}% of income',
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _delta(double value, String previous) {
+    if (value == 0) return 'Same as $previous';
+    final pct = (value.abs().clamp(0.0, 9.99) * 100).round();
+    final over = value.abs() > 9.99 ? 'over ' : '';
+    return '$over$pct% ${value > 0 ? 'more' : 'less'} than $previous';
+  }
+}
+
+class _FigureRow extends StatelessWidget {
+  const _FigureRow({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.caption,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+  final String caption;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    if (analytics.categories.isEmpty) {
-      return GlassCard(
-        shadow: false,
-        radius: 24,
-        glowColor: AppColors.blue,
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            Text('No expense data yet', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              'Add expense transactions to see the category breakdown.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 18),
-            InkWell(
-              onTap: onViewAll,
-              borderRadius: BorderRadius.circular(999),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Text(
-                  'View all →',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: AppColors.teal,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainer,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 22, 18, 20),
-            child: SizedBox(
-              height: 300,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  PieChart(
-                    PieChartData(
-                      sectionsSpace: 0,
-                      centerSpaceRadius: 96,
-                      startDegreeOffset: -90,
-                      pieTouchData: PieTouchData(
-                        touchCallback: (event, response) {
-                          if (event is FlTapUpEvent &&
-                              response?.touchedSection != null &&
-                              onCategoryTap != null) {
-                            final idx =
-                                response!.touchedSection!.touchedSectionIndex;
-                            if (idx >= 0 && idx < analytics.categories.length) {
-                              onCategoryTap!(analytics.categories[idx]);
-                            }
-                          }
-                        },
-                      ),
-                      sections: [
-                        for (var i = 0; i < analytics.categories.length; i++)
-                          PieChartSectionData(
-                            value: analytics.categories[i].amount,
-                            color: i == 0
-                                ? AppColors.teal
-                                : Color(analytics.categories[i].colorValue),
-                            radius: 30,
-                            showTitle: false,
-                          ),
-                      ],
-                    ),
-                    swapAnimationDuration: const Duration(milliseconds: 700),
-                    swapAnimationCurve: Curves.easeOutCubic,
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'TOP CATEGORY',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppColors.textSecondary,
-                          letterSpacing: 4,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        analytics.topCategoryName ?? 'None',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.surfaceDim,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-            child: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${analytics.transactionCount} transactions this month',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'LAST SYNCED: LOCAL ONLY',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppColors.textSecondary.withValues(alpha: 0.7),
-                          letterSpacing: 3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                InkWell(
-                  onTap: onViewAll,
-                  borderRadius: BorderRadius.circular(999),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 4,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'View all',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: AppColors.blue,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(
-                          LucideIcons.arrowRight,
-                          size: 22,
-                          color: AppColors.blue,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                Text(label, style: theme.textTheme.bodyLarge),
+                Text(caption, style: theme.textTheme.bodySmall),
               ],
             ),
           ),
-        ),
-      ],
+          Text(
+            value,
+            style: theme.textTheme.headlineMedium?.copyWith(color: color),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _CategoryDetailTile extends StatelessWidget {
-  const _CategoryDetailTile({
+class _Hairline extends StatelessWidget {
+  const _Hairline();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 0.5,
+    margin: const EdgeInsets.only(left: 16),
+    color: AppColors.outlineVariant,
+  );
+}
+
+/// The month's spending as one stacked bar, a segment per category.
+class _CategoryShareBar extends StatelessWidget {
+  const _CategoryShareBar({required this.categories});
+
+  final List<MonthlyCategoryBreakdown> categories;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: SizedBox(
+        height: 14,
+        child: Row(
+          children: [
+            for (var i = 0; i < categories.length; i++) ...[
+              if (i > 0) const SizedBox(width: 2),
+              Expanded(
+                flex: (categories[i].share * 1000).round().clamp(1, 1000),
+                child: ColoredBox(
+                  color: categoryColor(categories[i].colorValue),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryRow extends StatelessWidget {
+  const _CategoryRow({
     required this.item,
-    required this.highlightAsTop,
     this.pace,
-    this.onEditBudget,
+    this.onTap,
+    this.onLongPress,
   });
 
   final MonthlyCategoryBreakdown item;
 
   /// Share of the month gone (current month only), for the pace tick.
   final double? pace;
-  final bool highlightAsTop;
-  final VoidCallback? onEditBudget;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = highlightAsTop ? AppColors.teal : Color(item.colorValue);
     final limit = item.monthlyLimit;
-    final overBudget = limit != null && limit > 0 && item.amount > limit;
+    final hasLimit = limit != null && limit > 0;
+    final overBudget = hasLimit && item.amount > limit;
     final pace = this.pace;
-    final aheadOfPace =
-        limit != null && pace != null && item.amount > limit * pace;
+    final aheadOfPace = hasLimit && pace != null && item.amount > limit * pace;
     return InkWell(
-      onTap: onEditBudget,
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceDim,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 14, 22, 14),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 18,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [color, color.withValues(alpha: 0.42)],
-                      ),
-                      borderRadius: BorderRadius.circular(999),
-                      boxShadow: [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.18),
-                          blurRadius: 14,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  color: categoryColor(item.colorValue),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge,
                   ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          _categoryClassification(item.name),
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        formatBdtAmount(item.amount, fractionDigits: 0),
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontSize: 18,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        limit != null
-                            ? '${formatBdtAmount(item.amount)} / ${formatBdtAmount(limit)}'
-                            : '${(item.share * 100).toStringAsFixed(1)}% OF TOTAL',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: overBudget
-                              ? AppColors.coral
-                              : AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              if (limit != null && limit > 0) ...[
-                const SizedBox(height: 12),
-                BudgetProgressBar(
-                  used: item.amount / limit,
-                  pace: pace,
-                  height: 3,
-                  backgroundColor: Colors.white.withValues(alpha: 0.06),
-                  color: overBudget
-                      ? AppColors.coral
-                      : aheadOfPace
-                      ? AppColors.amber
-                      : AppColors.teal,
+                ),
+                Text(
+                  formatBdtAmount(item.amount),
+                  style: theme.textTheme.titleMedium,
                 ),
               ],
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 20, top: 2),
+              child: Text(
+                hasLimit
+                    ? overBudget
+                          ? '${formatBdtAmount(item.amount - limit)} over a ${formatBdtAmount(limit)} budget'
+                          : '${formatBdtAmount(limit - item.amount)} left of ${formatBdtAmount(limit)}'
+                    : '${(item.share * 100).round()}% of spending',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: overBudget ? AppColors.spend : null,
+                ),
+              ),
+            ),
+            if (hasLimit) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: BudgetProgressBar(
+                  used: item.amount / limit,
+                  pace: pace,
+                  height: 4,
+                  backgroundColor: AppColors.background,
+                  color: overBudget
+                      ? AppColors.spend
+                      : aheadOfPace
+                      ? AppColors.warning
+                      : AppColors.textPrimary,
+                ),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
   }
-}
-
-String _categoryClassification(String name) {
-  final normalized = name.toLowerCase();
-  if (normalized.contains('housing') || normalized.contains('utilit')) {
-    return 'RECURRING';
-  }
-  if (normalized.contains('life') ||
-      normalized.contains('food') ||
-      normalized.contains('dining') ||
-      normalized.contains('shopping')) {
-    return 'FLEXIBLE';
-  }
-  if (normalized.contains('transport') ||
-      normalized.contains('fuel') ||
-      normalized.contains('travel')) {
-    return 'VARIABLE';
-  }
-  return 'ONE-TIME';
 }

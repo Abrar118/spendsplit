@@ -5,7 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/budget_progress_bar.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/panel.dart';
 import '../../../providers/providers.dart';
 
 class MonthlyBudgetCard extends ConsumerWidget {
@@ -27,18 +27,17 @@ class MonthlyBudgetCard extends ConsumerWidget {
     // Spent beyond where the budget says we should be by today.
     final aheadOfPace = pace == null ? 0.0 : spent - budget * pace;
     final color = remaining < 0
-        ? AppColors.coral
+        ? AppColors.spend
         : aheadOfPace > 0
-        ? AppColors.amber
-        : AppColors.blue;
+        ? AppColors.warning
+        : AppColors.textPrimary;
 
     if (!enabled) {
-      return GlassCard(
+      return Panel(
         color: AppColors.surfaceRaised,
-        shadow: false,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.zero,
           onTap: () => showDialog<void>(
             context: context,
             builder: (_) => _BudgetDialog(initialBudget: budget),
@@ -68,9 +67,8 @@ class MonthlyBudgetCard extends ConsumerWidget {
       );
     }
 
-    return GlassCard(
+    return Panel(
       color: AppColors.surfaceRaised,
-      shadow: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -105,6 +103,7 @@ class MonthlyBudgetCard extends ConsumerWidget {
               used: spent / budget,
               pace: pace,
               color: color,
+              backgroundColor: AppColors.background,
               semanticsLabel: 'Monthly budget used',
             ),
             const SizedBox(height: 10),

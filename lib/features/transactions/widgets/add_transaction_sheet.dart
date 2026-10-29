@@ -1,13 +1,15 @@
-import 'dart:ui';
-
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spendsplit/core/icons/lucide_icons.dart';
 
+import '../../../core/constants/categories.dart';
 import '../../../core/constants/enums.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_decorations.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/grid_paper.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/input_formatters.dart';
 import '../../../data/database/app_database.dart';
@@ -35,16 +37,6 @@ Future<void> showAddTransactionSheet(
 enum _TransactionEntryType { expense, income, savings }
 
 enum _SavingsFlowType { deposit, withdrawal }
-
-/// Palette of colors auto-assigned to custom categories in round-robin order.
-const _customCategoryColors = [
-  AppColors.teal,
-  AppColors.blue,
-  AppColors.amber,
-  AppColors.coral,
-  AppColors.purple,
-  AppColors.green,
-];
 
 class AddTransactionSheet extends ConsumerStatefulWidget {
   const AddTransactionSheet({
@@ -145,9 +137,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   bool get _isEditing => widget.existingTransaction != null;
 
   Color get _accentColor => switch (_entryType) {
-    _TransactionEntryType.expense => AppColors.coral,
-    _TransactionEntryType.income => AppColors.green,
-    _TransactionEntryType.savings => AppColors.purple,
+    _TransactionEntryType.expense => AppColors.spend,
+    _TransactionEntryType.income => AppColors.income,
+    _TransactionEntryType.savings => AppColors.savings,
   };
 
   @override
@@ -177,396 +169,255 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     _syncInitialCategory(categories);
 
     return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
-      ),
-      child: SafeArea(
-        top: false,
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.92,
+          ),
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              color: AppColors.surfaceLight,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
             ),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(40),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF232738).withValues(alpha: 0.92),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(40),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 36,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppColors.outlineVariant,
+                      borderRadius: BorderRadius.circular(3),
                     ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x80000000),
-                        blurRadius: 40,
-                        offset: Offset(0, -12),
-                      ),
-                    ],
                   ),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 14),
-                      Container(
-                        width: 48,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  _isEditing ? 'Edit Entry' : 'New Entry',
-                                  style: theme.textTheme.headlineMedium,
-                                ),
-                                const Spacer(),
-                                IconButton(
-                                  onPressed: _saving
-                                      ? null
-                                      : () => Navigator.of(context).pop(),
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.white.withValues(
-                                      alpha: 0.05,
-                                    ),
-                                    side: BorderSide(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.08,
-                                      ),
-                                    ),
-                                  ),
-                                  icon: const Icon(LucideIcons.x),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 18),
-                            _TypeSelector(
-                              value: _entryType,
-                              onChanged: _saving
-                                  ? null
-                                  : (value) {
-                                      setState(() {
-                                        _entryType = value;
-                                      });
-                                    },
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // --- From Template button + most-used chips ---
-                              if (!_isEditing) ...[
-                                const SizedBox(height: 8),
-                                Center(
-                                  child: OutlinedButton.icon(
-                                    onPressed: _saving
-                                        ? null
-                                        : () => _openTemplatePicker(context),
-                                    icon: const Icon(
-                                      LucideIcons.layoutTemplate,
-                                      size: 16,
-                                    ),
-                                    label: const Text('From Template'),
-                                    style: OutlinedButton.styleFrom(
-                                      side: BorderSide(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.12,
-                                        ),
-                                      ),
-                                      foregroundColor: AppColors.textSecondary,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 10,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Builder(
-                                  builder: (context) {
-                                    final chips = ref.watch(
-                                      mostUsedTemplatesProvider,
-                                    );
-                                    if (chips.isEmpty) {
-                                      return const SizedBox(height: 16);
-                                    }
-                                    return Padding(
-                                      padding: const EdgeInsets.only(top: 12),
-                                      child: Wrap(
-                                        alignment: WrapAlignment.center,
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: [
-                                          for (final tpl in chips)
-                                            ActionChip(
-                                              label: Text(tpl.name),
-                                              onPressed: _saving
-                                                  ? null
-                                                  : () => _useTemplate(tpl),
-                                              backgroundColor: AppColors
-                                                  .surfaceLight
-                                                  .withValues(alpha: 0.6),
-                                              side: BorderSide.none,
-                                            ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 16),
-                              ],
-                              // --- Amount input with ambient glow ---
-                              Center(
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'ENTER AMOUNT',
-                                      style: theme.textTheme.labelMedium,
-                                    ),
-                                    const SizedBox(height: 14),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: _accentColor.withValues(
-                                              alpha: 0.12,
-                                            ),
-                                            blurRadius: 32,
-                                            spreadRadius: 4,
-                                          ),
-                                        ],
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            '৳',
-                                            style: theme.textTheme.headlineLarge
-                                                ?.copyWith(
-                                                  fontSize: 28,
-                                                  color: _accentColor,
-                                                  shadows: [
-                                                    Shadow(
-                                                      color: _accentColor
-                                                          .withValues(
-                                                            alpha: 0.35,
-                                                          ),
-                                                      blurRadius: 18,
-                                                    ),
-                                                  ],
-                                                ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          ConstrainedBox(
-                                            constraints: const BoxConstraints(
-                                              maxWidth: 220,
-                                            ),
-                                            child: TextField(
-                                              controller: _amountController,
-                                              enabled: !_saving,
-                                              textAlign: TextAlign.center,
-                                              keyboardType:
-                                                  const TextInputType.numberWithOptions(
-                                                    decimal: true,
-                                                  ),
-                                              inputFormatters: [
-                                                DecimalTextInputFormatter(
-                                                  maxDecimalPlaces: 2,
-                                                ),
-                                              ],
-                                              style: theme
-                                                  .textTheme
-                                                  .displayLarge
-                                                  ?.copyWith(
-                                                    fontSize: 48,
-                                                    color:
-                                                        AppColors.textPrimary,
-                                                    shadows: [
-                                                      Shadow(
-                                                        color: _accentColor
-                                                            .withValues(
-                                                              alpha: 0.28,
-                                                            ),
-                                                        blurRadius: 20,
-                                                      ),
-                                                    ],
-                                                  ),
-                                              decoration: InputDecoration(
-                                                hintText: '0.00',
-                                                hintStyle: theme
-                                                    .textTheme
-                                                    .displayLarge
-                                                    ?.copyWith(
-                                                      fontSize: 48,
-                                                      color: Colors.white
-                                                          .withValues(
-                                                            alpha: 0.1,
-                                                          ),
-                                                    ),
-                                                border: InputBorder.none,
-                                                isDense: true,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-                              categoriesAsync.when(
-                                data: (items) => _AdaptiveSection(
-                                  entryType: _entryType,
-                                  accentColor: _accentColor,
-                                  categories: items,
-                                  selectedCategoryId: _selectedCategoryId,
-                                  openGoals: openGoals,
-                                  selectedSavingsGoalId: _selectedSavingsGoalId,
-                                  selectedIncomeSource: _selectedIncomeSource,
-                                  savingsFlowType: _savingsFlowType,
-                                  onCategorySelected: (value) {
-                                    setState(() {
-                                      _selectedCategoryId = value;
-                                    });
-                                  },
-                                  onAddCustomCategory: _saving
-                                      ? null
-                                      : () => _createCustomCategory(context),
-                                  onIncomeSourceSelected: (value) {
-                                    setState(() {
-                                      _selectedIncomeSource = value;
-                                    });
-                                  },
-                                  onSavingsFlowSelected: (value) {
-                                    setState(() {
-                                      _savingsFlowType = value;
-                                    });
-                                  },
-                                  onSavingsGoalSelected: (value) {
-                                    setState(() {
-                                      _selectedSavingsGoalId = value;
-                                    });
-                                  },
-                                ),
-                                loading: () => const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 16),
-                                    child: CircularProgressIndicator(
-                                      color: AppColors.teal,
-                                    ),
-                                  ),
-                                ),
-                                error: (error, _) => Text(
-                                  'Could not load categories',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: AppColors.coral,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              _InfoRow(
-                                icon: LucideIcons.calendar,
-                                label: 'DATE',
-                                value: formatSheetDate(_selectedDate),
-                                onTap: _saving ? null : _pickDate,
-                              ),
-                              const SizedBox(height: 16),
-                              _NoteField(
-                                controller: _noteController,
-                                enabled: !_saving,
-                              ),
-                            ],
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _isEditing ? 'Edit entry' : 'New entry',
+                            style: theme.textTheme.titleLarge,
                           ),
                         ),
-                      ),
-                      // --- Save button: 12px radius, dark text, glow shadow ---
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                        child: Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _accentColor.withValues(alpha: 0.5),
-                                blurRadius: 32,
-                                offset: const Offset(0, 12),
-                                spreadRadius: -8,
-                              ),
-                            ],
-                          ),
-                          child: FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: _accentColor,
-                              foregroundColor: const Color(0xFF0E1016),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 18),
-                              textStyle: theme.textTheme.labelLarge?.copyWith(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            onPressed: _saving ? null : _saveTransaction,
-                            child: _saving
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Color(0xFF0E1016),
-                                    ),
-                                  )
-                                : Text(
-                                    _isEditing ? 'UPDATE' : 'SAVE TRANSACTION',
-                                  ),
-                          ),
-                        ),
-                      ),
-                      if (!_isEditing) ...[
-                        const SizedBox(height: 8),
-                        Center(
-                          child: TextButton.icon(
-                            onPressed: _saving
-                                ? null
-                                : () => _saveAsTemplate(context),
-                            icon: const Icon(LucideIcons.bookmark, size: 15),
-                            label: const Text('Save as Template'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.textSecondary,
-                            ),
-                          ),
+                        IconButton(
+                          tooltip: 'Close',
+                          onPressed: _saving
+                              ? null
+                              : () => Navigator.of(context).pop(),
+                          icon: const Icon(LucideIcons.x),
                         ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                    child: _TypeSelector(
+                      value: _entryType,
+                      onChanged: _saving
+                          ? null
+                          : (value) {
+                              setState(() {
+                                _entryType = value;
+                              });
+                            },
+                    ),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // --- Amount: the sheet's one hero figure ---
+                          Text('Amount', style: theme.textTheme.titleSmall),
+                          const SizedBox(height: 4),
+                          CustomPaint(
+                            painter: const GridPaperPainter(cell: 5.6),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 11.2,
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '৳',
+                                    style: theme.textTheme.displayMedium
+                                        ?.copyWith(
+                                          color: _accentColor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _amountController,
+                                      enabled: !_saving,
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
+                                      inputFormatters: [
+                                        DecimalTextInputFormatter(
+                                          maxDecimalPlaces: 2,
+                                        ),
+                                      ],
+                                      style: AppTypography.figure(56),
+                                      decoration: InputDecoration(
+                                        hintText: '0',
+                                        hintStyle: AppTypography.figure(
+                                          56,
+                                          color: AppColors.textTertiary,
+                                        ),
+                                        filled: false,
+                                        border: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        isDense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // --- From template + most-used chips ---
+                          if (!_isEditing)
+                            Builder(
+                              builder: (context) {
+                                final chips = ref.watch(
+                                  mostUsedTemplatesProvider,
+                                );
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    children: [
+                                      for (final tpl in chips)
+                                        _SquareChip(
+                                          label: tpl.name,
+                                          selected: false,
+                                          onTap: _saving
+                                              ? null
+                                              : () => _useTemplate(tpl),
+                                        ),
+                                      TextButton.icon(
+                                        onPressed: _saving
+                                            ? null
+                                            : () =>
+                                                  _openTemplatePicker(context),
+                                        icon: const Icon(
+                                          LucideIcons.layoutTemplate,
+                                          size: 16,
+                                        ),
+                                        label: const Text('From template'),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor:
+                                              AppColors.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          const SizedBox(height: 24),
+                          categoriesAsync.when(
+                            data: (items) => _AdaptiveSection(
+                              entryType: _entryType,
+                              categories: items,
+                              selectedCategoryId: _selectedCategoryId,
+                              openGoals: openGoals,
+                              selectedSavingsGoalId: _selectedSavingsGoalId,
+                              selectedIncomeSource: _selectedIncomeSource,
+                              savingsFlowType: _savingsFlowType,
+                              onCategorySelected: (value) {
+                                setState(() {
+                                  _selectedCategoryId = value;
+                                });
+                              },
+                              onAddCustomCategory: _saving
+                                  ? null
+                                  : () => _createCustomCategory(context),
+                              onIncomeSourceSelected: (value) {
+                                setState(() {
+                                  _selectedIncomeSource = value;
+                                });
+                              },
+                              onSavingsFlowSelected: (value) {
+                                setState(() {
+                                  _savingsFlowType = value;
+                                });
+                              },
+                              onSavingsGoalSelected: (value) {
+                                setState(() {
+                                  _selectedSavingsGoalId = value;
+                                });
+                              },
+                            ),
+                            loading: () => const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
+                            error: (error, _) => Text(
+                              "Categories couldn't load. Close the sheet and try again.",
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          _InfoRow(
+                            icon: LucideIcons.calendar,
+                            label: 'Date',
+                            value: formatSheetDate(_selectedDate),
+                            onTap: _saving ? null : _pickDate,
+                          ),
+                          const SizedBox(height: 8),
+                          _NoteField(
+                            controller: _noteController,
+                            enabled: !_saving,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: FilledButton(
+                      onPressed: _saving ? null : _saveTransaction,
+                      child: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.onPrimary,
+                              ),
+                            )
+                          : Text(_isEditing ? 'Update' : 'Save'),
+                    ),
+                  ),
+                  if (!_isEditing)
+                    TextButton.icon(
+                      onPressed: _saving
+                          ? null
+                          : () => _saveAsTemplate(context),
+                      icon: const Icon(LucideIcons.bookmark, size: 15),
+                      label: const Text('Save as template'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -603,7 +454,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(
               context,
-            ).colorScheme.copyWith(primary: AppColors.teal),
+            ).colorScheme.copyWith(primary: AppColors.accent),
           ),
           child: child!,
         );
@@ -631,7 +482,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         ref.read(categoriesProvider).valueOrNull ?? const [];
     final customCount = existingCategories.where((c) => !c.isPredefined).length;
     final color =
-        _customCategoryColors[customCount % _customCategoryColors.length];
+        CategoryColors.swatches[customCount % CategoryColors.swatches.length];
 
     try {
       final categoryId = await ref
@@ -640,7 +491,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             CategoriesTableCompanion.insert(
               name: name,
               icon: 'category',
-              color: color.toARGB32(),
+              color: color,
               isPredefined: const Value(false),
               isDollarCategory: const Value(false),
             ),
@@ -1043,6 +894,8 @@ class _CategoryNameDialogState extends State<_CategoryNameDialog> {
   }
 }
 
+/// Expense / Income / Savings as a segmented control. Neutral like every
+/// control; the type's legend colour shows on the ৳ sign instead.
 class _TypeSelector extends StatelessWidget {
   const _TypeSelector({required this.value, required this.onChanged});
 
@@ -1051,96 +904,73 @@ class _TypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: AppColors.background.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _TypePill(
-              label: 'EXPENSE',
-              selected: value == _TransactionEntryType.expense,
-              color: AppColors.coral,
-              onTap: onChanged == null
-                  ? null
-                  : () => onChanged!(_TransactionEntryType.expense),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _TypePill(
-              label: 'INCOME',
-              selected: value == _TransactionEntryType.income,
-              color: AppColors.green,
-              onTap: onChanged == null
-                  ? null
-                  : () => onChanged!(_TransactionEntryType.income),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _TypePill(
-              label: 'SAVINGS',
-              selected: value == _TransactionEntryType.savings,
-              color: AppColors.purple,
-              onTap: onChanged == null
-                  ? null
-                  : () => onChanged!(_TransactionEntryType.savings),
-            ),
-          ),
-        ],
-      ),
+    return _Segmented<_TransactionEntryType>(
+      values: _TransactionEntryType.values,
+      selected: value,
+      onSelected: onChanged,
+      label: (t) => switch (t) {
+        _TransactionEntryType.expense => 'Expense',
+        _TransactionEntryType.income => 'Income',
+        _TransactionEntryType.savings => 'Savings',
+      },
     );
   }
 }
 
-class _TypePill extends StatelessWidget {
-  const _TypePill({
-    required this.label,
+/// A square segmented control: one module, the selected segment inverted
+/// to ink.
+class _Segmented<T> extends StatelessWidget {
+  const _Segmented({
+    required this.values,
     required this.selected,
-    required this.color,
-    required this.onTap,
+    required this.onSelected,
+    required this.label,
   });
 
-  final String label;
-  final bool selected;
-  final Color color;
-  final VoidCallback? onTap;
+  final List<T> values;
+  final T selected;
+  final ValueChanged<T>? onSelected;
+  final String Function(T value) label;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? color : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected ? color : Colors.white.withValues(alpha: 0.08),
-          ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.28),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: AppDecorations.module(color: AppColors.surface),
+      child: Row(
+        children: [
+          for (final v in values)
+            Expanded(
+              child: Semantics(
+                selected: v == selected,
+                button: true,
+                child: Material(
+                  color: v == selected
+                      ? AppColors.textPrimary
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.zero,
+                  child: InkWell(
+                    borderRadius: BorderRadius.zero,
+                    onTap: onSelected == null ? null : () => onSelected!(v),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 38),
+                      child: Center(
+                        child: Text(
+                          label(v),
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: v == selected
+                                ? AppColors.background
+                                : AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ]
-              : const [],
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: Colors.white.withValues(alpha: selected ? 1 : 0.55),
-          ),
-        ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -1149,7 +979,6 @@ class _TypePill extends StatelessWidget {
 class _AdaptiveSection extends StatelessWidget {
   const _AdaptiveSection({
     required this.entryType,
-    required this.accentColor,
     required this.categories,
     required this.selectedCategoryId,
     required this.openGoals,
@@ -1164,7 +993,6 @@ class _AdaptiveSection extends StatelessWidget {
   });
 
   final _TransactionEntryType entryType;
-  final Color accentColor;
   final List<CategoriesTableData> categories;
   final int? selectedCategoryId;
   final List<SavingsGoalsTableData> openGoals;
@@ -1184,25 +1012,23 @@ class _AdaptiveSection extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text('SELECT CATEGORY', style: theme.textTheme.labelMedium),
-            ],
-          ),
-          const SizedBox(height: 18),
+          Text('Category', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 10),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (final category in categories) ...[
                   _CategoryChip(
                     label: category.name,
                     icon: _iconForCategory(category.icon),
-                    color: Color(category.color),
+                    color: categoryColor(category.color),
                     selected: selectedCategoryId == category.id,
                     onTap: () => onCategorySelected(category.id),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 8),
                 ],
                 _CustomCategoryChip(onTap: onAddCustomCategory),
               ],
@@ -1213,58 +1039,60 @@ class _AdaptiveSection extends StatelessWidget {
     }
 
     if (entryType == _TransactionEntryType.income) {
-      return _SegmentSection<IncomeSource>(
-        label: 'SOURCE',
-        accentColor: accentColor,
-        values: _AddTransactionSheetState._incomeSources,
-        selectedValue: _incomeSourcesByDbValue(selectedIncomeSource),
-        onSelected: (value) => onIncomeSourceSelected(value.dbValue),
-        displayText: (value) => switch (value) {
-          IncomeSource.salary => 'Salary',
-          IncomeSource.freelance => 'Freelance',
-          IncomeSource.other => 'Other',
-        },
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Source', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 10),
+          _Segmented<IncomeSource>(
+            values: _AddTransactionSheetState._incomeSources,
+            selected: _incomeSourcesByDbValue(selectedIncomeSource),
+            onSelected: (value) => onIncomeSourceSelected(value.dbValue),
+            label: (value) => switch (value) {
+              IncomeSource.salary => 'Salary',
+              IncomeSource.freelance => 'Freelance',
+              IncomeSource.other => 'Other',
+            },
+          ),
+        ],
       );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SegmentSection<_SavingsFlowType>(
-          label: 'SAVINGS TYPE',
-          accentColor: accentColor,
+        Text('Direction', style: theme.textTheme.titleSmall),
+        const SizedBox(height: 10),
+        _Segmented<_SavingsFlowType>(
           values: const [_SavingsFlowType.deposit, _SavingsFlowType.withdrawal],
-          selectedValue: savingsFlowType,
+          selected: savingsFlowType,
           onSelected: onSavingsFlowSelected,
-          displayText: (value) =>
-              value == _SavingsFlowType.deposit ? 'Deposit' : 'Withdrawal',
+          label: (value) => value == _SavingsFlowType.deposit
+              ? 'Into savings'
+              : 'Out of savings',
         ),
         const SizedBox(height: 24),
-        Text('ADD TO GOAL', style: theme.textTheme.labelMedium),
-        const SizedBox(height: 16),
+        Text('Goal', style: theme.textTheme.titleSmall),
+        const SizedBox(height: 10),
         if (openGoals.isEmpty)
           Text(
-            'No open savings goals available.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.58),
-            ),
+            'No open goals. Create one on the Goals tab to link savings to it.',
+            style: theme.textTheme.bodyMedium,
           )
         else
           Wrap(
-            spacing: 12,
-            runSpacing: 12,
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              _GoalLinkChip(
+              _SquareChip(
                 label: 'None',
                 selected: selectedSavingsGoalId == null,
-                accentColor: accentColor,
                 onTap: () => onSavingsGoalSelected(null),
               ),
               for (final goal in openGoals)
-                _GoalLinkChip(
+                _SquareChip(
                   label: goal.name,
                   selected: selectedSavingsGoalId == goal.id,
-                  accentColor: accentColor,
                   onTap: () => onSavingsGoalSelected(goal.id),
                 ),
             ],
@@ -1281,39 +1109,45 @@ class _AdaptiveSection extends StatelessWidget {
   }
 }
 
-class _GoalLinkChip extends StatelessWidget {
-  const _GoalLinkChip({
+/// A square chip, inverted to ink when selected.
+class _SquareChip extends StatelessWidget {
+  const _SquareChip({
     required this.label,
     required this.selected,
-    required this.accentColor,
     required this.onTap,
   });
 
   final String label;
   final bool selected;
-  final Color accentColor;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ChoiceChip(
-      label: Text(label),
+    return Semantics(
       selected: selected,
-      onSelected: (_) => onTap(),
-      showCheckmark: false,
-      selectedColor: accentColor.withValues(alpha: 0.16),
-      backgroundColor: Colors.white.withValues(alpha: 0.04),
-      side: BorderSide(
-        color: selected
-            ? accentColor.withValues(alpha: 0.32)
-            : Colors.white.withValues(alpha: 0.08),
+      button: true,
+      child: Material(
+        color: selected ? AppColors.textPrimary : AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDecorations.radius),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppDecorations.radius),
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 40),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: selected
+                      ? AppColors.background
+                      : AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
-      labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        color: selected ? Colors.white : Colors.white.withValues(alpha: 0.72),
-        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     );
   }
 }
@@ -1335,48 +1169,50 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = selected ? color : Colors.white.withValues(alpha: 0.42);
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: selected
-                  ? color.withValues(alpha: 0.16)
-                  : Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: selected
-                    ? color.withValues(alpha: 0.32)
-                    : Colors.white.withValues(alpha: 0.08),
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppDecorations.radius),
+        child: SizedBox(
+          width: 72,
+          child: Column(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.surfaceRaised : AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppDecorations.radius),
+                  border: Border.all(
+                    color: selected ? color : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  color: selected ? color : AppColors.textTertiary,
+                ),
               ),
-              boxShadow: selected
-                  ? [
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.18),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ]
-                  : const [],
-            ),
-            child: Icon(icon, color: foreground),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: selected
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: selected
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.42),
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1389,95 +1225,32 @@ class _CustomCategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Icon(LucideIcons.plus, color: AppColors.teal),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Custom',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.6),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SegmentSection<T> extends StatelessWidget {
-  const _SegmentSection({
-    required this.label,
-    required this.accentColor,
-    required this.values,
-    required this.selectedValue,
-    required this.onSelected,
-    this.displayText,
-  });
-
-  final String label;
-  final Color accentColor;
-  final List<T> values;
-  final T selectedValue;
-  final ValueChanged<T> onSelected;
-  final String Function(T value)? displayText;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: theme.textTheme.labelMedium),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            for (final value in values) ...[
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => onSelected(value),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: selectedValue == value
-                          ? AppColors.surfaceContainerHighest
-                          : Colors.white.withValues(alpha: 0.03),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: selectedValue == value
-                            ? accentColor.withValues(alpha: 0.22)
-                            : Colors.white.withValues(alpha: 0.08),
-                      ),
-                    ),
-                    child: Text(
-                      displayText?.call(value) ?? value.toString(),
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: selectedValue == value
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: 0.58),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
+    return Semantics(
+      button: true,
+      label: 'New category',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppDecorations.radius),
+        child: SizedBox(
+          width: 72,
+          child: Column(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: AppDecorations.module(),
+                child: const Icon(
+                  LucideIcons.plus,
+                  color: AppColors.textSecondary,
                 ),
               ),
-              if (value != values.last) const SizedBox(width: 12),
+              const SizedBox(height: 6),
+              Text('New', style: Theme.of(context).textTheme.labelMedium),
             ],
-          ],
+          ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -1498,52 +1271,29 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Ink(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(14),
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(AppDecorations.radius),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppDecorations.radius),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: AppColors.textSecondary),
+              const SizedBox(width: 12),
+              Text(label, style: theme.textTheme.bodyLarge),
+              const Spacer(),
+              Text(value, style: theme.textTheme.bodyMedium),
+              const SizedBox(width: 4),
+              const Icon(
+                LucideIcons.chevronRight,
+                size: 18,
+                color: AppColors.textTertiary,
               ),
-              child: Icon(
-                icon,
-                size: 20,
-                color: Colors.white.withValues(alpha: 0.56),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: theme.textTheme.labelMedium),
-                  const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              LucideIcons.chevronRight,
-              color: Colors.white.withValues(alpha: 0.24),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1558,54 +1308,15 @@ class _NoteField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              LucideIcons.pencil,
-              size: 20,
-              color: Colors.white.withValues(alpha: 0.56),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Optional Note', style: theme.textTheme.labelMedium),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: controller,
-                  enabled: enabled,
-                  maxLines: 1,
-                  decoration: InputDecoration(
-                    hintText: 'What was this for?',
-                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+    return TextField(
+      controller: controller,
+      enabled: enabled,
+      maxLines: 1,
+      textCapitalization: TextCapitalization.sentences,
+      decoration: const InputDecoration(
+        hintText: 'Note (optional): what was this for?',
+        fillColor: AppColors.surface,
+        prefixIcon: Icon(LucideIcons.pencil, size: 18),
       ),
     );
   }

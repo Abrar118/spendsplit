@@ -74,7 +74,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
 
     return categoriesAsync.when(
       loading: () =>
-          const Center(child: CircularProgressIndicator(color: AppColors.teal)),
+          const Center(child: CircularProgressIndicator(color: AppColors.usd)),
       error: (error, stackTrace) => Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Text(
@@ -97,7 +97,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
               decoration: BoxDecoration(
                 color: AppColors.surfaceLight,
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(32),
+                  top: Radius.circular(14),
                 ),
               ),
               child: Padding(
@@ -112,7 +112,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
                           height: 4,
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(999),
+                            borderRadius: BorderRadius.zero,
                           ),
                         ),
                       ),
@@ -133,7 +133,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
                         ],
                       ),
                       const SizedBox(height: AppSpacing.xl),
-                      _FieldLabel(label: 'AMOUNT'),
+                      _FieldLabel(label: 'Amount'),
                       const SizedBox(height: 10),
                       TextField(
                         controller: _amountController,
@@ -149,7 +149,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      _FieldLabel(label: 'PURPOSE'),
+                      _FieldLabel(label: 'Purpose'),
                       const SizedBox(height: 10),
                       TextField(
                         controller: _purposeController,
@@ -159,7 +159,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      const _FieldLabel(label: 'CATEGORY'),
+                      const _FieldLabel(label: 'Category'),
                       const SizedBox(height: 12),
                       Wrap(
                         spacing: 10,
@@ -183,11 +183,11 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
                         ],
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      _FieldLabel(label: 'DATE'),
+                      _FieldLabel(label: 'Date'),
                       const SizedBox(height: 10),
                       InkWell(
                         onTap: _saving ? null : _pickDate,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.zero,
                         child: Ink(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -195,7 +195,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
                           ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.04),
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.zero,
                           ),
                           child: Row(
                             children: [
@@ -215,7 +215,7 @@ class _AddDollarExpenseSheetState extends ConsumerState<AddDollarExpenseSheet> {
                         child: FilledButton(
                           onPressed: _saving ? null : _saveExpense,
                           style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.teal,
+                            backgroundColor: AppColors.accent,
                             foregroundColor: AppColors.onPrimary,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
@@ -461,7 +461,7 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Color(category.color);
+    final color = categoryColor(category.color);
     return ChoiceChip(
       selected: selected,
       onSelected: onTap == null ? null : (_) => onTap!(),
@@ -471,7 +471,7 @@ class _CategoryChip extends StatelessWidget {
       side: BorderSide(
         color: selected ? color : Colors.white.withValues(alpha: 0.08),
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       labelPadding: const EdgeInsets.symmetric(horizontal: 2),
       avatar: Icon(
         iconForCategoryKey(category.icon),
@@ -498,23 +498,23 @@ class _NewCategoryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.zero,
       child: Ink(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.teal.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: AppColors.teal.withValues(alpha: 0.4)),
+          color: AppColors.usd.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.zero,
+          border: Border.all(color: AppColors.usd.withValues(alpha: 0.4)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(LucideIcons.plus, size: 14, color: AppColors.teal),
+            const Icon(LucideIcons.plus, size: 14, color: AppColors.usd),
             const SizedBox(width: 8),
             Text(
               'New Category',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.teal,
+                color: AppColors.usd,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -540,7 +540,7 @@ _DollarCategoryAppearance _guessDollarCategoryAppearance(String name) {
   if (key.contains('tuition') || key.contains('school')) {
     return const _DollarCategoryAppearance(
       iconKey: 'school',
-      colorValue: 0xFFFBBF24,
+      colorValue: 0xFFC9B48A,
     );
   }
   if (key.contains('software') ||
@@ -548,29 +548,29 @@ _DollarCategoryAppearance _guessDollarCategoryAppearance(String name) {
       key.contains('figma')) {
     return const _DollarCategoryAppearance(
       iconKey: 'monitor',
-      colorValue: 0xFF60A5FA,
+      colorValue: 0xFF7F93B0,
     );
   }
   if (key.contains('course') || key.contains('book')) {
     return const _DollarCategoryAppearance(
       iconKey: 'book',
-      colorValue: 0xFF34D399,
+      colorValue: 0xFFA3B35C,
     );
   }
   if (key.contains('hardware') || key.contains('device')) {
     return const _DollarCategoryAppearance(
       iconKey: 'cpu',
-      colorValue: 0xFFFF6B6B,
+      colorValue: 0xFFB5677E,
     );
   }
   if (key.contains('travel')) {
     return const _DollarCategoryAppearance(
       iconKey: 'globe',
-      colorValue: 0xFF9C7CFF,
+      colorValue: 0xFF9C8CFF,
     );
   }
   return const _DollarCategoryAppearance(
     iconKey: 'briefcase',
-    colorValue: 0xFF00E5BF,
+    colorValue: 0xFF4DB8AC,
   );
 }

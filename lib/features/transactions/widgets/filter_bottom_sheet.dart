@@ -104,7 +104,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppColors.surfaceLight,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
         ),
         child: SafeArea(
           top: false,
@@ -120,14 +120,14 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                       height: 4,
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.zero,
                       ),
                     ),
                   ),
                   const SizedBox(height: 18),
                   Text('Filters', style: theme.textTheme.headlineMedium),
                   const SizedBox(height: 24),
-                  Text('TYPE', style: theme.textTheme.labelMedium),
+                  Text('Type', style: theme.textTheme.labelMedium),
                   const SizedBox(height: 12),
                   _FilterCheck(
                     label: 'Income',
@@ -151,7 +151,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     onChanged: _toggleSavings,
                   ),
                   const SizedBox(height: 24),
-                  Text('CATEGORY', style: theme.textTheme.labelMedium),
+                  Text('Category', style: theme.textTheme.labelMedium),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 10,
@@ -161,8 +161,10 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                         FilterChip(
                           selected: _selectedCategoryIds.contains(category.id),
                           label: Text(category.name),
-                          selectedColor: AppColors.teal.withValues(alpha: 0.18),
-                          checkmarkColor: AppColors.teal,
+                          selectedColor: AppColors.textPrimary.withValues(
+                            alpha: 0.18,
+                          ),
+                          checkmarkColor: AppColors.textPrimary,
                           side: BorderSide(
                             color: Colors.white.withValues(alpha: 0.08),
                           ),
@@ -171,7 +173,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Text('DATE RANGE', style: theme.textTheme.labelMedium),
+                  Text('Date range', style: theme.textTheme.labelMedium),
                   const SizedBox(height: 12),
                   _DateFilterRow(
                     label: 'From',
@@ -309,7 +311,7 @@ class _FilterCheck extends StatelessWidget {
     return CheckboxListTile(
       contentPadding: EdgeInsets.zero,
       value: value,
-      activeColor: AppColors.teal,
+      activeColor: AppColors.textPrimary,
       checkColor: AppColors.onPrimary,
       title: Text(label),
       controlAffinity: ListTileControlAffinity.leading,
@@ -336,12 +338,12 @@ class _DateFilterRow extends StatelessWidget {
     final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.zero,
       child: Ink(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.zero,
         ),
         child: Row(
           children: [
