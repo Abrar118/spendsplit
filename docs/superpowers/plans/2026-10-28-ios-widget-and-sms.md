@@ -32,8 +32,8 @@ need Xcode. Every phase ends with a device check before the next one starts.
 ## Global Constraints
 
 - No new pub dependencies.
-- The Runner stays at iOS 13. The widget extension targets iOS 17
-  (`containerBackground`). The App Intent is `@available(iOS 16, *)`.
+- The Runner targets iOS 15.0 (PR #4; Xcode's recommended target broke
+  `pod install`). The widget extension targets iOS 17 (`containerBackground`).
 - SMS rows go through the existing `parseTrustBankSms` → `importSmsMessages`
   path. No second parser in Swift.
 - Old plans in `docs/superpowers/plans/` keep their `com.example` references
@@ -43,29 +43,29 @@ need Xcode. Every phase ends with a device check before the next one starts.
 
 ## Phase 0 — New app ID + iOS baseline
 
-- [ ] Android: `applicationId` + `namespace` → `com.abrar.spendsplit`; move
+- [x] Android: `applicationId` + `namespace` → `com.abrar.spendsplit`; move
       the Kotlin sources to `kotlin/com/abrar/spendsplit/` and update their
       `package` lines.
-- [ ] iOS: `PRODUCT_BUNDLE_IDENTIFIER` → `com.abrar.spendsplit`
+- [x] iOS: `PRODUCT_BUNDLE_IDENTIFIER` → `com.abrar.spendsplit`
       (RunnerTests → `.RunnerTests`).
-- [ ] App Group → `group.com.abrar.spendsplit` in
+- [x] App Group → `group.com.abrar.spendsplit` in
       `WidgetDataService._appGroupId` and `AppDelegate.swift`.
-- [ ] `flutter analyze`, `flutter test`, `flutter build apk --debug`.
+- [x] `flutter analyze`, `flutter test`, `flutter build apk --debug`.
 - [ ] **[Mac]** Open `ios/Runner.xcworkspace`, select the Runner target, then
       Signing & Capabilities:
-  - Team = your Personal Team;
-  - **+ Capability → App Groups** → add `group.com.abrar.spendsplit`.
+  - [x] Team = your Personal Team (PR #4);
+  - [ ] **+ Capability → App Groups** → add `group.com.abrar.spendsplit`.
   - **Gate:** this confirms App Groups work on a free team. The widget can't
-    read app data without them; SMS import doesn't need them, since the App
-    Intent runs in the app's own process. If it fails, report the error
+    read app data without them; SMS import doesn't need them, since the inbox
+    folder is in the app's own Documents. If it fails, report the error
     before Phase 1.
 - [ ] **[Mac]** Commit the generated `Runner.entitlements` + `project.pbxproj`
       changes.
-- [ ] **[Mac]** `flutter run --release` on the iPhone. Then:
-  - restore the JSON backup;
-  - check Face ID unlock;
-  - add a transaction;
-  - confirm the balances match the old phone.
+- [x] **[Mac]** `flutter run --release` on the iPhone (PR #4). Then:
+  - [x] restore the JSON backup;
+  - [ ] check Face ID unlock;
+  - [ ] add a transaction;
+  - [ ] confirm the balances match the old phone.
 
 ## Phase 1 — Review-count widget (Android + iOS)
 
@@ -104,7 +104,7 @@ need Xcode. Every phase ends with a device check before the next one starts.
   - a `TimelineProvider` reads `review_count` from
     `UserDefaults(suiteName: "group.com.abrar.spendsplit")`, with a `.never`
     refresh policy;
-  - a SwiftUI view in the app's style: pure-black `containerBackground`,
+  - a SwiftUI view in the app's style: charcoal `#1D1D20` `containerBackground`,
     count in gold `#ECBB7E`, tracked "TO REVIEW" label, an "All reviewed"
     state;
   - `widgetURL(spendsplit://review?homeWidget)`;
@@ -117,38 +117,25 @@ need Xcode. Every phase ends with a device check before the next one starts.
 
 ## Phase 2 — Trust Bank SMS via a Shortcuts automation
 
-iOS never lets apps read SMS. The route here is a **Personal Automation**:
-- trigger *Message* → *Message Contains* `Balance TK`, set to *Run
-  Immediately*;
-- it passes the message text to a SpendSplit **App Intent**;
-- the intent queues the text;
-- the app drains the queue through the existing importer on open/resume.
+**Done (PR #4), as a file inbox instead of the planned App Intent.** iOS
+never lets apps read SMS. A **Personal Automation** (*Message Contains*
+`Balance TK`, *Run Immediately*) saves each alert as a file in
+`Documents/SMS Inbox`, exposed in Files via `UIFileSharingEnabled`. It needs
+no App Group, no Swift intent and no `spendsplit/sms` channel on iOS.
 
-- [ ] **[Mac]** First, confirm that Shortcuts offers the *Message* trigger
-      with *Run Immediately* on the phone's iOS version.
-- [ ] Swift `ImportBankSmsIntent: AppIntent` in the Runner target
-      (`@available(iOS 16, *)`, `openAppWhenRun = false`), plus an
-      `AppShortcutsProvider` so it shows up as "Import Bank SMS".
-      `perform()` appends `{body, receivedMillis: now}` to a JSON queue in
-      the App Group defaults (standard defaults if Phase 0 found no App
-      Group) and prunes entries older than 30 days.
-- [ ] `AppDelegate.swift`: handle the `spendsplit/sms` channel on iOS:
-  - `readInbox(sinceMillis)` returns the queued rows with
-    `receivedMillis > since`, oldest first, in the same shape as Android;
-  - `hasPermission` / `requestPermission` return `{read: true, receive: false}`.
-- [ ] `SmsGateway`: allow iOS through. `backgroundDone` stays Android-only.
-- [ ] SMS settings screen on iOS: replace the permission prompt with the
-      Shortcut setup steps. Enabling still sets `sms_import_since` to now.
-      Add a widget test for the iOS copy using `FakeSmsGateway`.
-- [ ] **[Mac]** Create the automation and wait for a real alert. Open the
-      app: the transaction should be flagged `needs_review`, the widget count
-      should go up, and the reconciliation card should appear.
-- [ ] Update `AGENTS.md` / `README.md`.
+- [x] `SmsImportRunner` imports and deletes the inbox files on open/resume,
+      through the existing `parseTrustBankSms` → `importSmsMessages` path and
+      `sms_ref` dedupe. Receive time = file mtime.
+- [x] Shortcuts saves text copied from Messages as RTFD, so `AppDelegate.swift`
+      decodes RTFD/RTF/UTF-8 natively (`spendsplit/text` channel). An
+      unreadable file is kept and skipped.
+- [x] The first iOS import switches `sms_import_since` on, so the
+      reconciliation card works.
+- [x] **[Mac]** A real Trust Bank SMS imported end to end on the iPhone.
+- [x] Update `AGENTS.md`.
+- [ ] Widget count going up after an import: blocked on Phase 1.
 
 **Known limits:**
-- No background import on iOS. Rows land, and the widget updates, when the
-  app next opens.
-- `receivedMillis` is when the Shortcut ran, not the carrier timestamp. An
-  automation that fires twice for one SMS could create a duplicate. That's
-  unlikely, and the review flag catches it.
+- No background import on iOS. Rows land, and the widget will update, when
+  the app next opens or resumes.
 - iOS may show a "Running your automation" banner each time.

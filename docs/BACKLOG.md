@@ -6,15 +6,10 @@ the limits of what shipped. In-flight work lives in `docs/superpowers/plans/`
 
 ## Open
 
-- **Day-one runway is very pessimistic.** With one day of history, a single
-  rent payment reads as the daily pace. Short history using observed days is
-  deliberate (`20db1be`); revisit if it bothers in practice.
+- **iOS home-screen widget** — Phase 1 of the iOS plan; not started.
 
 ## Limits of what shipped
 
-- **Safe to spend:** payday detection needs the largest income to land in at
-  least two of the last three months. Irregular income falls back to month
-  end.
 - **Recap category changes:** only categories with spend in the recap month.
   A category that dropped to zero isn't flagged.
 - **Privacy cover on Android:** needs Android 13+. Older versions still show
@@ -22,3 +17,5 @@ the limits of what shipped. In-flight work lives in `docs/superpowers/plans/`
 - **SMS engine contention (Android):** WAL plus a busy timeout prevents
   "database is locked". Rows inserted by the background engine show up in a
   running app on its next resume, not instantly.
+- **SMS import on iOS:** no background import. Rows land when the app next
+  opens or resumes.
